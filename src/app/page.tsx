@@ -1,65 +1,164 @@
-import Image from "next/image";
+import { HeroSection } from "@/components/HeroSection";
+import { SupportTiers } from "@/components/SupportTiers";
+import Link from "next/link";
+import { ArrowRight, Sparkles, Headphones, Heart } from "lucide-react";
 
-export default function Home() {
+// Belarusian rhombic ornament divider — echoes традиционные вышыванкі motifs
+function OrnamentDivider() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+    <div className="flex items-center justify-center gap-3 opacity-30 py-2" aria-hidden>
+      <div className="h-px flex-1 max-w-20 bg-gradient-to-r from-transparent to-border" />
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <path d="M9 1L17 9L9 17L1 9Z" stroke="currentColor" strokeWidth="0.8" className="text-primary" />
+        <path d="M9 5L13 9L9 13L5 9Z" fill="currentColor" className="text-primary" fillOpacity="0.3" />
+      </svg>
+      <div className="h-px w-1.5 bg-border" />
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+        <path d="M5 1L9 5L5 9L1 5Z" fill="currentColor" className="text-primary" fillOpacity="0.25" />
+      </svg>
+      <div className="h-px w-1.5 bg-border" />
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <path d="M9 1L17 9L9 17L1 9Z" stroke="currentColor" strokeWidth="0.8" className="text-primary" />
+        <path d="M9 5L13 9L9 13L5 9Z" fill="currentColor" className="text-primary" fillOpacity="0.3" />
+      </svg>
+      <div className="h-px flex-1 max-w-20 bg-gradient-to-l from-transparent to-border" />
     </div>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <>
+      <HeroSection />
+
+      {/* About / Philosophy */}
+      <section className="py-28 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        <div className="grid lg:grid-cols-2 gap-16 items-center">
+          <div>
+            {/* Section label — less mono-heavy, more typographic */}
+            <p className="text-xs uppercase tracking-[0.18em] text-primary/70 mb-4 font-medium">
+              Пра нас
+            </p>
+            <h2 className="font-display text-3xl sm:text-4xl font-semibold text-foreground mb-6 leading-[1.2] italic">
+              Там, дзе старажытны спеў{" "}
+              <span className="text-primary not-italic">сустракае новы гук</span>
+            </h2>
+            <p className="text-muted-foreground leading-relaxed mb-4">
+              Спеў — беларускі музычны лейбл. Наша місія простая: каб было
+              больш добрай музыкі на беларускай мове і ў яе было больш слухачоў.
+              Мы ствараем яе самі і дапамагаем гэта рабіць іншым.
+            </p>
+            <p className="text-muted-foreground/70 leading-relaxed text-sm">
+              Беларуская мова можа гучаць у любым жанры — у фолку і электроніцы,
+              у попе і амбіенце. Каранямі мы ў традыцыі: вуснай творчасці,
+              прыродзе, продках. Поглядам — наперад. Слова жыве, пакуль яно гучыць.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            {[
+              {
+                icon: Sparkles,
+                title: "Генерацыя музыкі",
+                desc: "Арыгінальныя песні на беларускай мове ў любым жанры",
+              },
+              {
+                icon: Headphones,
+                title: "Жывыя артысты",
+                desc: "Калабарацыі, AI-каверы і сумесныя праекты",
+              },
+              {
+                icon: Heart,
+                title: "Спеу-генератар",
+                desc: "Інструмент для напісання тэкстаў і структуры песень",
+              },
+              {
+                icon: ArrowRight,
+                title: "Вашы тэксты",
+                desc: "Ператворым вашы вершы ў гатовую песню",
+              },
+            ].map(({ icon: Icon, title, desc }) => (
+              <div
+                key={title}
+                className="glass rounded-xl p-4 border border-border hover:border-primary/25 transition-all duration-300 group"
+              >
+                <Icon
+                  className="h-5 w-5 text-primary mb-3 opacity-60 group-hover:opacity-100 transition-opacity"
+                  strokeWidth={1.5}
+                />
+                <h3 className="text-sm font-semibold text-foreground mb-1">{title}</h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">{desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <OrnamentDivider />
+      </div>
+
+      {/* Generator CTA band */}
+      <section className="relative py-20 overflow-hidden">
+        {/* Subtle Kupalle warmth */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/4 to-transparent" />
+        <div className="absolute inset-0 border-y border-border" />
+
+        {/* Background ornament — Belarusian swamp fern pattern */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-50"
+          aria-hidden>
+          <svg className="absolute right-0 top-0 h-full opacity-[0.04] text-primary" viewBox="0 0 200 200" fill="none">
+            <path d="M100 10L190 100L100 190L10 100Z" stroke="currentColor" strokeWidth="1" />
+            <path d="M100 40L160 100L100 160L40 100Z" stroke="currentColor" strokeWidth="0.8" />
+            <path d="M100 70L130 100L100 130L70 100Z" fill="currentColor" />
+          </svg>
+        </div>
+
+        <div className="relative max-w-4xl mx-auto px-4 text-center">
+          <p className="text-xs uppercase tracking-[0.18em] text-primary/70 mb-4 font-medium">
+            Наш інструмент
+          </p>
+          <h2 className="font-display text-3xl sm:text-4xl font-semibold text-foreground mb-4 italic">
+            Напішыце тэкст для вашай песні
+          </h2>
+          <p className="text-muted-foreground mb-8 max-w-xl mx-auto text-sm leading-relaxed">
+            Спеу-генератар дапамагае ствараць тэксты на беларускай мове: выберыце жанр,
+            настрой і тэму — і атрымайце гатовую структуру песні за секунды.
+          </p>
+          <Link
+            href="/generator"
+            className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-primary text-primary-foreground font-semibold hover:scale-[1.02] transition-all duration-300 glow-primary"
+          >
+            <Sparkles className="h-4 w-4" />
+            Адкрыць генератар
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+      </section>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+        <OrnamentDivider />
+      </div>
+
+      {/* Support tiers */}
+      <section className="py-28 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <p className="text-xs uppercase tracking-[0.18em] text-primary/70 mb-4 font-medium">
+              Падтрымай сцэну
+            </p>
+            <h2 className="font-display text-3xl sm:text-4xl font-semibold text-foreground mb-4 italic">
+              Падтрымай Speǔ
+            </h2>
+            <p className="text-muted-foreground max-w-lg mx-auto text-sm leading-relaxed">
+              Беларуская музыка расце разам з яе супольнасцю. Падтрымай лейбл —
+              і стань часткай таго, як беларуская мова гучыць сёння.
+            </p>
+          </div>
+          <SupportTiers />
+        </div>
+      </section>
+
+    </>
   );
 }
