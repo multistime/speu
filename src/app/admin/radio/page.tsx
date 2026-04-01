@@ -87,7 +87,11 @@ export default function AdminRadioPage() {
           <h1 className="font-display text-2xl italic text-foreground">Радыё</h1>
         </div>
         <p className="text-sm text-muted-foreground">
-          Налады стрымінгу. Змены захоўваюцца ў базе і адразу ўступаюць у сілу.
+          Калі ў раздзеле <strong>Песні</strong> ёсць апублікаваныя трэкі з адзнакай «На радыё»,
+          на старонцы <code className="text-xs bg-muted px-1 rounded">/radio</code> спачатку
+          выкарыстоўваецца <strong>плэйліст</strong> з гэтых файлаў (выпадковы парадак у браўзеры).
+          Калі такіх трэкаў няма — працуе URL стрыму ніжэй або зменная{" "}
+          <code className="text-xs bg-muted px-1 rounded">NEXT_PUBLIC_RADYO_MARA_STREAM_URL</code>.
         </p>
       </div>
 

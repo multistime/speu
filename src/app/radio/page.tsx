@@ -1,14 +1,13 @@
 import { Radio, Waves, CirclePlay } from "lucide-react";
+import { RadioPlayer } from "@/components/radio/RadioPlayer";
 
 export const metadata = {
   title: "Радыё Мара — Спеў",
   description:
-    "Радыё Мара — онлайн-радыё Speu, якое 24/7 круціць беларускі плэйліст у выпадковым парадку.",
+    "Радыё Мара — онлайн-радыё Speu: плэйліст з каталога песень або жывы струмень.",
 };
 
 export default function RadioPage() {
-  const streamUrl = process.env.NEXT_PUBLIC_RADYO_MARA_STREAM_URL ?? "";
-
   return (
     <div className="min-h-screen pt-28 pb-20 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
@@ -24,9 +23,9 @@ export default function RadioPage() {
             <span className="text-primary not-italic">24/7</span>
           </h1>
           <p className="text-muted-foreground max-w-2xl mx-auto text-sm leading-relaxed">
-            Радыё Мара - гэта бесперапынны струмень беларускай музыкі ад Speu.
-            Мы круцім наш плэйліст у выпадковым парадку, каб побач з вядомымі
-            трэкамі заўсёды адкрываліся новыя галасы, новыя словы і новыя настроі.
+            Радыё Мара — бесперапынны беларускі гук ад Speu. Калі ў каталогу ёсць песні з
+            адзнакай «на радыё», яны круцяцца ў выпадковым парадку ў браўзеры. Таксама можна
+            падключыць класічны аўдыя-струмень (Icecast / HLS) у наладах адміністратара.
           </p>
         </div>
 
@@ -38,33 +37,19 @@ export default function RadioPage() {
             </p>
           </div>
 
-          {streamUrl ? (
-            <audio controls autoPlay className="w-full" src={streamUrl}>
-              Ваш браўзер не падтрымлівае прайграванне аўдыя.
-            </audio>
-          ) : (
-            <div className="rounded-xl border border-dashed border-primary/30 bg-primary/5 p-5 text-sm text-muted-foreground">
-              Дадайце зменную асяроддзя
-              {" "}
-              <span className="font-mono text-primary/80">
-                NEXT_PUBLIC_RADYO_MARA_STREAM_URL
-              </span>
-              {" "}
-              са спасылкай на аўдыя-струмень, каб уключыць онлайн-радыё.
-            </div>
-          )}
+          <RadioPlayer />
         </div>
 
         <div className="mt-8 grid sm:grid-cols-3 gap-4">
           {[
             {
               title: "Неперарыўна",
-              desc: "Эфір працуе 24/7 без перапынкаў.",
+              desc: "Плэйліст або струмень без дадатковай устаноўкі.",
               icon: CirclePlay,
             },
             {
               title: "Выпадковы парадак",
-              desc: "Плэйліст круціцца ў жывой выпадковай чарзе.",
+              desc: "Каталожныя трэкі перамешваюцца пры кожным адкрыцці старонкі.",
               icon: Radio,
             },
             {

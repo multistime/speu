@@ -15,6 +15,7 @@ const songSchema = z.object({
   trackNumber: z.number().int().optional().nullable(),
   sortOrder: z.number().int().default(0),
   isPublished: z.boolean().default(true),
+  playOnRadio: z.boolean().default(false),
 });
 
 export async function GET() {
@@ -50,6 +51,7 @@ export async function POST(request: Request) {
     track_number: parsed.data.trackNumber ?? null,
     sort_order: parsed.data.sortOrder,
     is_published: parsed.data.isPublished,
+    play_on_radio: parsed.data.playOnRadio,
   };
 
   if (parsed.data.id) {

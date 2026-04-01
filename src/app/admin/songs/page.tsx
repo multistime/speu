@@ -27,6 +27,7 @@ type Song = {
   track_number: number | null;
   sort_order: number;
   is_published: boolean;
+  play_on_radio: boolean;
   artists?: { id: string; name: string; slug: string };
   albums?: { id: string; title: string } | null;
 };
@@ -54,6 +55,7 @@ const emptySongForm = {
   trackNumber: "",
   sortOrder: 0,
   isPublished: true,
+  playOnRadio: false,
 };
 
 function formatDuration(sec: number | null) {
@@ -163,6 +165,7 @@ export default function AdminSongsPage() {
         trackNumber: songForm.trackNumber ? Number(songForm.trackNumber) : null,
         sortOrder: Number(songForm.sortOrder),
         isPublished: songForm.isPublished,
+        playOnRadio: songForm.playOnRadio,
       }),
     });
 
@@ -200,6 +203,7 @@ export default function AdminSongsPage() {
       trackNumber: song.track_number?.toString() ?? "",
       sortOrder: song.sort_order,
       isPublished: song.is_published,
+      playOnRadio: song.play_on_radio ?? false,
     });
     setUploadFile(null);
     setUploadProgress("idle");
@@ -443,15 +447,27 @@ export default function AdminSongsPage() {
                 />
               </div>
 
-              <div className="flex items-center gap-2 pt-6">
-                <input
-                  id="song-published"
-                  type="checkbox"
-                  checked={songForm.isPublished}
-                  onChange={(e) => setSongForm({ ...songForm, isPublished: e.target.checked })}
-                  className="w-4 h-4 rounded border-border"
-                />
-                <label htmlFor="song-published" className="text-sm">Апублікаваць</label>
+              <div className="md:col-span-2 flex flex-wrap items-center gap-x-6 gap-y-2 pt-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    id="song-published"
+                    type="checkbox"
+                    checked={songForm.isPublished}
+                    onChange={(e) => setSongForm({ ...songForm, isPublished: e.target.checked })}
+                    className="w-4 h-4 rounded border-border"
+                  />
+                  <span className="text-sm">Апублікаваць</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    id="song-radio"
+                    type="checkbox"
+                    checked={songForm.playOnRadio}
+                    onChange={(e) => setSongForm({ ...songForm, playOnRadio: e.target.checked })}
+                    className="w-4 h-4 rounded border-border"
+                  />
+                  <span className="text-sm">На радыё (плэйліст на /radio)</span>
+                </label>
               </div>
             </div>
 
@@ -511,6 +527,11 @@ export default function AdminSongsPage() {
                       <span className={`text-xs px-2 py-1 rounded border ${song.is_published ? "border-green-500/30 text-green-600 bg-green-500/10" : "border-border text-muted-foreground bg-muted"}`}>
                         {song.is_published ? "✓" : "черновик"}
                       </span>
+                      {song.play_on_radio && (
+                        <span className="text-xs px-2 py-1 rounded border border-sky-500/30 text-sky-600 bg-sky-500/10" title="У плэйлісце радыё">
+                          📻
+                        </span>
+                      )}
                       <button
                         onClick={() => editSong(song)}
                         className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
