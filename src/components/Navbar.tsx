@@ -8,6 +8,7 @@ import { Menu, X, Music2, Sparkles, Headphones, Heart, Users, Radio } from "luci
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { createClient } from "@/lib/supabase/client";
+import { getSpeuProfile } from "@/lib/supabase/speu";
 
 const navLinks = [
   { href: "/generator", label: "Генератар", icon: Sparkles },
@@ -21,6 +22,7 @@ export function Navbar() {
   const [scrolled, setScrolled]   = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -30,23 +32,47 @@ export function Navbar() {
   }, []);
 
   useEffect(() => {
-    try {
-      const supabase = createClient();
+    const supabase = createClient();
 
-      supabase.auth.getUser().then(({ data }) => {
-        setIsAuthenticated(Boolean(data.user));
-      });
+      const updateUserState = async () => {
+        const { data } = await supabase.auth.getUser();
+        const user = data.user;
+
+        setIsAuthenticated(Boolean(user));
+        if (!user) {
+          setIsAdmin(false);
+          return;
+        }
+
+        try {
+          const profile = await getSpeuProfile(supabase, user.id);
+          setIsAdmin(Boolean(profile?.is_admin));
+        } catch {
+          setIsAdmin(false);
+        }
+      };
+
+      void updateUserState();
 
       const {
         data: { subscription },
-      } = supabase.auth.onAuthStateChange((_event, session) => {
-        setIsAuthenticated(Boolean(session?.user));
+      } = supabase.auth.onAuthStateChange(async (_event, session) => {
+        const user = session?.user;
+        setIsAuthenticated(Boolean(user));
+        if (!user) {
+          setIsAdmin(false);
+          return;
+        }
+
+        try {
+          const profile = await getSpeuProfile(supabase, user.id);
+          setIsAdmin(Boolean(profile?.is_admin));
+        } catch {
+          setIsAdmin(false);
+        }
       });
 
-      return () => subscription.unsubscribe();
-    } catch {
-      setIsAuthenticated(false);
-    }
+    return () => subscription.unsubscribe();
   }, []);
 
   return (
@@ -109,6 +135,14 @@ export function Navbar() {
         {/* Right controls */}
         <div className="hidden md:flex items-center gap-2">
           <ThemeToggle />
+          {isAuthenticated && isAdmin && (
+            <Link
+              href="/admin"
+              className="text-sm px-4 py-2 rounded-lg border border-border text-foreground/80 font-medium hover:bg-muted transition-all duration-300"
+            >
+              Адмінка
+            </Link>
+          )}
           <Link
             href="/cabinet"
             className="text-sm px-4 py-2 rounded-lg border border-primary/30 text-primary font-medium hover:bg-primary/8 hover:border-primary/50 transition-all duration-300"
@@ -167,6 +201,15 @@ export function Navbar() {
               >
                 {isAuthenticated ? "Кабінет" : "Увайсці"}
               </Link>
+              {isAuthenticated && isAdmin && (
+                <Link
+                  href="/admin"
+                  onClick={() => setMobileOpen(false)}
+                  className="text-sm px-4 py-3 rounded-lg border border-border text-foreground/80 font-medium text-center hover:bg-muted transition-all"
+                >
+                  Адмінка
+                </Link>
+              )}
             </div>
           </motion.div>
         )}

@@ -3,7 +3,7 @@
 // Metadata can't be exported from client components — set via generateMetadata in a layout
 // or a server wrapper if needed. Page is client-only for Framer Motion animations.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Play, Music, ExternalLink, MapPin, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -139,8 +139,6 @@ const ARTISTS: Artist[] = [
     pattern: "diamond",
   },
 ];
-
-const ALL_GENRES = ["Усе", "Folk", "Electronica", "Dark Ambient", "Post-Rock", "Hip-Hop", "Spoken Word", "Dream Pop", "Shoegaze", "Experimental", "Noise", "Folk Pop", "Indie"];
 
 /* ── Decorative SVG patterns per artist ─────────────────────────────── */
 
@@ -536,13 +534,67 @@ function ArtistModal({ artist, onClose }: { artist: Artist; onClose: () => void 
 export default function ArtistsPage() {
   const [selected, setSelected] = useState<Artist | null>(null);
   const [activeGenre, setActiveGenre] = useState("Усе");
+  const [artists, setArtists] = useState<Artist[]>(ARTISTS);
+
+  useEffect(() => {
+    const load = async () => {
+      const response = await fetch("/api/public/artists");
+      if (!response.ok) return;
+      const json = (await response.json()) as {
+        items?: Array<{
+          id: string;
+          slug: string;
+          name: string;
+          name_en: string | null;
+          genres: string[];
+          tagline: string | null;
+          bio: string | null;
+          location: string | null;
+          year_started: number | null;
+          initials: string | null;
+          social_links: { instagram?: string; youtube?: string; spotify?: string; telegram?: string } | null;
+          visual_json: {
+            gradientFrom?: string;
+            gradientTo?: string;
+            accent?: string;
+            accentRgb?: string;
+            pattern?: Artist["pattern"];
+          } | null;
+          artist_tracks?: Array<{ title: string }>;
+        }>;
+      };
+      if (!json.items?.length) return;
+
+      setArtists(
+        json.items.map((item) => ({
+          id: item.slug || item.id,
+          name: item.name,
+          nameEn: item.name_en ?? item.name,
+          genres: item.genres ?? [],
+          tagline: item.tagline ?? "",
+          bio: item.bio ?? "",
+          tracks: (item.artist_tracks ?? []).map((track) => track.title),
+          gradientFrom: item.visual_json?.gradientFrom ?? "#2B5035",
+          gradientTo: item.visual_json?.gradientTo ?? "#0E1811",
+          accent: item.visual_json?.accent ?? "#7DBF9E",
+          accentRgb: item.visual_json?.accentRgb ?? "125, 191, 158",
+          initial: item.initials ?? item.name.charAt(0),
+          year: item.year_started ? String(item.year_started) : "2024",
+          location: item.location ?? "Беларусь",
+          socials: item.social_links ?? {},
+          pattern: item.visual_json?.pattern ?? "diamond",
+        }))
+      );
+    };
+    void load();
+  }, []);
 
   const filtered =
     activeGenre === "Усе"
-      ? ARTISTS
-      : ARTISTS.filter((a) => a.genres.includes(activeGenre));
+      ? artists
+      : artists.filter((a) => a.genres.includes(activeGenre));
 
-  const uniqueGenres = ["Усе", ...Array.from(new Set(ARTISTS.flatMap((a) => a.genres)))];
+  const uniqueGenres = ["Усе", ...Array.from(new Set(artists.flatMap((a) => a.genres)))];
 
   return (
     <div className="min-h-screen pt-28 pb-20 px-4 sm:px-6 lg:px-8">

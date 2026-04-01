@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Send, Check, Loader2, Music, Sliders, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -86,10 +86,13 @@ export function ServicesForm() {
 
   const onSubmit = async (data: ServiceFormValues) => {
     setIsSubmitting(true);
-    await new Promise((r) => setTimeout(r, 1500));
-    console.log("Order submitted:", data);
+    const response = await fetch("/api/public/service-requests", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
     setIsSubmitting(false);
-    setSubmitted(true);
+    setSubmitted(response.ok);
   };
 
   if (submitted) {

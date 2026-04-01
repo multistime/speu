@@ -2,6 +2,7 @@ import { HeroSection } from "@/components/HeroSection";
 import { SupportTiers } from "@/components/SupportTiers";
 import Link from "next/link";
 import { ArrowRight, Sparkles, Headphones, Heart, Radio } from "lucide-react";
+import { blockPayload, getPageBlocks } from "@/lib/supabase/public-content";
 
 // Belarusian rhombic ornament divider — echoes традиционные вышыванкі motifs
 function OrnamentDivider() {
@@ -26,7 +27,37 @@ function OrnamentDivider() {
   );
 }
 
-export default function HomePage() {
+export default async function HomePage() {
+  const blocks = await getPageBlocks("home");
+  const about = blockPayload(blocks, "about", {
+    label: "Пра нас",
+    title: "Там, дзе старажытны спеў сустракае новы гук",
+    body:
+      "Спеў — беларускі музычны лейбл. Наша місія простая: каб было больш добрай музыкі на беларускай мове і ў яе было больш слухачоў. Мы ствараем яе самі і дапамагаем гэта рабіць іншым.",
+    subbody:
+      "Беларуская мова можа гучаць у любым жанры — у фолку і электроніцы, у попе і амбіенце. Каранямі мы ў традыцыі: вуснай творчасці, прыродзе, продках. Поглядам — наперад. Слова жыве, пакуль яно гучыць.",
+  });
+  const generatorCta = blockPayload(blocks, "generator_cta", {
+    label: "Наш інструмент",
+    title: "Напішыце тэкст для вашай песні",
+    description:
+      "Спеу-генератар дапамагае ствараць тэксты на беларускай мове: выберыце жанр, настрой і тэму — і атрымайце гатовую структуру песні за секунды.",
+    button: { label: "Адкрыць генератар", href: "/generator" },
+  });
+  const radioCta = blockPayload(blocks, "radio_cta", {
+    label: "Новае на Speu",
+    title: "Радыё Мара",
+    description:
+      "Радыё Мара - наша онлайн-радыёстанцыя, якая 24/7 круціць беларускі плэйліст у выпадковым парадку. Яе мэта - каб беларуская музыка і беларускае слова гучалі штодня, без цішыні і межаў.",
+    button: { label: "Слухаць Радыё Мара", href: "/radio" },
+  });
+  const supportHeader = blockPayload(blocks, "support_header", {
+    label: "Падтрымай сцэну",
+    title: "Падтрымай Speǔ",
+    description:
+      "Беларуская музыка расце разам з яе супольнасцю. Падтрымай лейбл — і стань часткай таго, як беларуская мова гучыць сёння.",
+  });
+
   return (
     <>
       <HeroSection />
@@ -37,21 +68,16 @@ export default function HomePage() {
           <div>
             {/* Section label — less mono-heavy, more typographic */}
             <p className="text-xs uppercase tracking-[0.18em] text-primary/70 mb-4 font-medium">
-              Пра нас
+              {String(about.label)}
             </p>
             <h2 className="font-display text-3xl sm:text-4xl font-semibold text-foreground mb-6 leading-[1.2] italic">
-              Там, дзе старажытны спеў{" "}
-              <span className="text-primary not-italic">сустракае новы гук</span>
+              {String(about.title)}
             </h2>
             <p className="text-muted-foreground leading-relaxed mb-4">
-              Спеў — беларускі музычны лейбл. Наша місія простая: каб было
-              больш добрай музыкі на беларускай мове і ў яе было больш слухачоў.
-              Мы ствараем яе самі і дапамагаем гэта рабіць іншым.
+              {String(about.body)}
             </p>
             <p className="text-muted-foreground/70 leading-relaxed text-sm">
-              Беларуская мова можа гучаць у любым жанры — у фолку і электроніцы,
-              у попе і амбіенце. Каранямі мы ў традыцыі: вуснай творчасці,
-              прыродзе, продках. Поглядам — наперад. Слова жыве, пакуль яно гучыць.
+              {String(about.subbody)}
             </p>
           </div>
 
@@ -116,21 +142,20 @@ export default function HomePage() {
 
         <div className="relative max-w-4xl mx-auto px-4 text-center">
           <p className="text-xs uppercase tracking-[0.18em] text-primary/70 mb-4 font-medium">
-            Наш інструмент
+            {String(generatorCta.label)}
           </p>
           <h2 className="font-display text-3xl sm:text-4xl font-semibold text-foreground mb-4 italic">
-            Напішыце тэкст для вашай песні
+            {String(generatorCta.title)}
           </h2>
           <p className="text-muted-foreground mb-8 max-w-xl mx-auto text-sm leading-relaxed">
-            Спеу-генератар дапамагае ствараць тэксты на беларускай мове: выберыце жанр,
-            настрой і тэму — і атрымайце гатовую структуру песні за секунды.
+            {String(generatorCta.description)}
           </p>
           <Link
-            href="/generator"
+            href={String((generatorCta.button as { href?: string })?.href ?? "/generator")}
             className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-primary text-primary-foreground font-semibold hover:scale-[1.02] transition-all duration-300 glow-primary"
           >
             <Sparkles className="h-4 w-4" />
-            Адкрыць генератар
+            {String((generatorCta.button as { label?: string })?.label ?? "Адкрыць генератар")}
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
@@ -145,23 +170,21 @@ export default function HomePage() {
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary/22 bg-primary/6 mb-5">
             <Radio className="h-3.5 w-3.5 text-primary" />
             <span className="text-[11px] font-mono text-primary tracking-widest uppercase">
-              Новае на Speu
+              {String(radioCta.label)}
             </span>
           </div>
           <h2 className="font-display text-3xl sm:text-4xl font-semibold text-foreground mb-4 italic">
-            Радыё Мара
+            {String(radioCta.title)}
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto text-sm leading-relaxed mb-7">
-            Радыё Мара - наша онлайн-радыёстанцыя, якая 24/7 круціць беларускі
-            плэйліст у выпадковым парадку. Яе мэта - каб беларуская музыка і
-            беларускае слова гучалі штодня, без цішыні і межаў.
+            {String(radioCta.description)}
           </p>
           <Link
-            href="/radio"
+            href={String((radioCta.button as { href?: string })?.href ?? "/radio")}
             className="inline-flex items-center gap-2 px-7 py-3 rounded-xl bg-primary text-primary-foreground font-semibold hover:scale-[1.02] transition-all duration-300 glow-primary"
           >
             <Radio className="h-4 w-4" />
-            Слухаць Радыё Мара
+            {String((radioCta.button as { label?: string })?.label ?? "Слухаць Радыё Мара")}
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
@@ -172,14 +195,13 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <p className="text-xs uppercase tracking-[0.18em] text-primary/70 mb-4 font-medium">
-              Падтрымай сцэну
+              {String(supportHeader.label)}
             </p>
             <h2 className="font-display text-3xl sm:text-4xl font-semibold text-foreground mb-4 italic">
-              Падтрымай Speǔ
+              {String(supportHeader.title)}
             </h2>
             <p className="text-muted-foreground max-w-lg mx-auto text-sm leading-relaxed">
-              Беларуская музыка расце разам з яе супольнасцю. Падтрымай лейбл —
-              і стань часткай таго, як беларуская мова гучыць сёння.
+              {String(supportHeader.description)}
             </p>
           </div>
           <SupportTiers />

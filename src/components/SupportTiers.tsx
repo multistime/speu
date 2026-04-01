@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Check, Heart, Star, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -82,10 +83,57 @@ const TIERS: Tier[] = [
   },
 ];
 
+const iconByCode: Record<string, typeof Heart> = {
+  supporter: Heart,
+  patron: Star,
+  coproducer: Zap,
+};
+
 export function SupportTiers() {
+  const [tiers, setTiers] = useState<Tier[]>(TIERS);
+
+  useEffect(() => {
+    const load = async () => {
+      const response = await fetch("/api/public/support-tiers");
+      if (!response.ok) return;
+      const json = (await response.json()) as {
+        items?: Array<{
+          code: string;
+          name: string;
+          label_be: string | null;
+          description: string | null;
+          price_amount: number;
+          period: string;
+          perks: string[];
+          highlighted: boolean;
+          accent_color: string | null;
+          glow_rgb: string | null;
+        }>;
+      };
+      if (!json.items?.length) return;
+
+      setTiers(
+        json.items.map((tier) => ({
+          id: tier.code,
+          name: tier.name,
+          belarusian: tier.label_be ?? tier.name,
+          price: `$${tier.price_amount}`,
+          period: tier.period,
+          description: tier.description ?? "",
+          perks: tier.perks ?? [],
+          highlighted: tier.highlighted,
+          icon: iconByCode[tier.code] ?? Heart,
+          accentColor: tier.accent_color ?? "#4A7CB5",
+          glowRgb: tier.glow_rgb ?? "74, 124, 181",
+        }))
+      );
+    };
+    void load();
+  }, []);
+
   return (
     <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-      {TIERS.map((tier, i) => {
+      {tiers.map((tier, i) => {
         const Icon = tier.icon;
         return (
           <motion.div
