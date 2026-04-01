@@ -1,14 +1,18 @@
 "use client";
 
-// Metadata can't be exported from client components — set via generateMetadata in a layout
-// or a server wrapper if needed. Page is client-only for Framer Motion animations.
-
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Play, Music, ExternalLink, MapPin, Calendar } from "lucide-react";
+import { X, Play, Pause, Music, ExternalLink, MapPin, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { usePlayer } from "@/contexts/PlayerContext";
+import type { PlayerTrack } from "@/contexts/PlayerContext";
 
 /* ── Artist data ─────────────────────────────────────────────────────── */
+
+interface ArtistTrack {
+  title: string;
+  audioUrl?: string | null;
+}
 
 interface Artist {
   id: string;
@@ -17,7 +21,7 @@ interface Artist {
   genres: string[];
   tagline: string;
   bio: string;
-  tracks: string[];
+  tracks: ArtistTrack[];
   gradientFrom: string;
   gradientTo: string;
   accent: string;
@@ -29,7 +33,7 @@ interface Artist {
   pattern: "diamond" | "waves" | "circles" | "grid" | "fern" | "spiral";
 }
 
-const ARTISTS: Artist[] = [
+const PLACEHOLDER_ARTISTS: Artist[] = [
   {
     id: "kupalina",
     name: "Купаліна",
@@ -37,7 +41,12 @@ const ARTISTS: Artist[] = [
     genres: ["Folk", "Electronica"],
     tagline: "Дух Купалля ў электронным гуку",
     bio: "Купаліна спалучае старажытны купальскі фальклор з сучаснай электронікай. Яе трэкі — гэта галасы продкаў у скрынях сінтэзатараў, вогнішчы ў пульсе басу. Кожная кампазіцыя нараджаецца на мяжы паміж старажытным светам і будучыняй.",
-    tracks: ["Купальская ноч", "Папараць-кветка", "Вада і агонь", "Зялёны дуб"],
+    tracks: [
+      { title: "Купальская ноч" },
+      { title: "Папараць-кветка" },
+      { title: "Вада і агонь" },
+      { title: "Зялёны дуб" },
+    ],
     gradientFrom: "#2B5035",
     gradientTo: "#0E1811",
     accent: "#7DBF9E",
@@ -55,7 +64,12 @@ const ARTISTS: Artist[] = [
     genres: ["Dark Ambient", "Post-Rock"],
     tagline: "З глыбіні Белавежскай пушчы",
     bio: "Лясун — дуэт, натхнёны ляснымі духамі беларускага фальклору. Іх музыка — гэта гул старажытных дрэў, шолах лісця і туман над балотам. Двое музыкантаў спалучаюць гітарны пост-рок і амбіентныя лэйеры.",
-    tracks: ["Пушча", "Начны туман", "Дзікі Лес", "Стары Дуб"],
+    tracks: [
+      { title: "Пушча" },
+      { title: "Начны туман" },
+      { title: "Дзікі Лес" },
+      { title: "Стары Дуб" },
+    ],
     gradientFrom: "#1A1A2E",
     gradientTo: "#0D0D1A",
     accent: "#4A7A5A",
@@ -73,7 +87,12 @@ const ARTISTS: Artist[] = [
     genres: ["Hip-Hop", "Spoken Word"],
     tagline: "Беларускія рыфмы ў сучасным рытме",
     bio: "Вузел — рэпер, які выкарыстоўвае беларускую мову як зброю і інструмент. Яго тэксты — гарадскія гісторыі, пасеяныя ў роднай мове. Беларускі хіп-хоп, які гаворыць праўду.",
-    tracks: ["Слова", "Горад", "Корань", "Вуліца"],
+    tracks: [
+      { title: "Слова" },
+      { title: "Горад" },
+      { title: "Корань" },
+      { title: "Вуліца" },
+    ],
     gradientFrom: "#0D2340",
     gradientTo: "#060E1A",
     accent: "#6B92C8",
@@ -91,7 +110,12 @@ const ARTISTS: Artist[] = [
     genres: ["Dream Pop", "Shoegaze"],
     tagline: "Сны ў насычаным тумане",
     bio: "Расіца стварае паветраную музыку, дзе вакал гучыць як раніцавая расіца — далёка і блізка адначасова. Меланхолія і прыгажосць беларускай прыроды ў кожным гуку. Шугейз-эстэтыка з беларускай душой.",
-    tracks: ["Расіца", "Туман", "Ранак", "Срэбная ніць"],
+    tracks: [
+      { title: "Расіца" },
+      { title: "Туман" },
+      { title: "Ранак" },
+      { title: "Срэбная ніць" },
+    ],
     gradientFrom: "#3A1A10",
     gradientTo: "#1A0808",
     accent: "#D4944A",
@@ -108,8 +132,13 @@ const ARTISTS: Artist[] = [
     nameEn: "Balota",
     genres: ["Experimental", "Noise"],
     tagline: "Гукавыя ландшафты беларускіх балот",
-    bio: "Балота — трыа, якое даследуе гукавыя магчымасці беларускіх прырод­ных ланд­шафтаў. Запісы балотных птушак, звону дрэў і туманнай цішы — аснова іх неза­вычайных кампазіцый.",
-    tracks: ["Трасавіна", "Крык журавоў", "Глыбіня", "Мох"],
+    bio: "Балота — трыа, якое даследуе гукавыя магчымасці беларускіх прыродных ландшафтаў. Запісы балотных птушак, звону дрэў і туманнай цішы — аснова іх незвычайных кампазіцый.",
+    tracks: [
+      { title: "Трасавіна" },
+      { title: "Крык журавоў" },
+      { title: "Глыбіня" },
+      { title: "Мох" },
+    ],
     gradientFrom: "#2A0D3A",
     gradientTo: "#10061A",
     accent: "#9B6B9B",
@@ -127,7 +156,12 @@ const ARTISTS: Artist[] = [
     genres: ["Folk Pop", "Indie"],
     tagline: "Жытнёвыя словы для новага пакалення",
     bio: "Жытнік — сольны праект, дзе фальклорныя традыцыі пераплятаюцца з сучасным інді-попам. Мелодыі жытнёвых палёў і рамантыка вёскі ў новай упакоўцы. Музыка для тых, хто памятае карані.",
-    tracks: ["Жыта", "Летні дождж", "Вёска", "Сенакос"],
+    tracks: [
+      { title: "Жыта" },
+      { title: "Летні дождж" },
+      { title: "Вёска" },
+      { title: "Сенакос" },
+    ],
     gradientFrom: "#2A2000",
     gradientTo: "#0E0C00",
     accent: "#C8A830",
@@ -226,8 +260,6 @@ function YoutubeIcon({ className }: { className?: string }) {
   );
 }
 
-/* ── Spotify icon SVG ────────────────────────────────────────────────── */
-
 function SpotifyIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="currentColor">
@@ -247,6 +279,8 @@ function TelegramIcon({ className }: { className?: string }) {
 /* ── Artist card ─────────────────────────────────────────────────────── */
 
 function ArtistCard({ artist, onClick, index }: { artist: Artist; onClick: (a: Artist) => void; index: number }) {
+  const hasAudio = artist.tracks.some((t) => t.audioUrl);
+
   return (
     <motion.div
       layoutId={`card-${artist.id}`}
@@ -265,13 +299,11 @@ function ArtistCard({ artist, onClick, index }: { artist: Artist; onClick: (a: A
         >
           <ArtistPattern pattern={artist.pattern} accent={artist.accent} />
 
-          {/* Glow orb */}
           <div
             className="absolute bottom-0 right-0 w-40 h-40 rounded-full blur-3xl opacity-30 transition-opacity duration-500 group-hover:opacity-50"
             style={{ background: artist.accent }}
           />
 
-          {/* Initial monogram */}
           <div className="absolute inset-0 flex items-center justify-center">
             <span
               className="font-display text-8xl font-semibold select-none opacity-20 group-hover:opacity-30 transition-opacity duration-300"
@@ -282,21 +314,29 @@ function ArtistCard({ artist, onClick, index }: { artist: Artist; onClick: (a: A
           </div>
 
           {/* Play hint on hover */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            whileHover={{ opacity: 1, scale: 1 }}
-            className="absolute inset-0 flex items-center justify-center"
-          >
+          <div className="absolute inset-0 flex items-center justify-center">
             <div
               className="w-14 h-14 rounded-full flex items-center justify-center backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-all duration-300"
               style={{ background: `rgba(${artist.accentRgb}, 0.25)`, border: `1px solid rgba(${artist.accentRgb}, 0.4)` }}
             >
               <Play className="h-5 w-5 ml-0.5" style={{ color: artist.accent }} strokeWidth={2} />
             </div>
-          </motion.div>
+          </div>
 
           {/* Year badge */}
-          <div className="absolute top-3 right-3">
+          <div className="absolute top-3 right-3 flex items-center gap-1.5">
+            {hasAudio && (
+              <span
+                className="text-xs px-2 py-0.5 rounded-md backdrop-blur-sm flex items-center gap-1"
+                style={{
+                  background: `rgba(${artist.accentRgb}, 0.18)`,
+                  border: `1px solid rgba(${artist.accentRgb}, 0.3)`,
+                  color: artist.accent,
+                }}
+              >
+                <Music className="h-2.5 w-2.5" strokeWidth={1.5} />
+              </span>
+            )}
             <span
               className="text-xs font-mono px-2 py-0.5 rounded-md backdrop-blur-sm"
               style={{
@@ -339,7 +379,6 @@ function ArtistCard({ artist, onClick, index }: { artist: Artist; onClick: (a: A
             {artist.tagline}
           </p>
 
-          {/* Location */}
           <div className="flex items-center gap-1 mt-3 text-muted-foreground/50">
             <MapPin className="h-3 w-3" strokeWidth={1.5} />
             <span className="text-xs">{artist.location}</span>
@@ -350,12 +389,95 @@ function ArtistCard({ artist, onClick, index }: { artist: Artist; onClick: (a: A
   );
 }
 
+/* ── Track row in modal ──────────────────────────────────────────────── */
+
+function TrackRow({
+  track,
+  index,
+  artist,
+}: {
+  track: ArtistTrack;
+  index: number;
+  artist: Artist;
+}) {
+  const { togglePlay, isTrackActive, isPlaying } = usePlayer();
+  const trackId = `${artist.id}-track-${index}`;
+  const active = isTrackActive(trackId);
+  const playing = active && isPlaying;
+
+  const playerTrack: PlayerTrack = {
+    id: trackId,
+    title: track.title,
+    audioUrl: track.audioUrl ?? "",
+    artistName: artist.name,
+    accentColor: artist.accent,
+    accentRgb: artist.accentRgb,
+  };
+
+  const canPlay = Boolean(track.audioUrl);
+
+  return (
+    <div
+      onClick={() => canPlay && togglePlay(playerTrack)}
+      className={cn(
+        "relative flex items-center gap-3 px-3 py-2 rounded-lg transition-colors group/track",
+        canPlay ? "cursor-pointer hover:bg-muted" : "cursor-default opacity-60"
+      )}
+      style={active ? { background: `rgba(${artist.accentRgb}, 0.08)` } : undefined}
+    >
+      <span className="text-xs text-muted-foreground/40 w-4 font-mono shrink-0">{index + 1}</span>
+
+      <div className="shrink-0 w-4 flex items-center justify-center">
+        {canPlay ? (
+          playing ? (
+            <Pause
+              className="h-3.5 w-3.5"
+              style={{ color: artist.accent }}
+              fill="currentColor"
+              strokeWidth={0}
+            />
+          ) : (
+            <>
+              <Music
+                className="h-3 w-3 text-muted-foreground/40 group-hover/track:opacity-0 transition-opacity"
+                strokeWidth={1.5}
+              />
+              <Play
+                className="h-3.5 w-3.5 absolute opacity-0 group-hover/track:opacity-100 transition-opacity"
+                style={{ color: artist.accent }}
+                fill="currentColor"
+                strokeWidth={0}
+              />
+            </>
+          )
+        ) : (
+          <Music className="h-3 w-3 text-muted-foreground/40" strokeWidth={1.5} />
+        )}
+      </div>
+
+      <span
+        className={cn("text-sm flex-1", active ? "font-medium" : "text-foreground/80")}
+        style={active ? { color: artist.accent } : undefined}
+      >
+        {track.title}
+      </span>
+
+      {canPlay && !playing && (
+        <Play
+          className="h-3 w-3 ml-auto opacity-0 group-hover/track:opacity-60 transition-opacity shrink-0"
+          style={{ color: artist.accent }}
+          strokeWidth={2}
+        />
+      )}
+    </div>
+  );
+}
+
 /* ── Artist modal ────────────────────────────────────────────────────── */
 
 function ArtistModal({ artist, onClose }: { artist: Artist; onClose: () => void }) {
   return (
     <>
-      {/* Backdrop */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -365,14 +487,12 @@ function ArtistModal({ artist, onClose }: { artist: Artist; onClose: () => void 
         onClick={onClose}
       />
 
-      {/* Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
         <motion.div
           layoutId={`card-${artist.id}`}
           className="relative w-full max-w-xl overflow-hidden rounded-2xl border border-border bg-card shadow-2xl my-4"
           style={{ boxShadow: `0 0 80px rgba(${artist.accentRgb}, 0.12)` }}
         >
-          {/* Close button */}
           <button
             onClick={onClose}
             className="absolute top-3 right-3 z-10 p-1.5 rounded-lg bg-background/40 backdrop-blur-sm border border-border/50 text-foreground/60 hover:text-foreground transition-colors"
@@ -380,7 +500,6 @@ function ArtistModal({ artist, onClose }: { artist: Artist; onClose: () => void 
             <X className="h-4 w-4" strokeWidth={1.5} />
           </button>
 
-          {/* Photo area */}
           <motion.div
             layoutId={`photo-${artist.id}`}
             className="relative h-52 overflow-hidden"
@@ -425,14 +544,12 @@ function ArtistModal({ artist, onClose }: { artist: Artist; onClose: () => void 
             </div>
           </motion.div>
 
-          {/* Content */}
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15, duration: 0.4 }}
             className="p-5"
           >
-            {/* Meta row */}
             <div className="flex items-center gap-4 mb-4 text-xs text-muted-foreground">
               <span className="flex items-center gap-1">
                 <MapPin className="h-3 w-3" strokeWidth={1.5} />
@@ -444,7 +561,6 @@ function ArtistModal({ artist, onClose }: { artist: Artist; onClose: () => void 
               </span>
             </div>
 
-            {/* Bio */}
             <p className="text-sm text-muted-foreground leading-relaxed mb-5">{artist.bio}</p>
 
             {/* Tracks */}
@@ -452,21 +568,9 @@ function ArtistModal({ artist, onClose }: { artist: Artist; onClose: () => void 
               <p className="text-xs uppercase tracking-widest text-muted-foreground/50 mb-3 font-medium">
                 Трэкі
               </p>
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 {artist.tracks.map((track, i) => (
-                  <div
-                    key={track}
-                    className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted transition-colors group/track cursor-pointer"
-                  >
-                    <span className="text-xs text-muted-foreground/40 w-4 font-mono">{i + 1}</span>
-                    <Music className="h-3 w-3 text-muted-foreground/40 group-hover/track:text-primary transition-colors" strokeWidth={1.5} />
-                    <span className="text-sm text-foreground/80">{track}</span>
-                    <Play
-                      className="h-3 w-3 ml-auto opacity-0 group-hover/track:opacity-100 transition-opacity"
-                      style={{ color: artist.accent }}
-                      strokeWidth={2}
-                    />
-                  </div>
+                  <TrackRow key={i} track={track} index={i} artist={artist} />
                 ))}
               </div>
             </div>
@@ -534,8 +638,28 @@ function ArtistModal({ artist, onClose }: { artist: Artist; onClose: () => void 
 export default function ArtistsPage() {
   const [selected, setSelected] = useState<Artist | null>(null);
   const [activeGenre, setActiveGenre] = useState("Усе");
-  const [artists, setArtists] = useState<Artist[]>(ARTISTS);
+  const [artists, setArtists] = useState<Artist[]>([]);
+  const [showPlaceholder, setShowPlaceholder] = useState(true);
 
+  // Fetch placeholder setting
+  useEffect(() => {
+    fetch("/api/public/site-settings?key=artists_show_placeholder")
+      .then((r) => r.json())
+      .then((d) => {
+        const val = d.settings?.artists_show_placeholder;
+        if (val === "false") {
+          setShowPlaceholder(false);
+        }
+      })
+      .catch(() => {/* keep default true */});
+  }, []);
+
+  // Set initial artists list based on placeholder setting
+  useEffect(() => {
+    setArtists(showPlaceholder ? PLACEHOLDER_ARTISTS : []);
+  }, [showPlaceholder]);
+
+  // Load real artists
   useEffect(() => {
     const load = async () => {
       const response = await fetch("/api/public/artists");
@@ -560,7 +684,7 @@ export default function ArtistsPage() {
             accentRgb?: string;
             pattern?: Artist["pattern"];
           } | null;
-          artist_tracks?: Array<{ title: string }>;
+          artist_tracks?: Array<{ title: string; audio_url?: string | null }>;
         }>;
       };
       if (!json.items?.length) return;
@@ -573,7 +697,10 @@ export default function ArtistsPage() {
           genres: item.genres ?? [],
           tagline: item.tagline ?? "",
           bio: item.bio ?? "",
-          tracks: (item.artist_tracks ?? []).map((track) => track.title),
+          tracks: (item.artist_tracks ?? []).map((track) => ({
+            title: track.title,
+            audioUrl: track.audio_url ?? null,
+          })),
           gradientFrom: item.visual_json?.gradientFrom ?? "#2B5035",
           gradientTo: item.visual_json?.gradientTo ?? "#0E1811",
           accent: item.visual_json?.accent ?? "#7DBF9E",
@@ -597,7 +724,7 @@ export default function ArtistsPage() {
   const uniqueGenres = ["Усе", ...Array.from(new Set(artists.flatMap((a) => a.genres)))];
 
   return (
-    <div className="min-h-screen pt-28 pb-20 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen pt-28 pb-24 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
 
         {/* Header */}
@@ -643,10 +770,7 @@ export default function ArtistsPage() {
         </motion.div>
 
         {/* Artists grid */}
-        <motion.div
-          layout
-          className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6"
-        >
+        <motion.div layout className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           <AnimatePresence mode="popLayout">
             {filtered.map((artist, i) => (
               <ArtistCard

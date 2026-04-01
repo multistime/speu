@@ -9,7 +9,7 @@ export async function GET() {
     .select(`
       id, slug, name, name_en, genres, tagline, bio, location, year_started, initials,
       social_links, visual_json,
-      artist_tracks (title, external_url, sort_order)
+      artist_tracks (title, audio_url, external_url, sort_order)
     `)
     .eq("status", "published")
     .order("sort_order", { ascending: true });
