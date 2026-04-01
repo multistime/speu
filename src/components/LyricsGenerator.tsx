@@ -123,10 +123,9 @@ function SelectChip<T extends string>({
       </p>
       <div className="flex flex-wrap gap-2">
         {options.map((opt) => (
-          <motion.button
+          <button
             key={opt.value}
             type="button"
-            whileTap={{ scale: 0.95 }}
             onClick={() => onChange(opt.value)}
             className={cn(
               "px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-200",
@@ -142,7 +141,7 @@ function SelectChip<T extends string>({
           >
             {opt.emoji && <span className="mr-1">{opt.emoji}</span>}
             {opt.label}
-          </motion.button>
+          </button>
         ))}
       </div>
     </div>
@@ -172,11 +171,10 @@ function BlockItem({
       as="div"
       className="group relative flex items-start gap-2 rounded-lg px-1 py-1 -mx-1 dark:hover:bg-white/[0.03] hover:bg-foreground/[0.025] transition-colors cursor-default select-none"
       onDoubleClick={onEdit}
-      layout
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.97 }}
-      whileDrag={{ scale: 1.01, boxShadow: "0 8px 32px rgba(0,0,0,0.25)", zIndex: 50 }}
+      whileDrag={{ scale: 1.005, zIndex: 50 }}
     >
       <motion.div
         onPointerDown={(e) => dragControls.start(e)}

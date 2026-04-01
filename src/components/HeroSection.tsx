@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useSyncExternalStore } from "react";
+import { useSyncExternalStore, useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { TopographicCanvas } from "./TopographicCanvas";
@@ -22,6 +22,16 @@ function subscribeToClass(cb: () => void) {
 }
 
 export function HeroSection() {
+  const [showAnimatedBackdrop, setShowAnimatedBackdrop] = useState(true);
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 768px)");
+    const update = () => setShowAnimatedBackdrop(!media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+
   const isDark = useSyncExternalStore(
     subscribeToClass,
     () => document.documentElement.classList.contains("dark"),
@@ -52,7 +62,20 @@ export function HeroSection() {
       style={{ color: fg }}
     >
       {/* Generative topographic background */}
-      <TopographicCanvas isDark={isDark} />
+      {showAnimatedBackdrop ? (
+        <TopographicCanvas isDark={isDark} />
+      ) : (
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              isDark
+                ? "radial-gradient(circle at 50% 40%, rgba(14,28,22,0.95) 0%, rgba(11,18,16,0.97) 55%, rgba(6,10,8,1) 100%)"
+                : "radial-gradient(circle at 50% 40%, rgba(246,242,232,1) 0%, rgba(242,237,224,1) 55%, rgba(234,229,212,1) 100%)",
+          }}
+          aria-hidden
+        />
+      )}
 
       {/* Ambient glow orbs */}
       <div className="absolute inset-0 pointer-events-none">
@@ -164,14 +187,7 @@ export function HeroSection() {
                 style={{
                   backgroundColor: ctaPrimBg,
                   color: ctaPrimFg,
-                  boxShadow: "0 0 0 rgba(0,0,0,0)",
-                  transition: "all 0.3s",
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLElement).style.boxShadow = `0 0 28px ${ctaGlow}`;
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLElement).style.boxShadow = "0 0 0 rgba(0,0,0,0)";
+                  boxShadow: `0 0 20px ${ctaGlow}`,
                 }}
               >
                 Напісаць тэкст
@@ -179,22 +195,10 @@ export function HeroSection() {
               </Link>
               <Link
                 href="/services"
-                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl border font-medium text-sm transition-all duration-300"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl border font-medium text-sm transition-all duration-300 hover:bg-primary/5 hover:text-foreground"
                 style={{
                   borderColor: ctaSecBrd,
                   color: ctaSecFg,
-                }}
-                onMouseEnter={(e) => {
-                  const el = e.currentTarget as HTMLElement;
-                  el.style.borderColor = `rgba(${accentRgb},0.45)`;
-                  el.style.color = fg;
-                  el.style.backgroundColor = `rgba(${accentRgb},0.06)`;
-                }}
-                onMouseLeave={(e) => {
-                  const el = e.currentTarget as HTMLElement;
-                  el.style.borderColor = ctaSecBrd;
-                  el.style.color = ctaSecFg;
-                  el.style.backgroundColor = "transparent";
                 }}
               >
                 Замовіць песню

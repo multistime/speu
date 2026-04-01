@@ -47,10 +47,10 @@ function marchingSquaresContour(
   t: number,
   threshold: number,
   color: string,
-  alpha: number
+  alpha: number,
+  step = 12
 ) {
   const scale = 0.004;
-  const step = 12;
 
   ctx.strokeStyle = color;
   ctx.globalAlpha = alpha;
@@ -118,18 +118,25 @@ export function TopographicCanvas({ isDark = true }: { isDark?: boolean }) {
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const isSmallScreen = window.matchMedia("(max-width: 768px)").matches;
+    const staticMode = prefersReducedMotion || isSmallScreen;
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.25);
 
     const resize = () => {
-      canvas.width = canvas.offsetWidth;
-      canvas.height = canvas.offsetHeight;
+      canvas.width = Math.floor(canvas.offsetWidth * dpr);
+      canvas.height = Math.floor(canvas.offsetHeight * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
     resize();
     window.addEventListener("resize", resize);
 
     let t = 0;
     const draw = () => {
-      const { width, height } = canvas;
+      const width = canvas.width / dpr;
+      const height = canvas.height / dpr;
       ctx.clearRect(0, 0, width, height);
+      const contourStep = isSmallScreen ? 24 : 18;
 
       if (isDarkRef.current) {
         // Dark: deep pine forest night
@@ -143,16 +150,27 @@ export function TopographicCanvas({ isDark = true }: { isDark?: boolean }) {
         ctx.fillStyle = bg;
         ctx.fillRect(0, 0, width, height);
 
-        const levels = [0.28, 0.34, 0.40, 0.46, 0.52, 0.58, 0.64, 0.70];
+        const levels = staticMode
+          ? [0.34, 0.46, 0.58, 0.70]
+          : [0.28, 0.34, 0.40, 0.46, 0.52, 0.58, 0.64, 0.70];
         levels.forEach((level, i) => {
           const progress = i / levels.length;
           const alpha = 0.08 + progress * 0.18;
           const green = Math.round(160 + progress * 62);
-          marchingSquaresContour(ctx, width, height, t, level, `rgb(40,${green},70)`, alpha);
+          marchingSquaresContour(ctx, width, height, t, level, `rgb(40,${green},70)`, alpha, contourStep);
         });
 
         [0.55, 0.62].forEach((level, i) => {
-          marchingSquaresContour(ctx, width, height, t * 0.7 + 50, level, `rgb(200,140,40)`, 0.04 + i * 0.04);
+          marchingSquaresContour(
+            ctx,
+            width,
+            height,
+            t * 0.7 + 50,
+            level,
+            `rgb(200,140,40)`,
+            0.04 + i * 0.04,
+            contourStep
+          );
         });
       } else {
         // Light: warm linen daylight
@@ -167,20 +185,41 @@ export function TopographicCanvas({ isDark = true }: { isDark?: boolean }) {
         ctx.fillRect(0, 0, width, height);
 
         // Cornflower blue contour lines — subtle on light linen
-        const levels = [0.28, 0.34, 0.40, 0.46, 0.52, 0.58, 0.64, 0.70];
+        const levels = staticMode
+          ? [0.34, 0.46, 0.58, 0.70]
+          : [0.28, 0.34, 0.40, 0.46, 0.52, 0.58, 0.64, 0.70];
         levels.forEach((level, i) => {
           const progress = i / levels.length;
           const alpha = 0.04 + progress * 0.10;
-          marchingSquaresContour(ctx, width, height, t, level, `rgb(61,107,152)`, alpha);
+          marchingSquaresContour(
+            ctx,
+            width,
+            height,
+            t,
+            level,
+            `rgb(61,107,152)`,
+            alpha,
+            contourStep
+          );
         });
 
         // Kupalle amber accents (sparse)
         [0.55, 0.62].forEach((level, i) => {
-          marchingSquaresContour(ctx, width, height, t * 0.7 + 50, level, `rgb(191,117,53)`, 0.025 + i * 0.025);
+          marchingSquaresContour(
+            ctx,
+            width,
+            height,
+            t * 0.7 + 50,
+            level,
+            `rgb(191,117,53)`,
+            0.025 + i * 0.025,
+            contourStep
+          );
         });
       }
 
-      t += 1;
+      if (staticMode) return;
+      t += 0.6;
       animRef.current = requestAnimationFrame(draw);
     };
 
