@@ -250,12 +250,14 @@ export default function CabinetPage() {
             <div className="flex-1 h-px bg-border" />
           </div>
 
-          <form onSubmit={onSubmit} className="space-y-4">
+          <form onSubmit={onSubmit} className="space-y-4" autoComplete="on">
             <div className="relative">
               <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
               <input
                 type="email"
+                name="email"
                 required
+                autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Адрас эл. пошты"
@@ -267,7 +269,9 @@ export default function CabinetPage() {
               <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
               <input
                 type={showPassword ? "text" : "password"}
+                name="password"
                 required
+                autoComplete={mode === "signin" ? "current-password" : "new-password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Пароль"
