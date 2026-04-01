@@ -1,0 +1,75 @@
+name: Promote to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      deployment_url:
+        description: 'Staging deployment URL to promote (leave empty to use latest staging)'
+        required: false
+        type: string
+      confirm:
+        description: 'Type "yes" to confirm production deploy'
+        required: true
+        type: string
+
+jobs:
+  promote:
+    name: Promote to Production
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ steps.promote.outputs.prod_url }}
+
+    steps:
+      - name: Validate confirmation
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "yes" ]; then
+            echo "Confirmation not provided. Type 'yes' to confirm."
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Determine deployment URL
+        id: url
+        run: |
+          INPUT_URL="${{ github.event.inputs.deployment_url }}"
+          if [ -n "$INPUT_URL" ]; then
+            echo "deploy_url=$INPUT_URL" >> $GITHUB_OUTPUT
+            echo "Using provided URL: $INPUT_URL"
+          else
+            # Get latest preview deployment URL from Vercel
+            LATEST=$(vercel ls --token=${{ secrets.VERCEL_TOKEN }} \
+              --scope=${{ secrets.VERCEL_ORG_ID }} 2>/dev/null \
+              | grep -E "https://speu-" | head -1 | awk '{print $2}')
+            echo "deploy_url=$LATEST" >> $GITHUB_OUTPUT
+            echo "Using latest deployment: $LATEST"
+          fi
+
+      - name: Promote to Production
+        id: promote
+        run: |
+          vercel promote ${{ steps.url.outputs.deploy_url }} \
+            --token=${{ secrets.VERCEL_TOKEN }}
+
+          # Get the production URL
+          PROD_URL=$(vercel ls --token=${{ secrets.VERCEL_TOKEN }} \
+            --scope=${{ secrets.VERCEL_ORG_ID }} 2>/dev/null \
+            | grep "Production" | head -1 | awk '{print $2}' || echo "https://speu.vercel.app")
+          echo "prod_url=$PROD_URL" >> $GITHUB_OUTPUT
+          echo "Promoted to production: $PROD_URL"
+
+      - name: Create deployment summary
+        run: |
+          echo "## Production Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Promoted from | \`${{ steps.url.outputs.deploy_url }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Production URL | ${{ steps.promote.outputs.prod_url }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Triggered by | @${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Time | $(date -u '+%Y-%m-%d %H:%M UTC') |" >> $GITHUB_STEP_SUMMARY

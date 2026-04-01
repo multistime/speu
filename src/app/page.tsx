@@ -1,7 +1,7 @@
 import { HeroSection } from "@/components/HeroSection";
 import { SupportTiers } from "@/components/SupportTiers";
 import Link from "next/link";
-import { ArrowRight, Sparkles, Headphones, Heart } from "lucide-react";
+import { ArrowRight, Sparkles, Headphones, Heart, Radio } from "lucide-react";
 
 // Belarusian rhombic ornament divider — echoes традиционные вышыванкі motifs
 function OrnamentDivider() {
@@ -139,6 +139,33 @@ export default function HomePage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
         <OrnamentDivider />
       </div>
+
+      <section className="py-24 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-5xl mx-auto glass rounded-2xl border border-border p-8 sm:p-10 text-center">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary/22 bg-primary/6 mb-5">
+            <Radio className="h-3.5 w-3.5 text-primary" />
+            <span className="text-[11px] font-mono text-primary tracking-widest uppercase">
+              Новае на Speu
+            </span>
+          </div>
+          <h2 className="font-display text-3xl sm:text-4xl font-semibold text-foreground mb-4 italic">
+            Радыё Мара
+          </h2>
+          <p className="text-muted-foreground max-w-2xl mx-auto text-sm leading-relaxed mb-7">
+            Радыё Мара - наша онлайн-радыёстанцыя, якая 24/7 круціць беларускі
+            плэйліст у выпадковым парадку. Яе мэта - каб беларуская музыка і
+            беларускае слова гучалі штодня, без цішыні і межаў.
+          </p>
+          <Link
+            href="/radio"
+            className="inline-flex items-center gap-2 px-7 py-3 rounded-xl bg-primary text-primary-foreground font-semibold hover:scale-[1.02] transition-all duration-300 glow-primary"
+          >
+            <Radio className="h-4 w-4" />
+            Слухаць Радыё Мара
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+      </section>
 
       {/* Support tiers */}
       <section className="py-28 px-4 sm:px-6 lg:px-8">

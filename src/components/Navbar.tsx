@@ -4,27 +4,49 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Music2, Sparkles, Headphones, Heart, User, Users } from "lucide-react";
+import { Menu, X, Music2, Sparkles, Headphones, Heart, Users, Radio } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { createClient } from "@/lib/supabase/client";
 
 const navLinks = [
   { href: "/generator", label: "Генератар", icon: Sparkles },
   { href: "/artists",   label: "Артысты",   icon: Users },
+  { href: "/radio",     label: "Радыё Мара", icon: Radio },
   { href: "/services",  label: "Паслугі",   icon: Headphones },
   { href: "/support",   label: "Падтрымка", icon: Heart },
-  { href: "/cabinet",   label: "Кабінет",   icon: User },
 ];
 
 export function Navbar() {
   const [scrolled, setScrolled]   = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const pathname = usePathname();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    try {
+      const supabase = createClient();
+
+      supabase.auth.getUser().then(({ data }) => {
+        setIsAuthenticated(Boolean(data.user));
+      });
+
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange((_event, session) => {
+        setIsAuthenticated(Boolean(session?.user));
+      });
+
+      return () => subscription.unsubscribe();
+    } catch {
+      setIsAuthenticated(false);
+    }
   }, []);
 
   return (
@@ -91,7 +113,7 @@ export function Navbar() {
             href="/cabinet"
             className="text-sm px-4 py-2 rounded-lg border border-primary/30 text-primary font-medium hover:bg-primary/8 hover:border-primary/50 transition-all duration-300"
           >
-            Увайсці
+            {isAuthenticated ? "Кабінет" : "Увайсці"}
           </Link>
         </div>
 
@@ -143,7 +165,7 @@ export function Navbar() {
                 onClick={() => setMobileOpen(false)}
                 className="mt-2 text-sm px-4 py-3 rounded-lg border border-primary/30 text-primary font-medium text-center hover:bg-primary/8 transition-all"
               >
-                Увайсці
+                {isAuthenticated ? "Кабінет" : "Увайсці"}
               </Link>
             </div>
           </motion.div>
