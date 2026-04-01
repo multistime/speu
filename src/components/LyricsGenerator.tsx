@@ -11,6 +11,8 @@ import {
   GripVertical,
   Pencil,
   X,
+  Trash2,
+  Plus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -147,7 +149,15 @@ function SelectChip<T extends string>({
   );
 }
 
-function BlockItem({ block, onEdit }: { block: SunoBlock; onEdit: () => void }) {
+function BlockItem({
+  block,
+  onEdit,
+  onDelete,
+}: {
+  block: SunoBlock;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
   const dragControls = useDragControls();
   const colorEntry = TAG_COLORS[block.tag] ?? {
     text: "dark:text-white/50 text-foreground/50",
@@ -189,16 +199,26 @@ function BlockItem({ block, onEdit }: { block: SunoBlock; onEdit: () => void }) 
         </div>
       </div>
 
-      <button
-        onClick={(e) => { e.stopPropagation(); onEdit(); }}
-        title="Рэдагаваць блок"
-        className="mt-[3px] flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg dark:hover:bg-white/10 hover:bg-foreground/[0.07]"
-      >
-        <Pencil className="h-3 w-3 dark:text-white/40 text-foreground/40" />
-      </button>
+      <div className="mt-[3px] flex-shrink-0 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button
+          onClick={(e) => { e.stopPropagation(); onEdit(); }}
+          title="Рэдагаваць блок"
+          className="p-1.5 rounded-lg dark:hover:bg-white/10 hover:bg-foreground/[0.07] transition-colors"
+        >
+          <Pencil className="h-3 w-3 dark:text-white/40 text-foreground/40" />
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete(); }}
+          title="Выдаліць блок"
+          className="group/del p-1.5 rounded-lg dark:hover:bg-red-500/15 hover:bg-red-500/8 transition-colors"
+        >
+          <Trash2 className="h-3 w-3 dark:text-white/35 text-foreground/35 dark:group-hover/del:text-red-400 group-hover/del:text-red-500 transition-colors" />
+        </button>
+      </div>
     </Reorder.Item>
   );
 }
+
 
 export function LyricsGenerator() {
   const [genre, setGenre] = useState<Genre | null>(null);
@@ -211,6 +231,7 @@ export function LyricsGenerator() {
   const [error, setError] = useState<string | null>(null);
 
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
+  const [insertAfterIdx, setInsertAfterIdx] = useState<number | null>(null);
   const [editTag, setEditTag] = useState<string>("Verse");
   const [editText, setEditText] = useState<string>("");
 
@@ -223,6 +244,7 @@ export function LyricsGenerator() {
     setBlocks([]);
     setSaved(false);
     setEditingIdx(null);
+    setInsertAfterIdx(null);
 
     try {
       const res = await fetch("/api/generate-lyrics", {
@@ -256,22 +278,51 @@ export function LyricsGenerator() {
     const block = blocks[idx];
     setEditTag(block.tag);
     setEditText(block.lines.join("\n"));
+    setInsertAfterIdx(null);
     setEditingIdx(idx);
   };
 
+  const openInsert = (afterIdx: number) => {
+    setEditTag("Verse");
+    setEditText("");
+    setEditingIdx(null);
+    setInsertAfterIdx(afterIdx);
+  };
+
   const saveEdit = () => {
+    const lines = editText.split("\n").filter((l) => l.trim());
+    if (insertAfterIdx !== null) {
+      const newBlock: SunoBlock = {
+        id: `${Date.now()}-new`,
+        tag: editTag,
+        lines: lines.length ? lines : [""],
+      };
+      const newBlocks = [...blocks];
+      const insertAt = insertAfterIdx < 0 ? 0 : insertAfterIdx + 1;
+      newBlocks.splice(insertAt, 0, newBlock);
+      setBlocks(newBlocks);
+      setInsertAfterIdx(null);
+      return;
+    }
     if (editingIdx === null) return;
     const newBlocks = [...blocks];
     newBlocks[editingIdx] = {
       ...newBlocks[editingIdx],
       tag: editTag,
-      lines: editText.split("\n").filter((l) => l.trim()),
+      lines,
     };
     setBlocks(newBlocks);
     setEditingIdx(null);
   };
 
-  const cancelEdit = () => setEditingIdx(null);
+  const cancelEdit = () => {
+    setEditingIdx(null);
+    setInsertAfterIdx(null);
+  };
+
+  const deleteBlock = (idx: number) => {
+    setBlocks((prev) => prev.filter((_, i) => i !== idx));
+  };
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -435,7 +486,7 @@ export function LyricsGenerator() {
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.4 }}
                 >
-                  <p className="flex items-center gap-3 text-[10px] font-mono dark:text-white/20 text-foreground/30 uppercase tracking-widest mb-4">
+                  <p className="flex items-center flex-wrap gap-x-3 gap-y-1 text-[10px] font-mono dark:text-white/20 text-foreground/30 uppercase tracking-widest mb-4">
                     <span className="flex items-center gap-1">
                       <GripVertical className="h-3 w-3" />
                       Перацягнуць
@@ -443,7 +494,12 @@ export function LyricsGenerator() {
                     <span>·</span>
                     <span className="flex items-center gap-1">
                       <Pencil className="h-2.5 w-2.5" />
-                      Двойны клік для рэдагавання
+                      Двойны клік / навесці
+                    </span>
+                    <span>·</span>
+                    <span className="flex items-center gap-1">
+                      <Trash2 className="h-2.5 w-2.5" />
+                      Выдаліць
                     </span>
                   </p>
 
@@ -459,9 +515,27 @@ export function LyricsGenerator() {
                         key={block.id}
                         block={block}
                         onEdit={() => openEdit(idx)}
+                        onDelete={() => deleteBlock(idx)}
                       />
                     ))}
                   </Reorder.Group>
+
+                  <motion.button
+                    onClick={() => openInsert(blocks.length - 1)}
+                    whileTap={{ scale: 0.97 }}
+                    className={cn(
+                      "mt-3 flex items-center gap-2 w-full py-2 px-3 rounded-lg text-xs font-mono",
+                      "dark:text-white/40 text-foreground/45",
+                      "dark:hover:text-[#4ade80] hover:text-[#3D6B98]",
+                      "dark:hover:bg-[rgba(74,222,128,0.07)] hover:bg-[rgba(61,107,152,0.06)]",
+                      "border border-dashed dark:border-white/[0.12] border-foreground/[0.12]",
+                      "dark:hover:border-[rgba(74,222,128,0.3)] hover:border-[rgba(61,107,152,0.3)]",
+                      "transition-all duration-150"
+                    )}
+                  >
+                    <Plus className="h-3 w-3" />
+                    Дадаць блок
+                  </motion.button>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -469,7 +543,7 @@ export function LyricsGenerator() {
 
           {/* Block editor overlay */}
           <AnimatePresence>
-            {editingIdx !== null && (
+            {(editingIdx !== null || insertAfterIdx !== null) && (
               <motion.div
                 key="editor"
                 initial={{ opacity: 0, y: 10 }}
@@ -480,7 +554,7 @@ export function LyricsGenerator() {
               >
                 <div className="flex items-center justify-between">
                   <h3 className="font-mono text-xs dark:text-white/40 text-foreground/50 uppercase tracking-widest">
-                    Рэдагаванне блока
+                    {insertAfterIdx !== null ? "Новы блок" : "Рэдагаванне блока"}
                   </h3>
                   <button
                     onClick={cancelEdit}
