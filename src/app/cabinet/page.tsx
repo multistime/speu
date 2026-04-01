@@ -17,6 +17,7 @@ import {
   AlertCircle,
   Info,
 } from "lucide-react";
+import type { User as SupabaseUser } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { getSpeuProfile } from "@/lib/supabase/speu";
 import { cn } from "@/lib/utils";
@@ -91,35 +92,35 @@ export default function CabinetPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<Msg | null>(null);
-  const [isAuthed, setIsAuthed] = useState<boolean | null>(null);
+  const [user, setUser] = useState<SupabaseUser | null | undefined>(undefined);
   const [isAdmin, setIsAdmin] = useState(false);
 
+  const isAuthed = user !== undefined ? Boolean(user) : null;
+
+  const syncUser = async (u: SupabaseUser | null) => {
+    setUser(u);
+    setIsAdmin(false);
+    if (!u) return;
+    try {
+      const profile = await getSpeuProfile(supabase, u.id);
+      setIsAdmin(Boolean(profile?.is_admin));
+    } catch {
+      // isAdmin stays false
+    }
+  };
+
   useEffect(() => {
-    const refresh = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      setIsAuthed(Boolean(user));
-      if (!user) { setIsAdmin(false); return; }
-      try {
-        const profile = await getSpeuProfile(supabase, user.id);
-        setIsAdmin(Boolean(profile?.is_admin));
-      } catch { setIsAdmin(false); }
-    };
-
-    void refresh();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      const user = session?.user;
-      setIsAuthed(Boolean(user));
-      if (!user) { setIsAdmin(false); return; }
-      try {
-        const profile = await getSpeuProfile(supabase, user.id);
-        setIsAdmin(Boolean(profile?.is_admin));
-      } catch { setIsAdmin(false); }
+    // getSession reads from cookie/storage immediately — no network request,
+    // so the spinner resolves instantly on page load.
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      void syncUser(session?.user ?? null);
     });
 
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      void syncUser(session?.user ?? null);
+    });
     return () => subscription.unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase]);
 
   const onSubmit = async (e: React.FormEvent) => {
@@ -183,9 +184,10 @@ export default function CabinetPage() {
     setLoading(false);
   };
 
-  const signOut = async () => {
-    await supabase.auth.signOut();
-    setMessage({ text: "Вы выйшлі з акаўнта.", kind: "info" });
+  const signOut = () => {
+    // Full page navigation to the server-side signout route.
+    // This clears the HTTP-only session cookies set during OAuth and redirects back.
+    window.location.assign("/api/auth/signout");
   };
 
   if (isAuthed === null) {
@@ -307,40 +309,92 @@ export default function CabinetPage() {
     );
   }
 
+  const displayName =
+    user?.user_metadata?.full_name ??
+    user?.user_metadata?.name ??
+    user?.email?.split("@")[0] ??
+    "Карыстальнік";
+
+  const avatarUrl = user?.user_metadata?.avatar_url as string | undefined;
+
   return (
     <div className="min-h-screen pt-28 pb-20 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto glass rounded-2xl border border-border p-8">
-        <h1 className="font-display text-3xl font-semibold text-foreground mb-2 italic">
-          Мой кабінет
-        </h1>
-        <p className="text-muted-foreground text-sm mb-6">
-          Вы ўвайшлі ў сістэму. Профіль SPEU падключаны праз Supabase.
-        </p>
+      <div className="max-w-4xl mx-auto space-y-4">
 
-        <div className="flex flex-wrap items-center gap-3">
-          {isAdmin && (
-            <Link
-              href="/admin"
-              className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-lg border border-primary/30 text-primary font-medium hover:bg-primary/8 transition-all"
+        {/* Profile card */}
+        <div className="glass rounded-2xl border border-border p-8">
+          <div className="flex items-start gap-5 mb-6">
+            <div className="relative shrink-0">
+              {avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={avatarUrl}
+                  alt={displayName}
+                  className="h-14 w-14 rounded-full object-cover border border-border"
+                />
+              ) : (
+                <div className="h-14 w-14 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center">
+                  <User className="h-6 w-6 text-primary" strokeWidth={1.5} />
+                </div>
+              )}
+              {isAdmin && (
+                <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-primary flex items-center justify-center" title="Адміністратар">
+                  <Shield className="h-3 w-3 text-primary-foreground" />
+                </div>
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <h1 className="font-display text-2xl font-semibold text-foreground italic truncate">
+                {displayName}
+              </h1>
+              {user?.email && (
+                <p className="text-sm text-muted-foreground mt-0.5 truncate">{user.email}</p>
+              )}
+              {isAdmin && (
+                <span className="inline-flex items-center gap-1 mt-1.5 text-xs px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-primary font-medium">
+                  <Shield className="h-3 w-3" />
+                  Адміністратар
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={signOut}
+              className="inline-flex items-center gap-2 text-sm px-4 py-2.5 rounded-xl border border-border text-foreground/70 font-medium hover:bg-muted hover:text-foreground transition-all duration-200"
             >
-              <Shield className="h-4 w-4" />
-              Перайсці ў адмінку
-            </Link>
+              <LogOut className="h-4 w-4" />
+              Выйсці
+            </button>
+          </div>
+
+          {message && (
+            <div className="mt-5">
+              <MessageBanner msg={message} />
+            </div>
           )}
-          <button
-            onClick={signOut}
-            className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-lg border border-border text-foreground/80 font-medium hover:bg-muted transition-all"
-          >
-            <LogOut className="h-4 w-4" />
-            Выйсці
-          </button>
         </div>
 
-        {message && (
-          <div className="mt-6">
-            <MessageBanner msg={message} />
-          </div>
+        {/* Admin panel entry — only visible for admins */}
+        {isAdmin && (
+          <Link
+            href="/admin"
+            className="group flex items-center gap-4 glass rounded-2xl border border-primary/25 p-6 hover:border-primary/50 hover:bg-primary/4 transition-all duration-200"
+          >
+            <div className="h-11 w-11 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 group-hover:bg-primary/15 transition-colors">
+              <Shield className="h-5 w-5 text-primary" strokeWidth={1.5} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-foreground">Панэль адміністратара</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Кіраванне кантэнтам, артыстамі, узроўнямі падтрымкі і заяўкамі
+              </p>
+            </div>
+            <span className="text-muted-foreground/40 group-hover:text-primary/60 transition-colors text-lg">→</span>
+          </Link>
         )}
+
       </div>
     </div>
   );

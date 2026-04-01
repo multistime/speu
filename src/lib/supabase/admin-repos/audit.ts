@@ -16,7 +16,8 @@ export async function writeAdminAuditLog(
     details,
   });
 
+  // Audit log failures are non-fatal — log to console but don't break the request.
   if (error) {
-    throw error;
+    console.error("[audit]", error.message);
   }
 }

@@ -6,20 +6,20 @@ export type SpeuProfile = {
   is_admin: boolean;
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function getSpeuProfile(
-  supabase: SupabaseClient,
-  userId: string
+  _supabase: SupabaseClient,
+  _userId: string
 ): Promise<SpeuProfile | null> {
-  const { data, error } = await supabase
-    .schema("speu")
-    .from("profiles")
-    .select("id, display_name, is_admin")
-    .eq("id", userId)
-    .maybeSingle();
-
-  if (error) {
-    throw error;
+  // Fetch via our server-side API route so the request uses HTTP cookies,
+  // which are reliably set by the middleware — bypasses browser-client auth quirks.
+  try {
+    const res = await fetch("/api/user/profile", { credentials: "include" });
+    if (!res.ok) return null;
+    const data = await res.json() as SpeuProfile | null;
+    return data;
+  } catch (err) {
+    console.error("[getSpeuProfile]", err);
+    return null;
   }
-
-  return data;
 }
