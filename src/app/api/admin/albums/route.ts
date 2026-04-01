@@ -18,13 +18,30 @@ export async function GET() {
   const { supabase, user } = await requireAdminApi();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
-  const { data, error } = await supabase
+  // Fetch albums and artists separately to avoid PostgREST schema cache dependency
+  const { data: albums, error: albumsError } = await supabase
     .schema("speu")
     .from("albums")
-    .select("*, artists(id, name, slug)")
+    .select("*")
     .order("sort_order", { ascending: true });
-  if (error) return NextResponse.json({ error: "fetch_failed" }, { status: 500 });
-  return NextResponse.json({ items: data ?? [] });
+
+  if (albumsError) {
+    return NextResponse.json({ error: "fetch_failed", details: albumsError.message }, { status: 500 });
+  }
+
+  const artistIds = [...new Set((albums ?? []).map((a: { artist_id: string }) => a.artist_id))];
+  const { data: artists } = artistIds.length > 0
+    ? await supabase.schema("speu").from("artists").select("id, name, slug").in("id", artistIds)
+    : { data: [] };
+
+  const artistMap = Object.fromEntries((artists ?? []).map((a: { id: string; name: string; slug: string }) => [a.id, a]));
+
+  const items = (albums ?? []).map((album: Record<string, unknown>) => ({
+    ...album,
+    artists: artistMap[album.artist_id as string] ?? null,
+  }));
+
+  return NextResponse.json({ items });
 }
 
 export async function POST(request: Request) {

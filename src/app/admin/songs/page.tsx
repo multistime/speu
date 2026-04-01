@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Trash2, Pencil, Upload, Music, Disc, X, Check } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 type Artist = { id: string; name: string; slug: string };
 type Album = {
@@ -111,24 +112,35 @@ export default function AdminSongsPage() {
     (a) => a.artist_id === songForm.artistId
   );
 
-  // Upload file and get URL
+  // Upload directly to Supabase Storage from browser (bypasses Vercel 4.5 MB limit)
   const uploadAudio = async (file: File): Promise<string | null> => {
     setUploadProgress("uploading");
-    const fd = new FormData();
-    fd.append("file", file);
-    const res = await fetch("/api/admin/songs/upload", {
-      method: "POST",
-      body: fd,
-    });
-    if (!res.ok) {
+
+    const allowed = ["audio/mpeg", "audio/mp3", "audio/wav", "audio/ogg", "audio/x-wav", "audio/x-mp3"];
+    const mime = file.type || "audio/mpeg";
+    if (!allowed.includes(mime)) {
       setUploadProgress("error");
-      const d = await res.json().catch(() => ({}));
-      setError(d.error ?? "Памылка загрузкі файла");
+      setError(`Непадтрымоўваны фармат: ${mime}. Выкарыстоўвайце MP3, WAV або OGG.`);
       return null;
     }
+
+    const ext = file.name.split(".").pop()?.toLowerCase() ?? "mp3";
+    const path = `songs/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+
+    const supabase = createClient();
+    const { data, error } = await supabase.storage
+      .from("speu-audio")
+      .upload(path, file, { contentType: mime, upsert: false });
+
+    if (error) {
+      setUploadProgress("error");
+      setError(`Памылка загрузкі: ${error.message}`);
+      return null;
+    }
+
     setUploadProgress("done");
-    const { url } = await res.json();
-    return url as string;
+    const { data: { publicUrl } } = supabase.storage.from("speu-audio").getPublicUrl(data.path);
+    return publicUrl;
   };
 
   const saveSong = async () => {

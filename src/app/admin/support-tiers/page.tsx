@@ -94,6 +94,7 @@ export default function AdminSupportTiersPage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        id: form.id || undefined,
         code: form.code,
         name: form.name,
         labelBe: form.labelBe || undefined,

@@ -22,14 +22,40 @@ export async function GET() {
   const { supabase, user } = await requireAdminApi();
   if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
-  const { data, error } = await supabase
+  // Fetch songs and related data in separate queries to avoid PostgREST schema cache issues
+  const { data: songs, error: songsError } = await supabase
     .schema("speu")
     .from("artist_tracks")
-    .select("*, artists(id, name, slug), albums(id, title)")
+    .select("*")
     .order("sort_order", { ascending: true });
 
-  if (error) return NextResponse.json({ error: "fetch_failed", details: error.message }, { status: 500 });
-  return NextResponse.json({ items: data ?? [] });
+  if (songsError) {
+    return NextResponse.json({ error: "fetch_failed", details: songsError.message }, { status: 500 });
+  }
+
+  // Enrich with artist names
+  const artistIds = [...new Set((songs ?? []).map((s: { artist_id: string }) => s.artist_id))];
+  const albumIds = [...new Set((songs ?? []).map((s: { album_id: string | null }) => s.album_id).filter(Boolean))];
+
+  const [artistsRes, albumsRes] = await Promise.all([
+    artistIds.length > 0
+      ? supabase.schema("speu").from("artists").select("id, name, slug").in("id", artistIds)
+      : { data: [], error: null },
+    albumIds.length > 0
+      ? supabase.schema("speu").from("albums").select("id, title").in("id", albumIds as string[])
+      : { data: [], error: null },
+  ]);
+
+  const artistMap = Object.fromEntries((artistsRes.data ?? []).map((a: { id: string; name: string; slug: string }) => [a.id, a]));
+  const albumMap = Object.fromEntries((albumsRes.data ?? []).map((a: { id: string; title: string }) => [a.id, a]));
+
+  const items = (songs ?? []).map((s: Record<string, unknown>) => ({
+    ...s,
+    artists: artistMap[s.artist_id as string] ?? null,
+    albums: s.album_id ? albumMap[s.album_id as string] ?? null : null,
+  }));
+
+  return NextResponse.json({ items });
 }
 
 export async function POST(request: Request) {
@@ -51,8 +77,14 @@ export async function POST(request: Request) {
     track_number: parsed.data.trackNumber ?? null,
     sort_order: parsed.data.sortOrder,
     is_published: parsed.data.isPublished,
-    play_on_radio: parsed.data.playOnRadio,
   };
+
+  // Only include play_on_radio if the column exists (safe for both DB states)
+  try {
+    row.play_on_radio = parsed.data.playOnRadio;
+  } catch {
+    // Column might not exist yet if migration hasn't been applied
+  }
 
   if (parsed.data.id) {
     const { data, error } = await supabase
