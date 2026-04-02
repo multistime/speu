@@ -1,7 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Trash2, Pencil, X } from "lucide-react";
+import { ArtistPattern } from "@/components/artists/artist-pattern";
+import {
+  ARTIST_COLOR_PRESETS,
+  ARTIST_PATTERN_IDS,
+  ARTIST_PATTERN_LABELS,
+  detectColorPreset,
+  parsePatternFromVisual,
+  resolveArtistVisual,
+  type ArtistColorPresetId,
+  type ArtistPatternId,
+} from "@/lib/artists/visual-theme";
 
 type Artist = {
   id: string;
@@ -14,6 +25,7 @@ type Artist = {
   location: string | null;
   status: string;
   sort_order: number;
+  visual_json?: Record<string, unknown> | null;
 };
 
 const emptyForm = {
@@ -27,6 +39,11 @@ const emptyForm = {
   location: "",
   status: "draft",
   sortOrder: "0",
+  colorPreset: "default" as ArtistColorPresetId,
+  pattern: "diamond" as ArtistPatternId,
+  customGradientFrom: "#2B5035",
+  customGradientTo: "#0E1811",
+  customAccent: "#7DBF9E",
 };
 
 export default function AdminArtistsPage() {
@@ -50,6 +67,8 @@ export default function AdminArtistsPage() {
   }, []);
 
   const editArtist = (artist: Artist) => {
+    const vj = (artist.visual_json ?? {}) as Record<string, unknown>;
+    const preset = detectColorPreset(vj);
     setForm({
       id: artist.id,
       slug: artist.slug,
@@ -61,6 +80,11 @@ export default function AdminArtistsPage() {
       location: artist.location ?? "",
       status: artist.status,
       sortOrder: String(artist.sort_order),
+      colorPreset: preset,
+      pattern: parsePatternFromVisual(vj.pattern),
+      customGradientFrom: String(vj.gradientFrom ?? "#2B5035"),
+      customGradientTo: String(vj.gradientTo ?? "#0E1811"),
+      customAccent: String(vj.accent ?? "#7DBF9E"),
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -86,6 +110,15 @@ export default function AdminArtistsPage() {
         location: form.location || undefined,
         status: form.status,
         sortOrder: Number(form.sortOrder),
+        colorPreset: form.colorPreset,
+        pattern: form.pattern,
+        ...(form.colorPreset === "custom"
+          ? {
+              customGradientFrom: form.customGradientFrom,
+              customGradientTo: form.customGradientTo,
+              customAccent: form.customAccent,
+            }
+          : {}),
       }),
     });
     if (!res.ok) {
@@ -117,6 +150,24 @@ export default function AdminArtistsPage() {
 
   const inputCls = "px-3 py-2 rounded-lg bg-muted border border-border text-sm w-full focus:outline-none focus:ring-1 focus:ring-primary";
   const labelCls = "text-xs text-muted-foreground mb-1 block";
+
+  const coverPreview = useMemo(
+    () =>
+      resolveArtistVisual({
+        colorPreset: form.colorPreset,
+        pattern: form.pattern,
+        customGradientFrom: form.customGradientFrom,
+        customGradientTo: form.customGradientTo,
+        customAccent: form.customAccent,
+      }),
+    [
+      form.colorPreset,
+      form.pattern,
+      form.customGradientFrom,
+      form.customGradientTo,
+      form.customAccent,
+    ]
+  );
 
   return (
     <div className="space-y-6">
@@ -223,6 +274,115 @@ export default function AdminArtistsPage() {
               value={form.sortOrder}
               onChange={(e) => setForm({ ...form, sortOrder: e.target.value })}
             />
+          </div>
+
+          <div className="md:col-span-2 border-t border-border pt-4 mt-1">
+            <p className="text-xs font-medium text-foreground mb-3">Заглушка карточкі на старонцы «Артысты»</p>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <label className={labelCls}>Колеравая схема</label>
+                <select
+                  className={inputCls}
+                  value={form.colorPreset}
+                  onChange={(e) =>
+                    setForm({ ...form, colorPreset: e.target.value as ArtistColorPresetId })
+                  }
+                >
+                  {ARTIST_COLOR_PRESETS.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.label}
+                    </option>
+                  ))}
+                  <option value="custom">Уласная палітра (#RRGGBB)</option>
+                </select>
+              </div>
+              <div>
+                <label className={labelCls}>Патэрн</label>
+                <select
+                  className={inputCls}
+                  value={form.pattern}
+                  onChange={(e) =>
+                    setForm({ ...form, pattern: e.target.value as ArtistPatternId })
+                  }
+                >
+                  {ARTIST_PATTERN_IDS.map((id) => (
+                    <option key={id} value={id}>
+                      {ARTIST_PATTERN_LABELS[id]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {form.colorPreset === "custom" && (
+                <>
+                  <div>
+                    <label className={labelCls}>Градыент зверху</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="color"
+                        className="h-10 w-14 rounded border border-border bg-transparent cursor-pointer shrink-0"
+                        value={form.customGradientFrom.slice(0, 7).startsWith("#") ? form.customGradientFrom.slice(0, 7) : "#2B5035"}
+                        onChange={(e) => setForm({ ...form, customGradientFrom: e.target.value })}
+                      />
+                      <input
+                        className={inputCls}
+                        placeholder="#2B5035"
+                        value={form.customGradientFrom}
+                        onChange={(e) => setForm({ ...form, customGradientFrom: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className={labelCls}>Градыент ніз</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="color"
+                        className="h-10 w-14 rounded border border-border bg-transparent cursor-pointer shrink-0"
+                        value={form.customGradientTo.slice(0, 7).startsWith("#") ? form.customGradientTo.slice(0, 7) : "#0E1811"}
+                        onChange={(e) => setForm({ ...form, customGradientTo: e.target.value })}
+                      />
+                      <input
+                        className={inputCls}
+                        placeholder="#0E1811"
+                        value={form.customGradientTo}
+                        onChange={(e) => setForm({ ...form, customGradientTo: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className={labelCls}>Акцэнт (патэрн і кнопкі)</label>
+                    <div className="flex gap-2 max-w-md">
+                      <input
+                        type="color"
+                        className="h-10 w-14 rounded border border-border bg-transparent cursor-pointer shrink-0"
+                        value={form.customAccent.slice(0, 7).startsWith("#") ? form.customAccent.slice(0, 7) : "#7DBF9E"}
+                        onChange={(e) => setForm({ ...form, customAccent: e.target.value })}
+                      />
+                      <input
+                        className={inputCls}
+                        placeholder="#7DBF9E"
+                        value={form.customAccent}
+                        onChange={(e) => setForm({ ...form, customAccent: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="mt-4">
+              <p className={labelCls}>Перадпрагляд</p>
+              <div
+                className="relative h-32 max-w-md rounded-xl overflow-hidden border border-border"
+                style={{
+                  background: `linear-gradient(160deg, ${coverPreview.gradientFrom} 0%, ${coverPreview.gradientTo} 100%)`,
+                }}
+              >
+                <ArtistPattern pattern={coverPreview.pattern as ArtistPatternId} accent={coverPreview.accent} />
+                <div
+                  className="absolute bottom-2 right-2 w-16 h-16 rounded-full blur-2xl opacity-40 pointer-events-none"
+                  style={{ background: coverPreview.accent }}
+                />
+              </div>
+            </div>
           </div>
         </div>
 

@@ -2,21 +2,53 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAdminApi } from "@/lib/auth/admin";
 import { writeAdminAuditLog } from "@/lib/supabase/admin-repos/audit";
+import {
+  ARTIST_COLOR_PRESET_IDS,
+  ARTIST_PATTERN_IDS,
+  isValidHex6,
+  resolveArtistVisual,
+} from "@/lib/artists/visual-theme";
 
-const artistSchema = z.object({
-  id: z.string().uuid().optional(),
-  slug: z.string().min(1),
-  name: z.string().min(1),
-  nameEn: z.string().optional(),
-  tagline: z.string().optional(),
-  bio: z.string().optional(),
-  genres: z.array(z.string()).default([]),
-  location: z.string().optional(),
-  yearStarted: z.number().int().optional(),
-  initials: z.string().optional(),
-  status: z.enum(["draft", "published", "archived"]).default("draft"),
-  sortOrder: z.number().int().default(0),
-});
+const colorPresetEnum = z.enum(ARTIST_COLOR_PRESET_IDS);
+const patternEnum = z.enum(ARTIST_PATTERN_IDS);
+
+const artistSchema = z
+  .object({
+    id: z.string().uuid().optional(),
+    slug: z.string().min(1),
+    name: z.string().min(1),
+    nameEn: z.string().optional(),
+    tagline: z.string().optional(),
+    bio: z.string().optional(),
+    genres: z.array(z.string()).default([]),
+    location: z.string().optional(),
+    yearStarted: z.number().int().optional(),
+    initials: z.string().optional(),
+    status: z.enum(["draft", "published", "archived"]).default("draft"),
+    sortOrder: z.number().int().default(0),
+    colorPreset: colorPresetEnum.default("default"),
+    pattern: patternEnum.default("diamond"),
+    customGradientFrom: z.string().optional(),
+    customGradientTo: z.string().optional(),
+    customAccent: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.colorPreset !== "custom") return;
+    const checks = [
+      [data.customGradientFrom?.trim() ?? "", "customGradientFrom"] as const,
+      [data.customGradientTo?.trim() ?? "", "customGradientTo"] as const,
+      [data.customAccent?.trim() ?? "", "customAccent"] as const,
+    ];
+    for (const [val, path] of checks) {
+      if (!isValidHex6(val)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Колер у фармаце #RRGGBB",
+          path: [path],
+        });
+      }
+    }
+  });
 
 export async function GET() {
   const { supabase, user } = await requireAdminApi();
@@ -43,6 +75,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "invalid_payload", details: parsed.error.flatten() }, { status: 400 });
   }
 
+  const visual_json = resolveArtistVisual({
+    colorPreset: parsed.data.colorPreset,
+    pattern: parsed.data.pattern,
+    customGradientFrom: parsed.data.customGradientFrom,
+    customGradientTo: parsed.data.customGradientTo,
+    customAccent: parsed.data.customAccent,
+  });
+
   const row = {
     slug: parsed.data.slug,
     name: parsed.data.name,
@@ -53,6 +93,7 @@ export async function POST(request: Request) {
     location: parsed.data.location ?? null,
     status: parsed.data.status,
     sort_order: parsed.data.sortOrder,
+    visual_json,
     updated_by: user.id,
   };
 
