@@ -113,7 +113,7 @@ function GlobalPlayerProgress({ track }: { track: PlayerTrack }) {
         !canSeek && "cursor-not-allowed"
       )}
     >
-      {/* Поўная шырыня — рэйка і запаўненне ў адным радку з верхнім краем кантэйнера */}
+      {/* Нейтральная рэйка поўнай шырыні; пазіцыя — толькі бегунок */}
       <div
         className={cn(
           "pointer-events-none absolute inset-x-0 top-0 z-0 h-px transition-opacity",
@@ -123,36 +123,19 @@ function GlobalPlayerProgress({ track }: { track: PlayerTrack }) {
       />
 
       {canSeek ? (
-        <>
-          <div
-            className={cn(
-              "pointer-events-none absolute left-0 top-0 z-[1] h-px origin-left transition-[opacity,box-shadow]",
-              !track.accentColor && "bg-primary",
-              isDragging
-                ? "opacity-100 shadow-[0_0_10px_rgba(125,191,158,0.2)]"
-                : "opacity-[0.95] group-hover/player:opacity-100"
-            )}
-            style={{
-              width: `${pct}%`,
-              ...fillStyle,
-            }}
-            aria-hidden
-          />
-          {/* Іскра: міні-ромб на лініі, не круг */}
-          <div
-            aria-hidden
-            className={cn(
-              "pointer-events-none absolute top-0 z-[2] size-[5px] -translate-x-1/2 -translate-y-1/2 rotate-45 rounded-[1px] border border-background/80 shadow-[0_0_6px_rgba(0,0,0,0.35)] transition-transform duration-150 ease-out",
-              !track.accentColor && "bg-primary",
-              "group-hover/player:scale-110",
-              isDragging && "scale-125 ring-1 ring-primary/40"
-            )}
-            style={{
-              left: `${pct}%`,
-              ...fillStyle,
-            }}
-          />
-        </>
+        <div
+          aria-hidden
+          className={cn(
+            "pointer-events-none absolute top-0 z-[2] size-[5px] -translate-x-1/2 -translate-y-1/2 rotate-45 rounded-[1px] border border-background/80 shadow-[0_0_6px_rgba(0,0,0,0.35)] transition-transform duration-150 ease-out",
+            !track.accentColor && "bg-primary",
+            "group-hover/player:scale-110",
+            isDragging && "scale-125 ring-1 ring-primary/40"
+          )}
+          style={{
+            left: `${pct}%`,
+            ...fillStyle,
+          }}
+        />
       ) : (
         <div
           className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-px overflow-hidden bg-border/35"
