@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAdminApi } from "@/lib/auth/admin";
 import { writeAdminAuditLog } from "@/lib/supabase/admin-repos/audit";
+import { parseArtistSocialLinksFromForm } from "@/lib/artists/social-links";
 import {
   ARTIST_COLOR_PRESET_IDS,
   ARTIST_PATTERN_IDS,
@@ -31,6 +32,10 @@ const artistSchema = z
     customGradientFrom: z.string().optional(),
     customGradientTo: z.string().optional(),
     customAccent: z.string().optional(),
+    instagram: z.string().optional(),
+    youtube: z.string().optional(),
+    spotify: z.string().optional(),
+    telegram: z.string().optional(),
   })
   .superRefine((data, ctx) => {
     if (data.colorPreset !== "custom") return;
@@ -75,6 +80,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "invalid_payload", details: parsed.error.flatten() }, { status: 400 });
   }
 
+  const socialParsed = parseArtistSocialLinksFromForm({
+    instagram: parsed.data.instagram,
+    youtube: parsed.data.youtube,
+    spotify: parsed.data.spotify,
+    telegram: parsed.data.telegram,
+  });
+  if (!socialParsed.ok) {
+    return NextResponse.json(
+      { error: "invalid_payload", details: socialParsed.message, field: socialParsed.field },
+      { status: 400 }
+    );
+  }
+
   const visual_json = resolveArtistVisual({
     colorPreset: parsed.data.colorPreset,
     pattern: parsed.data.pattern,
@@ -94,6 +112,7 @@ export async function POST(request: Request) {
     status: parsed.data.status,
     sort_order: parsed.data.sortOrder,
     visual_json,
+    social_links: socialParsed.social_links,
     updated_by: user.id,
   };
 

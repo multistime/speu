@@ -26,6 +26,7 @@ type Artist = {
   location: string | null;
   status: string;
   sort_order: number;
+  social_links?: Record<string, string> | null;
   visual_json?: Record<string, unknown> | null;
 };
 
@@ -45,6 +46,10 @@ const emptyForm = {
   customGradientFrom: "#2B5035",
   customGradientTo: "#0E1811",
   customAccent: "#7DBF9E",
+  instagram: "",
+  youtube: "",
+  spotify: "",
+  telegram: "",
 };
 
 type AdminArtistsPanelProps = {
@@ -75,6 +80,7 @@ export function AdminArtistsPanel({ onCatalogChanged }: AdminArtistsPanelProps) 
   const editArtist = (artist: Artist) => {
     const vj = (artist.visual_json ?? {}) as Record<string, unknown>;
     const preset = detectColorPreset(vj);
+    const sl = artist.social_links ?? {};
     setForm({
       id: artist.id,
       slug: artist.slug,
@@ -91,6 +97,10 @@ export function AdminArtistsPanel({ onCatalogChanged }: AdminArtistsPanelProps) 
       customGradientFrom: String(vj.gradientFrom ?? "#2B5035"),
       customGradientTo: String(vj.gradientTo ?? "#0E1811"),
       customAccent: String(vj.accent ?? "#7DBF9E"),
+      instagram: sl.instagram ?? "",
+      youtube: sl.youtube ?? "",
+      spotify: sl.spotify ?? "",
+      telegram: sl.telegram ?? "",
     });
     setFormOpen(true);
   };
@@ -125,13 +135,23 @@ export function AdminArtistsPanel({ onCatalogChanged }: AdminArtistsPanelProps) 
               customAccent: form.customAccent,
             }
           : {}),
+        instagram: form.instagram || undefined,
+        youtube: form.youtube || undefined,
+        spotify: form.spotify || undefined,
+        telegram: form.telegram || undefined,
       }),
     });
     if (!res.ok) {
-      const d = await res.json().catch(() => ({}));
+      const d = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        details?: string;
+        field?: string;
+      };
+      const fieldHint =
+        typeof d.field === "string" && d.field ? ` (${d.field})` : "";
       setError(
         typeof d.details === "string"
-          ? `${d.error ?? "Памылка"}: ${d.details}`
+          ? `${d.error ?? "Памылка"}: ${d.details}${fieldHint}`
           : d.error ?? "Памылка захавання"
       );
     } else {
@@ -276,6 +296,52 @@ export function AdminArtistsPanel({ onCatalogChanged }: AdminArtistsPanelProps) 
               onChange={(e) => setForm({ ...form, bio: e.target.value })}
             />
           </div>
+
+          <div className="md:col-span-2 border-t border-border pt-4 mt-1">
+            <p className="text-xs font-medium text-foreground mb-3">Сацыяльныя сеткі</p>
+            <p className="text-xs text-muted-foreground mb-3">
+              Поўныя спасылкі або без https (напрыклад instagram.com/username). Пуста — кнопка на старонцы не паказваецца.
+            </p>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <label className={labelCls}>Instagram</label>
+                <input
+                  className={inputCls}
+                  placeholder="https://instagram.com/…"
+                  value={form.instagram}
+                  onChange={(e) => setForm({ ...form, instagram: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className={labelCls}>YouTube</label>
+                <input
+                  className={inputCls}
+                  placeholder="https://youtube.com/…"
+                  value={form.youtube}
+                  onChange={(e) => setForm({ ...form, youtube: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className={labelCls}>Spotify</label>
+                <input
+                  className={inputCls}
+                  placeholder="https://open.spotify.com/…"
+                  value={form.spotify}
+                  onChange={(e) => setForm({ ...form, spotify: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className={labelCls}>Telegram</label>
+                <input
+                  className={inputCls}
+                  placeholder="https://t.me/…"
+                  value={form.telegram}
+                  onChange={(e) => setForm({ ...form, telegram: e.target.value })}
+                />
+              </div>
+            </div>
+          </div>
+
           <div>
             <label className={labelCls}>Статус</label>
             <select

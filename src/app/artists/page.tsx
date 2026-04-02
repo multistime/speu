@@ -489,6 +489,11 @@ function TrackRow({
 /* ── Artist modal ────────────────────────────────────────────────────── */
 
 function ArtistModal({ artist, onClose }: { artist: Artist; onClose: () => void }) {
+  const { instagram, youtube, spotify, telegram } = artist.socials;
+  const hasSocials = [instagram, youtube, spotify, telegram].some(
+    (u) => typeof u === "string" && u.length > 1
+  );
+
   return (
     <>
       <motion.div
@@ -589,43 +594,55 @@ function ArtistModal({ artist, onClose }: { artist: Artist; onClose: () => void 
             </div>
 
             {/* Socials */}
-            <div className="flex items-center gap-2 pt-4 border-t border-border">
-              <span className="text-xs text-muted-foreground/50 mr-1">Сачыць:</span>
-              {artist.socials.instagram && (
-                <a
-                  href={artist.socials.instagram}
-                  className="p-2 rounded-lg text-muted-foreground/50 hover:text-foreground hover:bg-muted transition-all"
-                  aria-label="Instagram"
-                >
-                  <InstagramIcon className="h-4 w-4" />
-                </a>
-              )}
-              {artist.socials.youtube && (
-                <a
-                  href={artist.socials.youtube}
-                  className="p-2 rounded-lg text-muted-foreground/50 hover:text-foreground hover:bg-muted transition-all"
-                  aria-label="YouTube"
-                >
-                  <YoutubeIcon className="h-4 w-4" />
-                </a>
-              )}
-              {artist.socials.spotify && (
-                <a
-                  href={artist.socials.spotify}
-                  className="p-2 rounded-lg text-muted-foreground/50 hover:text-foreground hover:bg-muted transition-all"
-                  aria-label="Spotify"
-                >
-                  <SpotifyIcon className="h-4 w-4" />
-                </a>
-              )}
-              {artist.socials.telegram && (
-                <a
-                  href={artist.socials.telegram}
-                  className="p-2 rounded-lg text-muted-foreground/50 hover:text-foreground hover:bg-muted transition-all"
-                  aria-label="Telegram"
-                >
-                  <TelegramIcon className="h-4 w-4" />
-                </a>
+            <div className="flex items-center gap-2 pt-4 border-t border-border flex-wrap">
+              {hasSocials && (
+                <>
+                  <span className="text-xs text-muted-foreground/50 mr-1">Сачыць:</span>
+                  {instagram && instagram.length > 1 && (
+                    <a
+                      href={instagram}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 rounded-lg text-muted-foreground/50 hover:text-foreground hover:bg-muted transition-all"
+                      aria-label="Instagram"
+                    >
+                      <InstagramIcon className="h-4 w-4" />
+                    </a>
+                  )}
+                  {youtube && youtube.length > 1 && (
+                    <a
+                      href={youtube}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 rounded-lg text-muted-foreground/50 hover:text-foreground hover:bg-muted transition-all"
+                      aria-label="YouTube"
+                    >
+                      <YoutubeIcon className="h-4 w-4" />
+                    </a>
+                  )}
+                  {spotify && spotify.length > 1 && (
+                    <a
+                      href={spotify}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 rounded-lg text-muted-foreground/50 hover:text-foreground hover:bg-muted transition-all"
+                      aria-label="Spotify"
+                    >
+                      <SpotifyIcon className="h-4 w-4" />
+                    </a>
+                  )}
+                  {telegram && telegram.length > 1 && (
+                    <a
+                      href={telegram}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 rounded-lg text-muted-foreground/50 hover:text-foreground hover:bg-muted transition-all"
+                      aria-label="Telegram"
+                    >
+                      <TelegramIcon className="h-4 w-4" />
+                    </a>
+                  )}
+                </>
               )}
               <a
                 href="#"
