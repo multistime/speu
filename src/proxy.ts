@@ -1,7 +1,26 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+const NEWSLETTER_FOLLOW_PATH = "/api/public/newsletter-follow";
+
+const newsletterFollowCorsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Accept, Origin",
+  "Access-Control-Max-Age": "86400",
+};
+
 export default async function proxy(request: NextRequest) {
+  if (
+    request.nextUrl.pathname === NEWSLETTER_FOLLOW_PATH &&
+    request.method === "OPTIONS"
+  ) {
+    return new NextResponse(null, {
+      status: 204,
+      headers: newsletterFollowCorsHeaders,
+    });
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -27,6 +46,12 @@ export default async function proxy(request: NextRequest) {
 
   // Refresh the session so it doesn't expire. Do NOT remove this call.
   await supabase.auth.getUser();
+
+  if (request.nextUrl.pathname === NEWSLETTER_FOLLOW_PATH) {
+    for (const [key, value] of Object.entries(newsletterFollowCorsHeaders)) {
+      supabaseResponse.headers.set(key, value);
+    }
+  }
 
   return supabaseResponse;
 }
