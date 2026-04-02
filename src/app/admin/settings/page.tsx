@@ -79,7 +79,9 @@ export default function AdminSettingsPage() {
   };
 
   const togglePlaceholder = async () => {
-    const newVal = !showPlaceholder;
+    const prev = showPlaceholder;
+    const newVal = !prev;
+    setShowPlaceholder(newVal);
     setSavingPlaceholder(true);
     setError(null);
     const res = await fetch("/api/admin/settings", {
@@ -88,10 +90,9 @@ export default function AdminSettingsPage() {
       body: JSON.stringify([{ key: "artists_show_placeholder", value: newVal ? "true" : "false" }]),
     });
     if (!res.ok) {
+      setShowPlaceholder(prev);
       const d = await res.json().catch(() => ({}));
       setError(d.error ?? "Памылка захавання");
-    } else {
-      setShowPlaceholder(newVal);
     }
     setSavingPlaceholder(false);
   };
