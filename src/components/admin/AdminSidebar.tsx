@@ -6,7 +6,6 @@ import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
   FileText,
-  Users,
   Music,
   Heart,
   Inbox,
@@ -15,10 +14,9 @@ import {
 } from "lucide-react";
 
 const items = [
-  { href: "/admin",                label: "Обзор",          icon: LayoutDashboard, exact: true },
-  { href: "/admin/content",        label: "Контент сайта",  icon: FileText },
-  { href: "/admin/artists",        label: "Артысты",        icon: Users },
-  { href: "/admin/songs",          label: "Песні",          icon: Music },
+  { href: "/admin",                label: "Агляд",          icon: LayoutDashboard, exact: true },
+  { href: "/admin/content",        label: "Кантэнт",        icon: FileText },
+  { href: "/admin/label",          label: "Лэйбл",          icon: Music },
   { href: "/admin/support-tiers",  label: "Падтрымка",      icon: Heart },
   { href: "/admin/service-requests", label: "Заяўкі",       icon: Inbox },
   { href: "/admin/radio",          label: "Радыё",          icon: Radio },

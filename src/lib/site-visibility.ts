@@ -10,7 +10,8 @@ export async function getVisiblePublicHrefs(): Promise<Set<string>> {
     .schema("speu")
     .from("content_pages")
     .select("slug")
-    .eq("status", "published");
+    .eq("status", "published")
+    .or("slug.eq.home,visible_on_site.eq.true");
   if (error || !data) {
     return new Set(SITE_ROUTE_SLUGS.map((s) => `/${s}`).concat(["/"]));
   }

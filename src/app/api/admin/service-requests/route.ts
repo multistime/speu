@@ -8,6 +8,10 @@ const statusSchema = z.object({
   status: z.enum(["new", "in_progress", "done", "rejected"]),
 });
 
+const deleteSchema = z.object({
+  id: z.string().uuid(),
+});
+
 export async function GET() {
   const { adminDb, user } = await requireAdminApi();
   if (!user || !adminDb) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -44,6 +48,26 @@ export async function PATCH(request: Request) {
     parsed.data.id,
     { status: parsed.data.status }
   );
+
+  return NextResponse.json({ ok: true });
+}
+
+export async function DELETE(request: Request) {
+  const { adminDb, user } = await requireAdminApi();
+  if (!user || !adminDb) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+
+  const payload = await request.json().catch(() => null);
+  const parsed = deleteSchema.safeParse(payload);
+  if (!parsed.success) return NextResponse.json({ error: "invalid_payload" }, { status: 400 });
+
+  const { error } = await adminDb
+    .schema("speu")
+    .from("service_requests")
+    .delete()
+    .eq("id", parsed.data.id);
+  if (error) return NextResponse.json({ error: "delete_failed" }, { status: 500 });
+
+  await writeAdminAuditLog(adminDb, user.id, "service_request.delete", "service_requests", parsed.data.id, {});
 
   return NextResponse.json({ ok: true });
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Users, FileText, Star, Inbox } from "lucide-react";
+import { Music, FileText, Star, Inbox } from "lucide-react";
 
 type Stats = {
   artists_total: number;
@@ -25,11 +25,11 @@ export default function AdminPage() {
 
   const tiles = [
     {
-      href: "/admin/artists",
-      label: "Артысты",
-      icon: Users,
+      href: "/admin/label",
+      label: "Лэйбл",
+      icon: Music,
       value: loading ? "…" : String(stats?.artists_total ?? 0),
-      sub: loading ? "" : `${stats?.artists_published ?? 0} апублікавана`,
+      sub: loading ? "" : `${stats?.artists_published ?? 0} артыстаў апублікавана`,
     },
     {
       href: "/admin/content",
@@ -58,10 +58,10 @@ export default function AdminPage() {
     <div className="space-y-6">
       <div className="glass rounded-2xl border border-border p-8">
         <h1 className="font-display text-3xl font-semibold text-foreground mb-1 italic">
-          Адмінка SPEU
+          Агляд
         </h1>
         <p className="text-muted-foreground text-sm">
-          Панэль кіравання кантэнтам, каталогам артыстаў і заяўкамі.
+          Панэль кіравання кантэнтам, лэйблам і заяўкамі (SPEU).
         </p>
       </div>
 

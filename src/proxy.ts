@@ -67,11 +67,15 @@ export default async function proxy(request: NextRequest) {
       const { data: page } = await supabase
         .schema("speu")
         .from("content_pages")
-        .select("id")
+        .select("id, slug, visible_on_site")
         .eq("slug", routeSlug)
         .eq("status", "published")
         .maybeSingle();
-      if (!page) {
+      const hidden =
+        page &&
+        page.slug !== "home" &&
+        page.visible_on_site === false;
+      if (!page || hidden) {
         return NextResponse.redirect(new URL("/", request.url));
       }
     }
