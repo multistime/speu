@@ -55,19 +55,22 @@ export async function POST(request: Request) {
   const { data: inserted, error } = await supabase
     .schema("speu")
     .from("content_blocks")
-    .upsert({
-      page_id: page.id,
-      block_key: parsed.data.blockKey,
-      block_type: parsed.data.blockType,
-      order_index: parsed.data.orderIndex,
-      enabled: parsed.data.enabled,
-      payload_json: parsed.data.payload,
-      updated_by: user.id,
-    })
+    .upsert(
+      {
+        page_id: page.id,
+        block_key: parsed.data.blockKey,
+        block_type: parsed.data.blockType,
+        order_index: parsed.data.orderIndex,
+        enabled: parsed.data.enabled,
+        payload_json: parsed.data.payload,
+        updated_by: user.id,
+      },
+      { onConflict: "page_id,block_key" }
+    )
     .select("id")
     .single();
   if (error) {
-    return NextResponse.json({ error: "save_failed" }, { status: 500 });
+    return NextResponse.json({ error: "save_failed", details: error.message }, { status: 500 });
   }
 
   await writeAdminAuditLog(supabase, user.id, "content_block.upsert", "content_blocks", String(inserted.id), {

@@ -3,15 +3,31 @@ import { z } from "zod";
 import { requireAdminApi } from "@/lib/auth/admin";
 import { writeAdminAuditLog } from "@/lib/supabase/admin-repos/audit";
 
+const emptyToNull = (v: unknown) => {
+  if (v == null) return null;
+  if (typeof v === "string" && v.trim() === "") return null;
+  return v;
+};
+
 const albumSchema = z.object({
   id: z.string().uuid().optional(),
   artistId: z.string().uuid(),
   title: z.string().min(1),
-  coverUrl: z.string().optional().nullable(),
-  releaseDate: z.string().optional().nullable(),
-  description: z.string().optional().nullable(),
+  coverUrl: z.preprocess(emptyToNull, z.string().nullable().optional()),
+  releaseDate: z.preprocess((v) => {
+    const n = emptyToNull(v);
+    if (n == null) return null;
+    if (typeof n !== "string") return null;
+    const s = n.trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+    return s;
+  }, z.string().nullable().optional()),
+  description: z.preprocess(emptyToNull, z.string().nullable().optional()),
   isPublished: z.boolean().default(false),
-  sortOrder: z.number().int().default(0),
+  sortOrder: z.preprocess((v) => {
+    const n = typeof v === "number" ? v : Number(v);
+    return Number.isFinite(n) ? Math.trunc(n) : 0;
+  }, z.number().int()),
 });
 
 export async function GET() {
@@ -30,9 +46,16 @@ export async function GET() {
   }
 
   const artistIds = [...new Set((albums ?? []).map((a: { artist_id: string }) => a.artist_id))];
-  const { data: artists } = artistIds.length > 0
+  const { data: artists, error: artistsError } = artistIds.length > 0
     ? await supabase.schema("speu").from("artists").select("id, name, slug").in("id", artistIds)
-    : { data: [] };
+    : { data: [], error: null };
+
+  if (artistsError) {
+    return NextResponse.json(
+      { error: "fetch_failed", details: artistsError.message },
+      { status: 500 }
+    );
+  }
 
   const artistMap = Object.fromEntries((artists ?? []).map((a: { id: string; name: string; slug: string }) => [a.id, a]));
 

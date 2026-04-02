@@ -4,6 +4,7 @@ import { requireAdminApi } from "@/lib/auth/admin";
 import { writeAdminAuditLog } from "@/lib/supabase/admin-repos/audit";
 
 const artistSchema = z.object({
+  id: z.string().uuid().optional(),
   slug: z.string().min(1),
   name: z.string().min(1),
   nameEn: z.string().optional(),
@@ -26,7 +27,9 @@ export async function GET() {
     .from("artists")
     .select("*")
     .order("sort_order", { ascending: true });
-  if (error) return NextResponse.json({ error: "fetch_failed" }, { status: 500 });
+  if (error) {
+    return NextResponse.json({ error: "fetch_failed", details: error.message }, { status: 500 });
+  }
   return NextResponse.json({ items: data ?? [] });
 }
 
@@ -36,30 +39,58 @@ export async function POST(request: Request) {
 
   const payload = await request.json().catch(() => null);
   const parsed = artistSchema.safeParse(payload);
-  if (!parsed.success) return NextResponse.json({ error: "invalid_payload" }, { status: 400 });
+  if (!parsed.success) {
+    return NextResponse.json({ error: "invalid_payload", details: parsed.error.flatten() }, { status: 400 });
+  }
+
+  const row = {
+    slug: parsed.data.slug,
+    name: parsed.data.name,
+    name_en: parsed.data.nameEn ?? null,
+    tagline: parsed.data.tagline ?? null,
+    bio: parsed.data.bio ?? null,
+    genres: parsed.data.genres,
+    location: parsed.data.location ?? null,
+    status: parsed.data.status,
+    sort_order: parsed.data.sortOrder,
+    updated_by: user.id,
+  };
+
+  if (parsed.data.id) {
+    const { data, error } = await supabase
+      .schema("speu")
+      .from("artists")
+      .update(row)
+      .eq("id", parsed.data.id)
+      .select("id")
+      .single();
+    if (error) {
+      return NextResponse.json({ error: "save_failed", details: error.message }, { status: 500 });
+    }
+    await writeAdminAuditLog(supabase, user.id, "artist.update", "artists", data.id, {
+      slug: parsed.data.slug,
+    });
+    return NextResponse.json({ ok: true, id: data.id });
+  }
+
+  const insertRow = {
+    ...row,
+    ...(parsed.data.yearStarted != null ? { year_started: parsed.data.yearStarted } : {}),
+    ...(parsed.data.initials != null ? { initials: parsed.data.initials } : {}),
+    created_by: user.id,
+  };
 
   const { data, error } = await supabase
     .schema("speu")
     .from("artists")
-    .upsert({
-      slug: parsed.data.slug,
-      name: parsed.data.name,
-      name_en: parsed.data.nameEn ?? null,
-      tagline: parsed.data.tagline ?? null,
-      bio: parsed.data.bio ?? null,
-      genres: parsed.data.genres,
-      location: parsed.data.location ?? null,
-      year_started: parsed.data.yearStarted ?? null,
-      initials: parsed.data.initials ?? null,
-      status: parsed.data.status,
-      sort_order: parsed.data.sortOrder,
-      updated_by: user.id,
-    })
+    .insert(insertRow)
     .select("id")
     .single();
-  if (error) return NextResponse.json({ error: "save_failed" }, { status: 500 });
+  if (error) {
+    return NextResponse.json({ error: "save_failed", details: error.message }, { status: 500 });
+  }
 
-  await writeAdminAuditLog(supabase, user.id, "artist.upsert", "artists", data.id, {
+  await writeAdminAuditLog(supabase, user.id, "artist.create", "artists", data.id, {
     slug: parsed.data.slug,
   });
 

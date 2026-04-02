@@ -76,6 +76,7 @@ export default function AdminArtistsPage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        ...(form.id ? { id: form.id } : {}),
         slug: form.slug,
         name: form.name,
         nameEn: form.nameEn || undefined,
@@ -89,7 +90,11 @@ export default function AdminArtistsPage() {
     });
     if (!res.ok) {
       const d = await res.json().catch(() => ({}));
-      setError(d.error ?? "Памылка захавання");
+      setError(
+        typeof d.details === "string"
+          ? `${d.error ?? "Памылка"}: ${d.details}`
+          : d.error ?? "Памылка захавання"
+      );
     } else {
       setForm(emptyForm);
       await load();

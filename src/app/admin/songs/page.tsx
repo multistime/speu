@@ -247,7 +247,11 @@ export default function AdminSongsPage() {
     });
     if (!res.ok) {
       const d = await res.json().catch(() => ({}));
-      setError(d.error ?? "Памылка захавання");
+      setError(
+        typeof d.details === "string"
+          ? `${d.error ?? "Памылка"}: ${d.details}`
+          : d.error ?? "Памылка захавання"
+      );
     } else {
       setAlbumForm(emptyAlbumForm);
       await loadAll();
