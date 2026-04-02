@@ -13,12 +13,12 @@ const createBlockSchema = z.object({
 });
 
 export async function GET() {
-  const { supabase, user } = await requireAdminApi();
-  if (!user) {
+  const { adminDb, user } = await requireAdminApi();
+  if (!user || !adminDb) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await adminDb
     .schema("speu")
     .from("content_pages")
     .select("id, slug, title, status, content_blocks(id, block_key, block_type, order_index, enabled, payload_json)")
@@ -31,8 +31,8 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const { supabase, user } = await requireAdminApi();
-  if (!user) {
+  const { adminDb, user } = await requireAdminApi();
+  if (!user || !adminDb) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "invalid_payload" }, { status: 400 });
   }
 
-  const { data: page, error: pageError } = await supabase
+  const { data: page, error: pageError } = await adminDb
     .schema("speu")
     .from("content_pages")
     .select("id")
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "page_not_found" }, { status: 404 });
   }
 
-  const { data: inserted, error } = await supabase
+  const { data: inserted, error } = await adminDb
     .schema("speu")
     .from("content_blocks")
     .upsert(
@@ -73,7 +73,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "save_failed", details: error.message }, { status: 500 });
   }
 
-  await writeAdminAuditLog(supabase, user.id, "content_block.upsert", "content_blocks", String(inserted.id), {
+  await writeAdminAuditLog(adminDb, user.id, "content_block.upsert", "content_blocks", String(inserted.id), {
     pageSlug: parsed.data.pageSlug,
     blockKey: parsed.data.blockKey,
   });

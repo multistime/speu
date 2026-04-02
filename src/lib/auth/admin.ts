@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getAdminDatabaseClient } from "@/lib/supabase/service";
 import type { SpeuProfile } from "@/lib/supabase/speu";
 
 async function fetchAdminProfile(supabase: Awaited<ReturnType<typeof createClient>>, userId: string): Promise<SpeuProfile | null> {
@@ -32,10 +33,11 @@ export async function requireAdminApi() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user) return { supabase, user: null, profile: null };
+  if (!user) return { supabase, user: null, profile: null, adminDb: null };
 
   const profile = await fetchAdminProfile(supabase, user.id);
-  if (!profile?.is_admin) return { supabase, user: null, profile: null };
+  if (!profile?.is_admin) return { supabase, user: null, profile: null, adminDb: null };
 
-  return { supabase, user, profile };
+  const adminDb = getAdminDatabaseClient(supabase);
+  return { supabase, user, profile, adminDb };
 }

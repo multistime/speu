@@ -11,10 +11,10 @@ const upsertSchema = z.object({
 const batchSchema = z.array(upsertSchema);
 
 export async function GET() {
-  const { supabase, user } = await requireAdminApi();
-  if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const { adminDb, user } = await requireAdminApi();
+  if (!user || !adminDb) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
-  const { data, error } = await supabase
+  const { data, error } = await adminDb
     .schema("speu")
     .from("site_settings")
     .select("key, value, description, updated_at")
@@ -26,8 +26,8 @@ export async function GET() {
 
 // Accepts either a single { key, value } or an array of them
 export async function POST(request: Request) {
-  const { supabase, user } = await requireAdminApi();
-  if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const { adminDb, user } = await requireAdminApi();
+  if (!user || !adminDb) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const payload = await request.json().catch(() => null);
   if (!payload) return NextResponse.json({ error: "invalid_payload" }, { status: 400 });
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
   if (!parsed.success) return NextResponse.json({ error: "invalid_payload", details: parsed.error.flatten() }, { status: 400 });
 
   for (const row of parsed.data) {
-    const { error } = await supabase
+    const { error } = await adminDb
       .schema("speu")
       .from("site_settings")
       .upsert({ key: row.key, value: row.value, updated_by: user.id, updated_at: new Date().toISOString() });
@@ -45,7 +45,7 @@ export async function POST(request: Request) {
     if (error) return NextResponse.json({ error: "save_failed", key: row.key, details: error.message }, { status: 500 });
   }
 
-  await writeAdminAuditLog(supabase, user.id, "settings.update", "site_settings", "batch", {
+  await writeAdminAuditLog(adminDb, user.id, "settings.update", "site_settings", "batch", {
     keys: parsed.data.map((r) => r.key),
   });
 

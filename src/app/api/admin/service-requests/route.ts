@@ -9,10 +9,10 @@ const statusSchema = z.object({
 });
 
 export async function GET() {
-  const { supabase, user } = await requireAdminApi();
-  if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const { adminDb, user } = await requireAdminApi();
+  if (!user || !adminDb) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
-  const { data, error } = await supabase
+  const { data, error } = await adminDb
     .schema("speu")
     .from("service_requests")
     .select("*")
@@ -22,14 +22,14 @@ export async function GET() {
 }
 
 export async function PATCH(request: Request) {
-  const { supabase, user } = await requireAdminApi();
-  if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const { adminDb, user } = await requireAdminApi();
+  if (!user || !adminDb) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const payload = await request.json().catch(() => null);
   const parsed = statusSchema.safeParse(payload);
   if (!parsed.success) return NextResponse.json({ error: "invalid_payload" }, { status: 400 });
 
-  const { error } = await supabase
+  const { error } = await adminDb
     .schema("speu")
     .from("service_requests")
     .update({ status: parsed.data.status })
@@ -37,7 +37,7 @@ export async function PATCH(request: Request) {
   if (error) return NextResponse.json({ error: "update_failed" }, { status: 500 });
 
   await writeAdminAuditLog(
-    supabase,
+    adminDb,
     user.id,
     "service_request.status_update",
     "service_requests",

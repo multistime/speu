@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { requireAdminApi } from "@/lib/auth/admin";
 
 export async function POST(request: Request) {
-  const { supabase, user } = await requireAdminApi();
-  if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const { adminDb, user } = await requireAdminApi();
+  if (!user || !adminDb) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   let formData: FormData;
   try {
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
   const arrayBuffer = await file.arrayBuffer();
   const buffer = new Uint8Array(arrayBuffer);
 
-  const { data, error } = await supabase.storage
+  const { data, error } = await adminDb.storage
     .from("speu-audio")
     .upload(filename, buffer, {
       contentType: mime,
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "upload_failed", details: error.message }, { status: 500 });
   }
 
-  const { data: { publicUrl } } = supabase.storage
+  const { data: { publicUrl } } = adminDb.storage
     .from("speu-audio")
     .getPublicUrl(data.path);
 

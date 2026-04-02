@@ -51,10 +51,10 @@ const artistSchema = z
   });
 
 export async function GET() {
-  const { supabase, user } = await requireAdminApi();
-  if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const { adminDb, user } = await requireAdminApi();
+  if (!user || !adminDb) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
-  const { data, error } = await supabase
+  const { data, error } = await adminDb
     .schema("speu")
     .from("artists")
     .select("*")
@@ -66,8 +66,8 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const { supabase, user } = await requireAdminApi();
-  if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const { adminDb, user } = await requireAdminApi();
+  if (!user || !adminDb) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const payload = await request.json().catch(() => null);
   const parsed = artistSchema.safeParse(payload);
@@ -98,7 +98,7 @@ export async function POST(request: Request) {
   };
 
   if (parsed.data.id) {
-    const { data, error } = await supabase
+    const { data, error } = await adminDb
       .schema("speu")
       .from("artists")
       .update(row)
@@ -108,7 +108,7 @@ export async function POST(request: Request) {
     if (error) {
       return NextResponse.json({ error: "save_failed", details: error.message }, { status: 500 });
     }
-    await writeAdminAuditLog(supabase, user.id, "artist.update", "artists", data.id, {
+    await writeAdminAuditLog(adminDb, user.id, "artist.update", "artists", data.id, {
       slug: parsed.data.slug,
     });
     return NextResponse.json({ ok: true, id: data.id });
@@ -121,7 +121,7 @@ export async function POST(request: Request) {
     created_by: user.id,
   };
 
-  const { data, error } = await supabase
+  const { data, error } = await adminDb
     .schema("speu")
     .from("artists")
     .insert(insertRow)
@@ -131,7 +131,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "save_failed", details: error.message }, { status: 500 });
   }
 
-  await writeAdminAuditLog(supabase, user.id, "artist.create", "artists", data.id, {
+  await writeAdminAuditLog(adminDb, user.id, "artist.create", "artists", data.id, {
     slug: parsed.data.slug,
   });
 

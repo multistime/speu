@@ -6,12 +6,12 @@ export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { supabase, user } = await requireAdminApi();
-  if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const { adminDb, user } = await requireAdminApi();
+  if (!user || !adminDb) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const { id } = await params;
 
-  const { error } = await supabase
+  const { error } = await adminDb
     .schema("speu")
     .from("support_tiers")
     .delete()
@@ -19,6 +19,6 @@ export async function DELETE(
 
   if (error) return NextResponse.json({ error: "delete_failed", details: error.message }, { status: 500 });
 
-  await writeAdminAuditLog(supabase, user.id, "support_tier.delete", "support_tiers", id, {});
+  await writeAdminAuditLog(adminDb, user.id, "support_tier.delete", "support_tiers", id, {});
   return NextResponse.json({ ok: true });
 }

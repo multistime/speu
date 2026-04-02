@@ -31,11 +31,11 @@ const albumSchema = z.object({
 });
 
 export async function GET() {
-  const { supabase, user } = await requireAdminApi();
-  if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const { adminDb, user } = await requireAdminApi();
+  if (!user || !adminDb) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   // Fetch albums and artists separately to avoid PostgREST schema cache dependency
-  const { data: albums, error: albumsError } = await supabase
+  const { data: albums, error: albumsError } = await adminDb
     .schema("speu")
     .from("albums")
     .select("*")
@@ -47,7 +47,7 @@ export async function GET() {
 
   const artistIds = [...new Set((albums ?? []).map((a: { artist_id: string }) => a.artist_id))];
   const { data: artists, error: artistsError } = artistIds.length > 0
-    ? await supabase.schema("speu").from("artists").select("id, name, slug").in("id", artistIds)
+    ? await adminDb.schema("speu").from("artists").select("id, name, slug").in("id", artistIds)
     : { data: [], error: null };
 
   if (artistsError) {
@@ -68,8 +68,8 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const { supabase, user } = await requireAdminApi();
-  if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const { adminDb, user } = await requireAdminApi();
+  if (!user || !adminDb) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const payload = await request.json().catch(() => null);
   const parsed = albumSchema.safeParse(payload);
@@ -87,7 +87,7 @@ export async function POST(request: Request) {
   };
 
   if (parsed.data.id) {
-    const { data, error } = await supabase
+    const { data, error } = await adminDb
       .schema("speu")
       .from("albums")
       .update(row)
@@ -95,18 +95,18 @@ export async function POST(request: Request) {
       .select("id")
       .single();
     if (error) return NextResponse.json({ error: "save_failed", details: error.message }, { status: 500 });
-    await writeAdminAuditLog(supabase, user.id, "album.update", "albums", data.id, { title: parsed.data.title });
+    await writeAdminAuditLog(adminDb, user.id, "album.update", "albums", data.id, { title: parsed.data.title });
     return NextResponse.json({ ok: true, id: data.id });
   }
 
   row.created_by = user.id;
-  const { data, error } = await supabase
+  const { data, error } = await adminDb
     .schema("speu")
     .from("albums")
     .insert(row)
     .select("id")
     .single();
   if (error) return NextResponse.json({ error: "save_failed", details: error.message }, { status: 500 });
-  await writeAdminAuditLog(supabase, user.id, "album.create", "albums", data.id, { title: parsed.data.title });
+  await writeAdminAuditLog(adminDb, user.id, "album.create", "albums", data.id, { title: parsed.data.title });
   return NextResponse.json({ ok: true, id: data.id });
 }

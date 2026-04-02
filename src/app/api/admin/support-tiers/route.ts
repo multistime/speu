@@ -21,10 +21,10 @@ const tierSchema = z.object({
 });
 
 export async function GET() {
-  const { supabase, user } = await requireAdminApi();
-  if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const { adminDb, user } = await requireAdminApi();
+  if (!user || !adminDb) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
-  const { data, error } = await supabase
+  const { data, error } = await adminDb
     .schema("speu")
     .from("support_tiers")
     .select("*")
@@ -34,8 +34,8 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const { supabase, user } = await requireAdminApi();
-  if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const { adminDb, user } = await requireAdminApi();
+  if (!user || !adminDb) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const payload = await request.json().catch(() => null);
   const parsed = tierSchema.safeParse(payload);
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
 
   // Update existing tier by id
   if (parsed.data.id) {
-    const { data, error } = await supabase
+    const { data, error } = await adminDb
       .schema("speu")
       .from("support_tiers")
       .update(row)
@@ -68,12 +68,12 @@ export async function POST(request: Request) {
       .select("id")
       .single();
     if (error) return NextResponse.json({ error: "save_failed", details: error.message }, { status: 500 });
-    await writeAdminAuditLog(supabase, user.id, "support_tier.update", "support_tiers", data.id, { code: parsed.data.code });
+    await writeAdminAuditLog(adminDb, user.id, "support_tier.update", "support_tiers", data.id, { code: parsed.data.code });
     return NextResponse.json({ ok: true, id: data.id });
   }
 
   // Insert new tier; on duplicate code — update (handles seed data)
-  const { data, error } = await supabase
+  const { data, error } = await adminDb
     .schema("speu")
     .from("support_tiers")
     .upsert({ ...row }, { onConflict: "code" })
@@ -81,6 +81,6 @@ export async function POST(request: Request) {
     .single();
   if (error) return NextResponse.json({ error: "save_failed", details: error.message }, { status: 500 });
 
-  await writeAdminAuditLog(supabase, user.id, "support_tier.upsert", "support_tiers", data.id, { code: parsed.data.code });
+  await writeAdminAuditLog(adminDb, user.id, "support_tier.upsert", "support_tiers", data.id, { code: parsed.data.code });
   return NextResponse.json({ ok: true, id: data.id });
 }

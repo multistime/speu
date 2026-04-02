@@ -2,14 +2,14 @@ import { NextResponse } from "next/server";
 import { requireAdminApi } from "@/lib/auth/admin";
 
 export async function GET() {
-  const { supabase, user } = await requireAdminApi();
-  if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const { adminDb, user } = await requireAdminApi();
+  if (!user || !adminDb) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const [artists, pages, tiers, requests] = await Promise.all([
-    supabase.schema("speu").from("artists").select("status", { count: "exact", head: false }),
-    supabase.schema("speu").from("content_pages").select("id", { count: "exact", head: true }),
-    supabase.schema("speu").from("support_tiers").select("is_active", { count: "exact", head: false }),
-    supabase.schema("speu").from("service_requests").select("status", { count: "exact", head: false }),
+    adminDb.schema("speu").from("artists").select("status", { count: "exact", head: false }),
+    adminDb.schema("speu").from("content_pages").select("id", { count: "exact", head: true }),
+    adminDb.schema("speu").from("support_tiers").select("is_active", { count: "exact", head: false }),
+    adminDb.schema("speu").from("service_requests").select("status", { count: "exact", head: false }),
   ]);
 
   const artistsPublished = (artists.data ?? []).filter((a) => a.status === "published").length;
