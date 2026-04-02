@@ -107,73 +107,72 @@ function GlobalPlayerProgress({ track }: { track: PlayerTrack }) {
       onPointerCancel={onPointerUp}
       onKeyDown={onKeyDown}
       className={cn(
-        "absolute inset-x-0 top-0 z-30 flex h-4 cursor-pointer touch-none items-center justify-stretch select-none",
+        /* Зона націску ніжэй за візуал, лінія — строга top-0 (першы піксель панэлі) */
+        "absolute inset-x-0 top-0 z-30 h-3 cursor-pointer touch-none select-none",
         "focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary/45 focus-visible:outline-offset-2 focus-visible:rounded-sm",
         !canSeek && "cursor-not-allowed"
       )}
     >
-      <div className="relative h-2.5 w-full">
-        {/* Рэйка — па цэнтры па вертыкалі */}
-        <div
-          className={cn(
-            "pointer-events-none absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-border transition-opacity",
-            "opacity-[0.42] group-hover/player:opacity-[0.58]"
-          )}
-          aria-hidden
-        />
-
-        {canSeek ? (
-          <>
-            <div
-              className={cn(
-                "pointer-events-none absolute left-0 top-1/2 h-px origin-left -translate-y-1/2 transition-[opacity,box-shadow]",
-                !track.accentColor && "bg-primary",
-                isDragging
-                  ? "opacity-100 shadow-[0_0_12px_rgba(125,191,158,0.22)]"
-                  : "opacity-[0.92] group-hover/player:opacity-100"
-              )}
-              style={{
-                width: `${pct}%`,
-                ...fillStyle,
-              }}
-              aria-hidden
-            />
-            {/* Бегунок */}
-            <div
-              aria-hidden
-              className={cn(
-                "pointer-events-none absolute top-1/2 z-[2] size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-background shadow-md transition-transform duration-150 ease-out",
-                !track.accentColor && "bg-primary",
-                "group-hover/player:scale-110",
-                isDragging && "scale-125 ring-2 ring-primary/35"
-              )}
-              style={{
-                left: `${pct}%`,
-                ...fillStyle,
-              }}
-            />
-          </>
-        ) : (
-          <div
-            className="pointer-events-none absolute inset-x-0 top-1/2 h-px -translate-y-1/2 overflow-hidden bg-border/35"
-            aria-hidden
-          >
-            {isPlaying ? (
-              <div
-                className={cn(
-                  "speu-player-progress-indeterminate h-full w-[22%]",
-                  track.accentColor ? "" : "bg-primary/75"
-                )}
-                style={
-                  track.accentColor
-                    ? { background: track.accentColor, opacity: 0.75 }
-                    : undefined
-                }
-              />
-            ) : null}
-          </div>
+      {/* Поўная шырыня — рэйка і запаўненне ў адным радку з верхнім краем кантэйнера */}
+      <div
+        className={cn(
+          "pointer-events-none absolute inset-x-0 top-0 z-0 h-px transition-opacity",
+          "bg-border opacity-[0.45] group-hover/player:opacity-[0.62]"
         )}
-      </div>
+        aria-hidden
+      />
+
+      {canSeek ? (
+        <>
+          <div
+            className={cn(
+              "pointer-events-none absolute left-0 top-0 z-[1] h-px origin-left transition-[opacity,box-shadow]",
+              !track.accentColor && "bg-primary",
+              isDragging
+                ? "opacity-100 shadow-[0_0_10px_rgba(125,191,158,0.2)]"
+                : "opacity-[0.95] group-hover/player:opacity-100"
+            )}
+            style={{
+              width: `${pct}%`,
+              ...fillStyle,
+            }}
+            aria-hidden
+          />
+          {/* Іскра: міні-ромб на лініі, не круг */}
+          <div
+            aria-hidden
+            className={cn(
+              "pointer-events-none absolute top-0 z-[2] size-[5px] -translate-x-1/2 -translate-y-1/2 rotate-45 rounded-[1px] border border-background/80 shadow-[0_0_6px_rgba(0,0,0,0.35)] transition-transform duration-150 ease-out",
+              !track.accentColor && "bg-primary",
+              "group-hover/player:scale-110",
+              isDragging && "scale-125 ring-1 ring-primary/40"
+            )}
+            style={{
+              left: `${pct}%`,
+              ...fillStyle,
+            }}
+          />
+        </>
+      ) : (
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-px overflow-hidden bg-border/35"
+          aria-hidden
+        >
+          {isPlaying ? (
+            <div
+              className={cn(
+                "speu-player-progress-indeterminate h-full w-[22%]",
+                track.accentColor ? "" : "bg-primary/75"
+              )}
+              style={
+                track.accentColor
+                  ? { background: track.accentColor, opacity: 0.75 }
+                  : undefined
+              }
+            />
+          ) : null}
+        </div>
+      )}
     </div>
   );
 }
@@ -200,7 +199,7 @@ export function GlobalPlayer() {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 100, opacity: 0 }}
           transition={{ type: "spring", damping: 28, stiffness: 280 }}
-          className="group/player fixed bottom-0 inset-x-0 z-50 border-t border-border bg-background/95 backdrop-blur-md"
+          className="group/player fixed bottom-0 inset-x-0 z-50 overflow-visible bg-background/95 backdrop-blur-md"
           style={
             track.accentRgb
               ? { boxShadow: `0 -4px 40px rgba(${track.accentRgb}, 0.08)` }
@@ -209,11 +208,11 @@ export function GlobalPlayer() {
         >
           <GlobalPlayerProgress track={track} />
 
-          {/* Акцэнт трэка — ніжэй іскры, без перакрыцьця hit-target */}
+          {/* Акцэнт трэка — пад зонай прагрэсу (h-3), без перакрыцьця */}
           {track.accentColor && (
             <div
-              className="pointer-events-none absolute left-0 right-0 top-1 z-10 h-px"
-              style={{ background: track.accentColor, opacity: 0.35 }}
+              className="pointer-events-none absolute left-0 right-0 top-3 z-10 h-px"
+              style={{ background: track.accentColor, opacity: 0.32 }}
             />
           )}
 
