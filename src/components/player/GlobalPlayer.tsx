@@ -198,14 +198,6 @@ export function GlobalPlayer() {
         >
           <GlobalPlayerProgress track={track} />
 
-          {/* Акцэнт трэка — пад зонай прагрэсу (h-3), без перакрыцьця */}
-          {track.accentColor && (
-            <div
-              className="pointer-events-none absolute left-0 right-0 top-3 z-10 h-px"
-              style={{ background: track.accentColor, opacity: 0.32 }}
-            />
-          )}
-
           <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3">
             {/* Icon / cover */}
             <div
