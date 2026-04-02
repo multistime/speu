@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Trash2, Pencil, X } from "lucide-react";
+import { Trash2, Pencil, Plus, X } from "lucide-react";
+import { AdminFormModal } from "@/components/admin/AdminFormModal";
 
 type Tier = {
   id: string;
@@ -44,6 +45,7 @@ export default function AdminSupportTiersPage() {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [formOpen, setFormOpen] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -74,7 +76,7 @@ export default function AdminSupportTiersPage() {
       isActive: tier.is_active,
       sortOrder: String(tier.sort_order),
     });
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    setFormOpen(true);
   };
 
   const save = async () => {
@@ -116,6 +118,7 @@ export default function AdminSupportTiersPage() {
       setError(d.error ?? "Памылка захавання");
     } else {
       setForm(emptyForm);
+      setFormOpen(false);
       await load();
     }
     setSaving(false);
@@ -132,6 +135,18 @@ export default function AdminSupportTiersPage() {
       await load();
     }
     setDeleting(null);
+  };
+
+  const closeFormModal = () => {
+    setFormOpen(false);
+    setForm(emptyForm);
+    setError(null);
+  };
+
+  const openNewTier = () => {
+    setForm(emptyForm);
+    setError(null);
+    setFormOpen(true);
   };
 
   const inputCls = "px-3 py-2 rounded-lg bg-muted border border-border text-sm w-full focus:outline-none focus:ring-1 focus:ring-primary";
@@ -151,9 +166,8 @@ export default function AdminSupportTiersPage() {
         </div>
       )}
 
-      {/* Form */}
-      <div className="glass rounded-2xl border border-border p-6 space-y-4">
-        <h2 className="text-sm font-semibold">
+      <AdminFormModal open={formOpen} onClose={closeFormModal} maxWidthClassName="max-w-2xl">
+        <h2 className="text-sm font-semibold pr-2">
           {form.id ? "Рэдагаваць узровень" : "Дадаць узровень"}
         </h2>
 
@@ -301,7 +315,7 @@ export default function AdminSupportTiersPage() {
           </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 pt-1">
           <button
             onClick={save}
             disabled={saving}
@@ -311,18 +325,29 @@ export default function AdminSupportTiersPage() {
           </button>
           {form.id && (
             <button
-              onClick={() => { setForm(emptyForm); setError(null); }}
+              type="button"
+              onClick={closeFormModal}
               className="px-4 py-2 rounded-lg border border-border text-sm text-foreground/70 hover:text-foreground"
             >
               Скасаваць
             </button>
           )}
         </div>
-      </div>
+      </AdminFormModal>
 
       {/* List */}
       <div className="glass rounded-2xl border border-border p-6">
-        <h2 className="text-sm font-semibold mb-4">Спіс ({items.length})</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <h2 className="text-sm font-semibold">Спіс ({items.length})</h2>
+          <button
+            type="button"
+            onClick={openNewTier}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
+          >
+            <Plus className="w-4 h-4" strokeWidth={2} />
+            Дадаць
+          </button>
+        </div>
         {loading ? (
           <p className="text-sm text-muted-foreground">Загрузка...</p>
         ) : (

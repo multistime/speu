@@ -21,7 +21,9 @@ export async function GET() {
   const { data, error } = await adminDb
     .schema("speu")
     .from("content_pages")
-    .select("id, slug, title, status, content_blocks(id, block_key, block_type, order_index, enabled, payload_json)")
+    .select(
+      "id, slug, title, status, visible_on_site, content_blocks(id, block_key, block_type, order_index, enabled, payload_json)"
+    )
     .order("slug", { ascending: true });
 
   if (error) {

@@ -4,6 +4,7 @@ import "./globals.css";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { ClientProviders } from "@/components/ClientProviders";
+import { getVisiblePublicHrefs } from "@/lib/site-visibility";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,11 +30,13 @@ export const metadata: Metadata = {
   keywords: ["беларуская музыка", "беларуская мова", "музычны лейбл", "Спеў", "нэа-фолк", "беларускія песні"],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const visibleHrefs = Array.from(await getVisiblePublicHrefs());
+
   return (
     <html
       lang="be"
@@ -53,9 +56,9 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-background text-foreground antialiased">
         <ClientProviders>
-          <Navbar />
+          <Navbar visibleHrefs={visibleHrefs} />
           <main>{children}</main>
-          <Footer />
+          <Footer visibleHrefs={visibleHrefs} />
         </ClientProviders>
       </body>
     </html>

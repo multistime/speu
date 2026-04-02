@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Trash2, Pencil, X } from "lucide-react";
+import { Trash2, Pencil, Plus, X } from "lucide-react";
+import { AdminFormModal } from "@/components/admin/AdminFormModal";
 import { ArtistPattern } from "@/components/artists/artist-pattern";
 import {
   ARTIST_COLOR_PRESETS,
@@ -53,6 +54,7 @@ export default function AdminArtistsPage() {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [formOpen, setFormOpen] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -86,7 +88,7 @@ export default function AdminArtistsPage() {
       customGradientTo: String(vj.gradientTo ?? "#0E1811"),
       customAccent: String(vj.accent ?? "#7DBF9E"),
     });
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    setFormOpen(true);
   };
 
   const save = async () => {
@@ -130,6 +132,7 @@ export default function AdminArtistsPage() {
       );
     } else {
       setForm(emptyForm);
+      setFormOpen(false);
       await load();
     }
     setSaving(false);
@@ -150,6 +153,18 @@ export default function AdminArtistsPage() {
 
   const inputCls = "px-3 py-2 rounded-lg bg-muted border border-border text-sm w-full focus:outline-none focus:ring-1 focus:ring-primary";
   const labelCls = "text-xs text-muted-foreground mb-1 block";
+
+  const closeFormModal = () => {
+    setFormOpen(false);
+    setForm(emptyForm);
+    setError(null);
+  };
+
+  const openNewArtist = () => {
+    setForm(emptyForm);
+    setError(null);
+    setFormOpen(true);
+  };
 
   const coverPreview = useMemo(
     () =>
@@ -183,9 +198,8 @@ export default function AdminArtistsPage() {
         </div>
       )}
 
-      {/* Form */}
-      <div className="glass rounded-2xl border border-border p-6 space-y-4">
-        <h2 className="text-sm font-semibold">
+      <AdminFormModal open={formOpen} onClose={closeFormModal} maxWidthClassName="max-w-3xl">
+        <h2 className="text-sm font-semibold pr-2">
           {form.id ? "Рэдагаваць артыста" : "Дадаць артыста"}
         </h2>
 
@@ -386,7 +400,7 @@ export default function AdminArtistsPage() {
           </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 pt-1">
           <button
             onClick={save}
             disabled={saving}
@@ -396,18 +410,29 @@ export default function AdminArtistsPage() {
           </button>
           {form.id && (
             <button
-              onClick={() => { setForm(emptyForm); setError(null); }}
+              type="button"
+              onClick={closeFormModal}
               className="px-4 py-2 rounded-lg border border-border text-sm text-foreground/70 hover:text-foreground"
             >
               Скасаваць
             </button>
           )}
         </div>
-      </div>
+      </AdminFormModal>
 
       {/* List */}
       <div className="glass rounded-2xl border border-border p-6">
-        <h2 className="text-sm font-semibold mb-4">Спіс ({items.length})</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <h2 className="text-sm font-semibold">Спіс ({items.length})</h2>
+          <button
+            type="button"
+            onClick={openNewArtist}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
+          >
+            <Plus className="w-4 h-4" strokeWidth={2} />
+            Дадаць
+          </button>
+        </div>
         {loading ? (
           <p className="text-sm text-muted-foreground">Загрузка...</p>
         ) : items.length === 0 ? (

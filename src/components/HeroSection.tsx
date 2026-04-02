@@ -21,7 +21,15 @@ function subscribeToClass(cb: () => void) {
   return () => observer.disconnect();
 }
 
-export function HeroSection() {
+type HeroSectionProps = {
+  showGeneratorLink?: boolean;
+  showServicesLink?: boolean;
+};
+
+export function HeroSection({
+  showGeneratorLink = true,
+  showServicesLink = true,
+}: HeroSectionProps) {
   const [showAnimatedBackdrop, setShowAnimatedBackdrop] = useState(true);
 
   useEffect(() => {
@@ -176,34 +184,40 @@ export function HeroSection() {
             </motion.p>
 
             {/* CTA buttons */}
-            <motion.div
-              {...fadeUp}
-              transition={{ delay: 0.65, duration: 0.6 }}
-              className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start"
-            >
-              <Link
-                href="/generator"
-                className="group inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl font-semibold text-sm transition-all duration-300 hover:scale-[1.02]"
-                style={{
-                  backgroundColor: ctaPrimBg,
-                  color: ctaPrimFg,
-                  boxShadow: `0 0 20px ${ctaGlow}`,
-                }}
+            {(showGeneratorLink || showServicesLink) && (
+              <motion.div
+                {...fadeUp}
+                transition={{ delay: 0.65, duration: 0.6 }}
+                className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start"
               >
-                Напісаць тэкст
-                <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-              </Link>
-              <Link
-                href="/services"
-                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl border font-medium text-sm transition-all duration-300 hover:bg-primary/5 hover:text-foreground"
-                style={{
-                  borderColor: ctaSecBrd,
-                  color: ctaSecFg,
-                }}
-              >
-                Замовіць песню
-              </Link>
-            </motion.div>
+                {showGeneratorLink && (
+                  <Link
+                    href="/generator"
+                    className="group inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl font-semibold text-sm transition-all duration-300 hover:scale-[1.02]"
+                    style={{
+                      backgroundColor: ctaPrimBg,
+                      color: ctaPrimFg,
+                      boxShadow: `0 0 20px ${ctaGlow}`,
+                    }}
+                  >
+                    Напісаць тэкст
+                    <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+                  </Link>
+                )}
+                {showServicesLink && (
+                  <Link
+                    href="/services"
+                    className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl border font-medium text-sm transition-all duration-300 hover:bg-primary/5 hover:text-foreground"
+                    style={{
+                      borderColor: ctaSecBrd,
+                      color: ctaSecFg,
+                    }}
+                  >
+                    Замовіць песню
+                  </Link>
+                )}
+              </motion.div>
+            )}
 
             {/* Stats */}
             <motion.div

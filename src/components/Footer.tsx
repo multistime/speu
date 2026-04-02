@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Music2, Sparkles, Headphones, Heart, Users } from "lucide-react";
+import { Music2, Sparkles, Headphones, Heart, Users, Radio } from "lucide-react";
 
 /* ── Custom brand SVG icons ──────────────────────────────────────────── */
 
@@ -78,11 +78,19 @@ const SOCIAL_LINKS = [
 const FOOTER_LINKS = [
   { href: "/generator", label: "Генератар",  icon: Sparkles },
   { href: "/artists",   label: "Артысты",    icon: Users },
+  { href: "/radio",     label: "Радыё Мара", icon: Radio },
   { href: "/services",  label: "Паслугі",    icon: Headphones },
   { href: "/support",   label: "Падтрымка",  icon: Heart },
 ];
 
-export function Footer() {
+type FooterProps = {
+  visibleHrefs: string[];
+};
+
+export function Footer({ visibleHrefs }: FooterProps) {
+  const visibleSet = new Set(visibleHrefs);
+  const footerLinks = FOOTER_LINKS.filter((l) => visibleSet.has(l.href));
+
   return (
     <footer className="border-t border-border bg-background">
       {/* Main footer content */}
@@ -125,7 +133,7 @@ export function Footer() {
               Навігацыя
             </p>
             <ul className="space-y-2">
-              {FOOTER_LINKS.map(({ href, label, icon: Icon }) => (
+              {footerLinks.map(({ href, label, icon: Icon }) => (
                 <li key={href}>
                   <Link
                     href={href}

@@ -1,123 +1,134 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { slugToPublicPath } from "@/lib/site-route-slugs";
 
 type ContentPageItem = {
   id: number;
   slug: string;
   title: string;
   status: string;
-  content_blocks?: Array<{
-    id: number;
-    block_key: string;
-    block_type: string;
-    payload_json: Record<string, unknown>;
-  }>;
+  visible_on_site?: boolean;
 };
 
 export default function AdminContentPage() {
   const [items, setItems] = useState<ContentPageItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({
-    pageSlug: "home",
-    blockKey: "custom_cta",
-    blockType: "cta",
-    title: "",
-    description: "",
-    buttonLabel: "",
-    buttonHref: "",
-  });
+  const [savingSlug, setSavingSlug] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
+    setError(null);
     const response = await fetch("/api/admin/content");
+    if (!response.ok) {
+      setError("Не ўдалося загрузіць старонкі");
+      setLoading(false);
+      return;
+    }
     const data = await response.json();
     setItems(data.items ?? []);
     setLoading(false);
-  };
-
-  useEffect(() => {
-    let active = true;
-    fetch("/api/admin/content")
-      .then((response) => response.json())
-      .then((data) => {
-        if (!active) return;
-        setItems(data.items ?? []);
-        setLoading(false);
-      })
-      .catch(() => {
-        if (!active) return;
-        setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
   }, []);
 
-  const save = async () => {
-    setSaving(true);
-    await fetch("/api/admin/content", {
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const sorted = useMemo(() => {
+    return [...items].sort((a, b) => {
+      if (a.slug === "home") return -1;
+      if (b.slug === "home") return 1;
+      return a.title.localeCompare(b.title, "be");
+    });
+  }, [items]);
+
+  const toggleVisible = async (slug: string, next: boolean) => {
+    if (slug === "home") return;
+    setSavingSlug(slug);
+    setError(null);
+    const res = await fetch("/api/admin/content/visibility", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        pageSlug: form.pageSlug,
-        blockKey: form.blockKey,
-        blockType: form.blockType,
-        payload: {
-          title: form.title,
-          description: form.description,
-          button: { label: form.buttonLabel, href: form.buttonHref },
-        },
-      }),
+      body: JSON.stringify({ slug, visibleOnSite: next }),
     });
-    setSaving(false);
-    await load();
+    setSavingSlug(null);
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      setError(typeof d.error === "string" ? d.error : "Памылка захавання");
+      return;
+    }
+    setItems((prev) =>
+      prev.map((p) => (p.slug === slug ? { ...p, visible_on_site: next } : p))
+    );
   };
 
   return (
     <div className="space-y-6">
       <div className="glass rounded-2xl border border-border p-6">
-        <h1 className="font-display text-2xl italic text-foreground mb-2">Контент сайта</h1>
+        <h1 className="font-display text-2xl italic text-foreground mb-2">Контэнт сайта</h1>
         <p className="text-sm text-muted-foreground">
-          Редактирование текстов, CTA и блоков страниц через CMS-слой.
+          Уключайце або хавайце старонкі для публікі. Схаваная старонка не паказваецца ў меню і пры адкрыцці URL робіць
+          рэдырэкт на галоўную. Галоўная заўсёды бачная.
         </p>
       </div>
 
-      <div className="glass rounded-2xl border border-border p-6 space-y-3">
-        <h2 className="text-sm font-semibold text-foreground">Добавить/обновить блок</h2>
-        <div className="grid md:grid-cols-2 gap-3">
-          <input className="px-3 py-2 rounded-lg bg-muted border border-border text-sm" placeholder="page slug" value={form.pageSlug} onChange={(e) => setForm({ ...form, pageSlug: e.target.value })} />
-          <input className="px-3 py-2 rounded-lg bg-muted border border-border text-sm" placeholder="block key" value={form.blockKey} onChange={(e) => setForm({ ...form, blockKey: e.target.value })} />
-          <input className="px-3 py-2 rounded-lg bg-muted border border-border text-sm" placeholder="title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-          <input className="px-3 py-2 rounded-lg bg-muted border border-border text-sm" placeholder="description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-          <input className="px-3 py-2 rounded-lg bg-muted border border-border text-sm" placeholder="button label" value={form.buttonLabel} onChange={(e) => setForm({ ...form, buttonLabel: e.target.value })} />
-          <input className="px-3 py-2 rounded-lg bg-muted border border-border text-sm" placeholder="button href" value={form.buttonHref} onChange={(e) => setForm({ ...form, buttonHref: e.target.value })} />
+      {error && (
+        <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {error}
         </div>
-        <button onClick={save} disabled={saving} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium disabled:opacity-60">
-          {saving ? "Сохранение..." : "Сохранить блок"}
-        </button>
-      </div>
+      )}
 
       <div className="glass rounded-2xl border border-border p-6">
-        <h2 className="text-sm font-semibold text-foreground mb-3">Текущие страницы и блоки</h2>
+        <h2 className="text-sm font-semibold text-foreground mb-4">Старонкі</h2>
         {loading ? (
           <p className="text-sm text-muted-foreground">Загрузка...</p>
+        ) : sorted.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Няма запісаў у content_pages</p>
         ) : (
-          <div className="space-y-3">
-            {items.map((page) => (
-              <div key={page.id} className="rounded-xl border border-border p-4">
-                <p className="text-sm font-semibold">{page.title} <span className="text-muted-foreground">({page.slug})</span></p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {(page.content_blocks ?? []).map((block) => (
-                    <span key={block.id} className="text-xs px-2 py-1 rounded-md bg-muted border border-border">
-                      {block.block_key}
+          <ul className="space-y-2">
+            {sorted.map((page) => {
+              const path = slugToPublicPath(page.slug);
+              const visible = page.visible_on_site !== false;
+              const locked = page.slug === "home";
+              const busy = savingSlug === page.slug;
+              return (
+                <li
+                  key={page.id}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border px-4 py-3"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground">{page.title}</p>
+                    <p className="text-xs text-muted-foreground font-mono mt-0.5">
+                      {path}
+                      {locked ? " · заўсёды бачная" : ""}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span className="text-xs text-muted-foreground hidden sm:inline">
+                      {visible ? "Бачная" : "Схаваная"}
                     </span>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={visible}
+                      disabled={locked || busy}
+                      onClick={() => void toggleVisible(page.slug, !visible)}
+                      className={`relative w-11 h-6 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-50 ${
+                        visible ? "bg-primary" : "bg-muted"
+                      }`}
+                    >
+                      <span
+                        className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-background shadow transition-transform ${
+                          visible ? "translate-x-5" : "translate-x-0"
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
         )}
       </div>
     </div>

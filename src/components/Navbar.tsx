@@ -18,7 +18,14 @@ const navLinks = [
   { href: "/support",   label: "Падтрымка", icon: Heart },
 ];
 
-export function Navbar() {
+type NavbarProps = {
+  visibleHrefs: string[];
+};
+
+export function Navbar({ visibleHrefs }: NavbarProps) {
+  const visibleSet = new Set(visibleHrefs);
+  const filteredNav = navLinks.filter((l) => visibleSet.has(l.href));
+  const showCabinet = visibleSet.has("/cabinet");
   const [scrolled, setScrolled]   = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -105,7 +112,7 @@ export function Navbar() {
 
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-1">
-          {navLinks.map(({ href, label, icon: Icon }) => {
+          {filteredNav.map(({ href, label, icon: Icon }) => {
             const isActive = pathname.startsWith(href);
             return (
               <Link
@@ -143,12 +150,14 @@ export function Navbar() {
               Адмінка
             </Link>
           )}
-          <Link
-            href="/cabinet"
-            className="text-sm px-4 py-2 rounded-lg border border-primary/30 text-primary font-medium hover:bg-primary/8 hover:border-primary/50 transition-all duration-300"
-          >
-            {isAuthenticated ? "Кабінет" : "Увайсці"}
-          </Link>
+          {showCabinet && (
+            <Link
+              href="/cabinet"
+              className="text-sm px-4 py-2 rounded-lg border border-primary/30 text-primary font-medium hover:bg-primary/8 hover:border-primary/50 transition-all duration-300"
+            >
+              {isAuthenticated ? "Кабінет" : "Увайсці"}
+            </Link>
+          )}
         </div>
 
         {/* Mobile: theme toggle + hamburger */}
@@ -175,7 +184,7 @@ export function Navbar() {
             className="md:hidden overflow-hidden glass border-t border-border"
           >
             <div className="px-4 py-4 flex flex-col gap-1">
-              {navLinks.map(({ href, label, icon: Icon }) => {
+              {filteredNav.map(({ href, label, icon: Icon }) => {
                 const isActive = pathname.startsWith(href);
                 return (
                   <Link
@@ -194,13 +203,15 @@ export function Navbar() {
                   </Link>
                 );
               })}
-              <Link
-                href="/cabinet"
-                onClick={() => setMobileOpen(false)}
-                className="mt-2 text-sm px-4 py-3 rounded-lg border border-primary/30 text-primary font-medium text-center hover:bg-primary/8 transition-all"
-              >
-                {isAuthenticated ? "Кабінет" : "Увайсці"}
-              </Link>
+              {showCabinet && (
+                <Link
+                  href="/cabinet"
+                  onClick={() => setMobileOpen(false)}
+                  className="mt-2 text-sm px-4 py-3 rounded-lg border border-primary/30 text-primary font-medium text-center hover:bg-primary/8 transition-all"
+                >
+                  {isAuthenticated ? "Кабінет" : "Увайсці"}
+                </Link>
+              )}
               {isAuthenticated && isAdmin && (
                 <Link
                   href="/admin"

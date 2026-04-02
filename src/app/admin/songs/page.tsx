@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Trash2, Pencil, Upload, Music, Disc, X, Check } from "lucide-react";
+import { Trash2, Pencil, Plus, Upload, Music, Disc, X, Check } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { AdminFormModal } from "@/components/admin/AdminFormModal";
 
 type Artist = { id: string; name: string; slug: string };
 type Album = {
@@ -84,6 +85,8 @@ export default function AdminSongsPage() {
 
   // Album form state
   const [albumForm, setAlbumForm] = useState(emptyAlbumForm);
+  const [songFormOpen, setSongFormOpen] = useState(false);
+  const [albumFormOpen, setAlbumFormOpen] = useState(false);
 
   const loadAll = async () => {
     setLoading(true);
@@ -186,6 +189,7 @@ export default function AdminSongsPage() {
       setError(d.error ?? "Памылка захавання");
     } else {
       setSongForm(emptySongForm);
+      setSongFormOpen(false);
       setUploadFile(null);
       setUploadProgress("idle");
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -221,7 +225,7 @@ export default function AdminSongsPage() {
     setUploadProgress("idle");
     if (fileInputRef.current) fileInputRef.current.value = "";
     setTab("songs");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    setSongFormOpen(true);
   };
 
   const saveAlbum = async () => {
@@ -254,6 +258,7 @@ export default function AdminSongsPage() {
       );
     } else {
       setAlbumForm(emptyAlbumForm);
+      setAlbumFormOpen(false);
       await loadAll();
     }
     setSaving(false);
@@ -279,7 +284,37 @@ export default function AdminSongsPage() {
       sortOrder: album.sort_order,
     });
     setTab("albums");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    setAlbumFormOpen(true);
+  };
+
+  const closeSongModal = () => {
+    setSongFormOpen(false);
+    setSongForm(emptySongForm);
+    setUploadFile(null);
+    setUploadProgress("idle");
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    setError(null);
+  };
+
+  const openNewSong = () => {
+    setSongForm(emptySongForm);
+    setUploadFile(null);
+    setUploadProgress("idle");
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    setError(null);
+    setSongFormOpen(true);
+  };
+
+  const closeAlbumModal = () => {
+    setAlbumFormOpen(false);
+    setAlbumForm(emptyAlbumForm);
+    setError(null);
+  };
+
+  const openNewAlbum = () => {
+    setAlbumForm(emptyAlbumForm);
+    setError(null);
+    setAlbumFormOpen(true);
   };
 
   const inputCls = "px-3 py-2 rounded-lg bg-muted border border-border text-sm w-full focus:outline-none focus:ring-1 focus:ring-primary";
@@ -296,13 +331,23 @@ export default function AdminSongsPage() {
       {/* Tabs */}
       <div className="flex gap-2">
         <button
-          onClick={() => { setTab("songs"); setError(null); }}
+          type="button"
+          onClick={() => {
+            setTab("songs");
+            setError(null);
+            setAlbumFormOpen(false);
+          }}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === "songs" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground/70 hover:text-foreground"}`}
         >
           <Music className="w-4 h-4" /> Песні
         </button>
         <button
-          onClick={() => { setTab("albums"); setError(null); }}
+          type="button"
+          onClick={() => {
+            setTab("albums");
+            setError(null);
+            setSongFormOpen(false);
+          }}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === "albums" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground/70 hover:text-foreground"}`}
         >
           <Disc className="w-4 h-4" /> Альбомы
@@ -319,9 +364,8 @@ export default function AdminSongsPage() {
       {/* ─────────────── SONGS TAB ─────────────── */}
       {tab === "songs" && (
         <>
-          {/* Song form */}
-          <div className="glass rounded-2xl border border-border p-6 space-y-4">
-            <h2 className="text-sm font-semibold">
+          <AdminFormModal open={songFormOpen} onClose={closeSongModal} maxWidthClassName="max-w-2xl">
+            <h2 className="text-sm font-semibold pr-2">
               {songForm.id ? "Рэдагаваць песню" : "Дадаць песню"}
             </h2>
 
@@ -487,7 +531,7 @@ export default function AdminSongsPage() {
               </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 pt-1">
               <button
                 onClick={saveSong}
                 disabled={saving}
@@ -497,18 +541,29 @@ export default function AdminSongsPage() {
               </button>
               {songForm.id && (
                 <button
-                  onClick={() => { setSongForm(emptySongForm); setUploadFile(null); setUploadProgress("idle"); }}
+                  type="button"
+                  onClick={closeSongModal}
                   className="px-4 py-2 rounded-lg border border-border text-sm text-foreground/70 hover:text-foreground"
                 >
                   Скасаваць
                 </button>
               )}
             </div>
-          </div>
+          </AdminFormModal>
 
           {/* Songs list */}
           <div className="glass rounded-2xl border border-border p-6">
-            <h2 className="text-sm font-semibold mb-4">Спіс песень ({songs.length})</h2>
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <h2 className="text-sm font-semibold">Спіс песень ({songs.length})</h2>
+              <button
+                type="button"
+                onClick={openNewSong}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
+              >
+                <Plus className="w-4 h-4" strokeWidth={2} />
+                Дадаць
+              </button>
+            </div>
             {loading ? (
               <p className="text-sm text-muted-foreground">Загрузка...</p>
             ) : songs.length === 0 ? (
@@ -575,9 +630,8 @@ export default function AdminSongsPage() {
       {/* ─────────────── ALBUMS TAB ─────────────── */}
       {tab === "albums" && (
         <>
-          {/* Album form */}
-          <div className="glass rounded-2xl border border-border p-6 space-y-4">
-            <h2 className="text-sm font-semibold">
+          <AdminFormModal open={albumFormOpen} onClose={closeAlbumModal} maxWidthClassName="max-w-2xl">
+            <h2 className="text-sm font-semibold pr-2">
               {albumForm.id ? "Рэдагаваць альбом" : "Дадаць альбом"}
             </h2>
 
@@ -659,7 +713,7 @@ export default function AdminSongsPage() {
               </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 pt-1">
               <button
                 onClick={saveAlbum}
                 disabled={saving}
@@ -669,18 +723,29 @@ export default function AdminSongsPage() {
               </button>
               {albumForm.id && (
                 <button
-                  onClick={() => setAlbumForm(emptyAlbumForm)}
+                  type="button"
+                  onClick={closeAlbumModal}
                   className="px-4 py-2 rounded-lg border border-border text-sm text-foreground/70 hover:text-foreground"
                 >
                   Скасаваць
                 </button>
               )}
             </div>
-          </div>
+          </AdminFormModal>
 
           {/* Albums list */}
           <div className="glass rounded-2xl border border-border p-6">
-            <h2 className="text-sm font-semibold mb-4">Спіс альбомаў ({albums.length})</h2>
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <h2 className="text-sm font-semibold">Спіс альбомаў ({albums.length})</h2>
+              <button
+                type="button"
+                onClick={openNewAlbum}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
+              >
+                <Plus className="w-4 h-4" strokeWidth={2} />
+                Дадаць
+              </button>
+            </div>
             {loading ? (
               <p className="text-sm text-muted-foreground">Загрузка...</p>
             ) : albums.length === 0 ? (
