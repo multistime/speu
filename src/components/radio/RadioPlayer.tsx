@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, Radio, SkipForward } from "lucide-react";
 
 type RadioTrack = {
@@ -37,6 +37,10 @@ export function RadioPlayer() {
   const [loading, setLoading] = useState(true);
   const [playlistIndex, setPlaylistIndex] = useState(0);
   const [streamSrc, setStreamSrc] = useState<string | null>(null);
+
+  const playlistAudioRef = useRef<HTMLAudioElement | null>(null);
+  const autoplayAfterTrackChangeRef = useRef(false);
+  const playlistTrackCountRef = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -77,14 +81,47 @@ export function RadioPlayer() {
       ? shuffledTracks[playlistIndex % shuffledTracks.length]
       : null;
 
+  playlistTrackCountRef.current = shuffledTracks.length;
+
+  useEffect(() => {
+    if (data?.mode !== "playlist" || !currentTrack) return;
+    if (!autoplayAfterTrackChangeRef.current) return;
+    const el = playlistAudioRef.current;
+    if (!el) return;
+
+    autoplayAfterTrackChangeRef.current = false;
+
+    const tryPlay = () => {
+      void el.play().catch(() => {});
+    };
+
+    if (el.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
+      tryPlay();
+    } else {
+      el.addEventListener("canplay", tryPlay, { once: true });
+      return () => el.removeEventListener("canplay", tryPlay);
+    }
+  }, [data?.mode, currentTrack?.id, currentTrack?.audioUrl]);
+
+  const advancePlaylist = useCallback(() => {
+    const n = playlistTrackCountRef.current;
+    if (n <= 1) return;
+    const el = playlistAudioRef.current;
+    if (el && !el.paused) autoplayAfterTrackChangeRef.current = true;
+    setPlaylistIndex((i) => (i + 1) % n);
+  }, []);
+
+  const handlePlaylistEnded = useCallback(() => {
+    advancePlaylist();
+  }, [advancePlaylist]);
+
   const goNext = useCallback(() => {
-    if (shuffledTracks.length <= 1) return;
-    setPlaylistIndex((i) => (i + 1) % shuffledTracks.length);
-  }, [shuffledTracks.length]);
+    advancePlaylist();
+  }, [advancePlaylist]);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center gap-2 rounded-xl border border-border bg-muted/40 py-12 text-sm text-muted-foreground">
+      <div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" />
         Загрузка радыё…
       </div>
@@ -135,22 +172,22 @@ export function RadioPlayer() {
 
   if (data.mode === "playlist" && currentTrack) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
         <div className="flex flex-col sm:flex-row gap-4 sm:items-center">
           {currentTrack.coverUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={currentTrack.coverUrl}
               alt=""
-              className="w-full sm:w-32 h-32 rounded-xl object-cover border border-border shrink-0 mx-auto sm:mx-0"
+              className="w-full sm:w-32 h-32 rounded-xl object-cover border border-primary/20 shrink-0 mx-auto sm:mx-0 ring-1 ring-primary/10"
             />
           ) : (
-            <div className="w-full sm:w-32 h-32 rounded-xl border border-border bg-muted flex items-center justify-center shrink-0 mx-auto sm:mx-0">
-              <Radio className="h-10 w-10 text-muted-foreground/50" />
+            <div className="w-full sm:w-32 h-32 rounded-xl border border-primary/25 bg-primary/[0.06] flex items-center justify-center shrink-0 mx-auto sm:mx-0">
+              <Radio className="h-10 w-10 text-primary/45" />
             </div>
           )}
           <div className="flex-1 min-w-0 text-center sm:text-left">
-            <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">
+            <p className="text-xs uppercase tracking-wider text-primary/80 mb-1">
               Зараз гучыць
             </p>
             <p className="text-lg font-semibold text-foreground truncate">{currentTrack.title}</p>
@@ -165,11 +202,11 @@ export function RadioPlayer() {
         </div>
 
         <audio
-          key={currentTrack.id}
+          ref={playlistAudioRef}
           controls
-          className="w-full"
+          className="speu-native-audio"
           src={currentTrack.audioUrl}
-          onEnded={goNext}
+          onEnded={handlePlaylistEnded}
         >
           Ваш браўзер не падтрымлівае прайграванне аўдыя.
         </audio>
@@ -178,9 +215,9 @@ export function RadioPlayer() {
           <button
             type="button"
             onClick={goNext}
-            className="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 rounded-lg border border-border bg-muted/50 text-sm text-foreground hover:bg-muted transition-colors"
+            className="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 rounded-lg border border-primary/30 text-sm text-foreground hover:bg-primary/10 transition-colors"
           >
-            <SkipForward className="h-4 w-4" />
+            <SkipForward className="h-4 w-4 text-primary" />
             Наступны трэк
           </button>
         )}
@@ -202,7 +239,7 @@ export function RadioPlayer() {
     <div className="space-y-3">
       <audio
         controls
-        className="w-full"
+        className="speu-native-audio"
         src={activeStream}
         onError={() => {
           if (data.fallbackStreamUrl && streamSrc !== data.fallbackStreamUrl) {

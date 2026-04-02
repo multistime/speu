@@ -1,11 +1,195 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Music, Pause, Play, X } from "lucide-react";
-import { usePlayer } from "@/contexts/PlayerContext";
+import { Music, Pause, Play, Repeat1, X } from "lucide-react";
+import { useCallback, useRef, useState } from "react";
+import { usePlayer, type PlayerTrack } from "@/contexts/PlayerContext";
+import { formatPlayerTime } from "@/lib/format-player-time";
+import { clientXToSeekRatio } from "@/lib/player-progress";
+import { cn } from "@/lib/utils";
+
+function GlobalPlayerProgress({ track }: { track: PlayerTrack }) {
+  const { currentTime, duration, canSeek, seekRatio, isPlaying } = usePlayer();
+
+  const railRef = useRef<HTMLDivElement>(null);
+  const draggingRef = useRef(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragRatio, setDragRatio] = useState<number | null>(null);
+
+  const livePct =
+    canSeek && duration > 0 ? Math.min(1, Math.max(0, currentTime / duration)) : 0;
+  const progress =
+    dragRatio !== null ? dragRatio : livePct;
+  const pct = Math.min(100, Math.max(0, progress * 100));
+
+  const applyRatio = useCallback(
+    (ratio: number) => {
+      const r = Math.min(1, Math.max(0, ratio));
+      setDragRatio(r);
+      seekRatio(r);
+    },
+    [seekRatio]
+  );
+
+  const applyFromClientX = useCallback(
+    (clientX: number) => {
+      const el = railRef.current;
+      if (!el || !canSeek) return;
+      applyRatio(clientXToSeekRatio(el.getBoundingClientRect(), clientX));
+    },
+    [canSeek, applyRatio]
+  );
+
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!canSeek) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    draggingRef.current = true;
+    setIsDragging(true);
+    applyFromClientX(e.clientX);
+  };
+
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!draggingRef.current || !canSeek) return;
+    applyFromClientX(e.clientX);
+  };
+
+  const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+    draggingRef.current = false;
+    setIsDragging(false);
+    setDragRatio(null);
+  };
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!canSeek || duration <= 0) return;
+    const step = e.shiftKey ? 30 : 5;
+    if (e.key === "ArrowLeft" || e.key === "ArrowDown") {
+      e.preventDefault();
+      seekRatio(Math.min(1, Math.max(0, (currentTime - step) / duration)));
+    } else if (e.key === "ArrowRight" || e.key === "ArrowUp") {
+      e.preventDefault();
+      seekRatio(Math.min(1, Math.max(0, (currentTime + step) / duration)));
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      seekRatio(0);
+    } else if (e.key === "End") {
+      e.preventDefault();
+      seekRatio(1);
+    }
+  };
+
+  const fillStyle = track.accentColor
+    ? { background: track.accentColor }
+    : undefined;
+
+  return (
+    <div
+      ref={railRef}
+      role="slider"
+      tabIndex={canSeek ? 0 : -1}
+      aria-label="Пазіцыя прайграваньня"
+      aria-valuemin={0}
+      aria-valuemax={canSeek ? Math.round(duration) : 0}
+      aria-valuenow={canSeek ? Math.round(currentTime) : 0}
+      aria-valuetext={
+        canSeek
+          ? `${formatPlayerTime(currentTime)} з ${formatPlayerTime(duration)}`
+          : isPlaying
+            ? "Жывы струмень"
+            : "Даўжыньня невядомая"
+      }
+      aria-disabled={!canSeek}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
+      onKeyDown={onKeyDown}
+      className={cn(
+        "absolute inset-x-0 top-0 z-30 flex h-4 cursor-pointer touch-none items-center justify-stretch select-none",
+        "focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary/45 focus-visible:outline-offset-2 focus-visible:rounded-sm",
+        !canSeek && "cursor-not-allowed"
+      )}
+    >
+      <div className="relative h-2.5 w-full">
+        {/* Рэйка — па цэнтры па вертыкалі */}
+        <div
+          className={cn(
+            "pointer-events-none absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-border transition-opacity",
+            "opacity-[0.42] group-hover/player:opacity-[0.58]"
+          )}
+          aria-hidden
+        />
+
+        {canSeek ? (
+          <>
+            <div
+              className={cn(
+                "pointer-events-none absolute left-0 top-1/2 h-px origin-left -translate-y-1/2 transition-[opacity,box-shadow]",
+                !track.accentColor && "bg-primary",
+                isDragging
+                  ? "opacity-100 shadow-[0_0_12px_rgba(125,191,158,0.22)]"
+                  : "opacity-[0.92] group-hover/player:opacity-100"
+              )}
+              style={{
+                width: `${pct}%`,
+                ...fillStyle,
+              }}
+              aria-hidden
+            />
+            {/* Бегунок */}
+            <div
+              aria-hidden
+              className={cn(
+                "pointer-events-none absolute top-1/2 z-[2] size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-background shadow-md transition-transform duration-150 ease-out",
+                !track.accentColor && "bg-primary",
+                "group-hover/player:scale-110",
+                isDragging && "scale-125 ring-2 ring-primary/35"
+              )}
+              style={{
+                left: `${pct}%`,
+                ...fillStyle,
+              }}
+            />
+          </>
+        ) : (
+          <div
+            className="pointer-events-none absolute inset-x-0 top-1/2 h-px -translate-y-1/2 overflow-hidden bg-border/35"
+            aria-hidden
+          >
+            {isPlaying ? (
+              <div
+                className={cn(
+                  "speu-player-progress-indeterminate h-full w-[22%]",
+                  track.accentColor ? "" : "bg-primary/75"
+                )}
+                style={
+                  track.accentColor
+                    ? { background: track.accentColor, opacity: 0.75 }
+                    : undefined
+                }
+              />
+            ) : null}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export function GlobalPlayer() {
-  const { track, isPlaying, togglePlay, stop } = usePlayer();
+  const {
+    track,
+    isPlaying,
+    repeatOne,
+    currentTime,
+    duration,
+    canSeek,
+    togglePlay,
+    toggleRepeatOne,
+    stop,
+  } = usePlayer();
 
   return (
     <AnimatePresence>
@@ -16,18 +200,20 @@ export function GlobalPlayer() {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 100, opacity: 0 }}
           transition={{ type: "spring", damping: 28, stiffness: 280 }}
-          className="fixed bottom-0 inset-x-0 z-50 border-t border-border bg-background/95 backdrop-blur-md"
+          className="group/player fixed bottom-0 inset-x-0 z-50 border-t border-border bg-background/95 backdrop-blur-md"
           style={
             track.accentRgb
               ? { boxShadow: `0 -4px 40px rgba(${track.accentRgb}, 0.08)` }
               : undefined
           }
         >
-          {/* Thin accent line on top */}
+          <GlobalPlayerProgress track={track} />
+
+          {/* Акцэнт трэка — ніжэй іскры, без перакрыцьця hit-target */}
           {track.accentColor && (
             <div
-              className="absolute top-0 inset-x-0 h-px"
-              style={{ background: track.accentColor, opacity: 0.5 }}
+              className="pointer-events-none absolute left-0 right-0 top-1 z-10 h-px"
+              style={{ background: track.accentColor, opacity: 0.35 }}
             />
           )}
 
@@ -60,16 +246,23 @@ export function GlobalPlayer() {
               )}
             </div>
 
-            {/* Track info */}
+            {/* Track info + time (для мінімалізму — толькі на sm+) */}
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-foreground leading-tight truncate">
                 {track.title}
               </p>
-              {track.artistName && (
-                <p className="text-xs text-muted-foreground truncate mt-0.5">
-                  {track.artistName}
-                </p>
-              )}
+              <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground tabular-nums">
+                {track.artistName ? (
+                  <span className="min-w-0 flex-1 truncate">{track.artistName}</span>
+                ) : (
+                  <span className="flex-1" />
+                )}
+                {canSeek && (
+                  <span className="flex-shrink-0 font-mono text-[10px] tracking-tight text-muted-foreground/90 hidden sm:inline">
+                    {formatPlayerTime(currentTime)} / {formatPlayerTime(duration)}
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Equalizer animation when playing */}
@@ -95,6 +288,25 @@ export function GlobalPlayer() {
             {/* Controls */}
             <div className="flex items-center gap-2 flex-shrink-0">
               <button
+                type="button"
+                onClick={toggleRepeatOne}
+                aria-label={
+                  repeatOne
+                    ? "Адключыць паўтор трэка"
+                    : "Уключыць паўтор аднаго трэка"
+                }
+                aria-pressed={repeatOne}
+                className={`w-9 h-9 rounded-full border flex items-center justify-center transition-colors ${
+                  repeatOne
+                    ? "border-primary/50 text-primary bg-primary/12"
+                    : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
+                }`}
+              >
+                <Repeat1 className="w-4 h-4" strokeWidth={2} />
+              </button>
+
+              <button
+                type="button"
                 onClick={() => togglePlay(track)}
                 aria-label={isPlaying ? "Пауза" : "Прайграць"}
                 className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-105"
@@ -111,6 +323,7 @@ export function GlobalPlayer() {
               </button>
 
               <button
+                type="button"
                 onClick={stop}
                 aria-label="Спыніць"
                 className="w-8 h-8 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 flex items-center justify-center transition-colors"

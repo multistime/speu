@@ -29,16 +29,14 @@ export default function RadioPage() {
           </p>
         </div>
 
-        <div className="glass rounded-2xl border border-border p-6 sm:p-8">
-          <div className="flex items-center gap-3 mb-4">
-            <Waves className="h-5 w-5 text-primary/70" />
-            <p className="text-sm text-foreground font-medium">
-              Жывы эфір Радыё Мара
-            </p>
-          </div>
-
-          <RadioPlayer />
+        <div className="mb-2 flex items-center gap-3">
+          <Waves className="h-5 w-5 text-primary/70" />
+          <p className="text-sm text-foreground font-medium">
+            Жывы эфір Радыё Мара
+          </p>
         </div>
+
+        <RadioPlayer />
 
         <div className="mt-8 grid sm:grid-cols-3 gap-4">
           {[

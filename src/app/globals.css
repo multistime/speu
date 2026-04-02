@@ -296,3 +296,29 @@
   background: rgba(125, 191, 158, 0.18);
   color: #7DBF9E;
 }
+
+/* ══════════════════════════════════════════════════════════════════════ */
+/*  NATIVE <audio> — align with theme (primary accent, dark controls)     */
+/* ══════════════════════════════════════════════════════════════════════ */
+audio.speu-native-audio {
+  width: 100%;
+  border-radius: var(--radius-lg);
+  accent-color: var(--primary);
+}
+.dark audio.speu-native-audio {
+  color-scheme: dark;
+  filter: saturate(0.92) contrast(1.02);
+}
+
+/* Глабальны плэер — нявызначаная даўжыньня (струмень) */
+@keyframes speu-player-indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(450%);
+  }
+}
+.speu-player-progress-indeterminate {
+  animation: speu-player-indeterminate 2.2s ease-in-out infinite alternate;
+}
