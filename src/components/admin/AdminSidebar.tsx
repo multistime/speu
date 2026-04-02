@@ -11,10 +11,12 @@ import {
   Inbox,
   Radio,
   Settings,
+  BookMarked,
 } from "lucide-react";
 
 const items = [
   { href: "/admin",                label: "Агляд",          icon: LayoutDashboard, exact: true },
+  { href: "/admin/project",       label: "Праект",         icon: BookMarked },
   { href: "/admin/content",        label: "Кантэнт",        icon: FileText },
   { href: "/admin/label",          label: "Лэйбл",          icon: Music },
   { href: "/admin/support-tiers",  label: "Падтрымка",      icon: Heart },
