@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Play, Pause, Music, ExternalLink, MapPin, Calendar } from "lucide-react";
+import { X, Play, Pause, Music, ExternalLink, MapPin, Calendar, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePlayer } from "@/contexts/PlayerContext";
 import type { PlayerTrack } from "@/contexts/PlayerContext";
@@ -175,6 +175,52 @@ const PLACEHOLDER_ARTISTS: Artist[] = [
     pattern: "diamond",
   },
 ];
+
+type PublicArtistApiRow = {
+  id: string;
+  slug: string;
+  name: string;
+  name_en: string | null;
+  genres: string[];
+  tagline: string | null;
+  bio: string | null;
+  location: string | null;
+  year_started: number | null;
+  initials: string | null;
+  social_links: { instagram?: string; youtube?: string; spotify?: string; telegram?: string } | null;
+  visual_json: {
+    gradientFrom?: string;
+    gradientTo?: string;
+    accent?: string;
+    accentRgb?: string;
+    pattern?: string;
+  } | null;
+  artist_tracks?: Array<{ title: string; audio_url?: string | null }>;
+};
+
+function mapPublicArtistRow(item: PublicArtistApiRow): Artist {
+  return {
+    id: item.slug || item.id,
+    name: item.name,
+    nameEn: item.name_en ?? item.name,
+    genres: item.genres ?? [],
+    tagline: item.tagline ?? "",
+    bio: item.bio ?? "",
+    tracks: (item.artist_tracks ?? []).map((track) => ({
+      title: track.title,
+      audioUrl: track.audio_url ?? null,
+    })),
+    gradientFrom: item.visual_json?.gradientFrom ?? "#2B5035",
+    gradientTo: item.visual_json?.gradientTo ?? "#0E1811",
+    accent: item.visual_json?.accent ?? "#7DBF9E",
+    accentRgb: item.visual_json?.accentRgb ?? "125, 191, 158",
+    initial: item.initials ?? item.name.charAt(0),
+    year: item.year_started ? String(item.year_started) : "2024",
+    location: item.location ?? "Беларусь",
+    socials: item.social_links ?? {},
+    pattern: parsePatternFromVisual(item.visual_json?.pattern),
+  };
+}
 
 /* ── Brand SVG icons ─────────────────────────────────────────────────── */
 
@@ -575,82 +621,60 @@ export default function ArtistsPage() {
   const [selected, setSelected] = useState<Artist | null>(null);
   const [activeGenre, setActiveGenre] = useState("Усе");
   const [artists, setArtists] = useState<Artist[]>([]);
-  const [showPlaceholder, setShowPlaceholder] = useState(true);
+  const [pageStatus, setPageStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [loadNonce, setLoadNonce] = useState(0);
 
-  // Fetch placeholder setting
-  useEffect(() => {
-    fetch("/api/public/site-settings?key=artists_show_placeholder")
-      .then((r) => r.json())
-      .then((d) => {
-        const val = d.settings?.artists_show_placeholder;
-        if (val === "false") {
-          setShowPlaceholder(false);
-        }
-      })
-      .catch(() => {/* keep default true */});
+  const loadArtistsPage = useCallback(async (signal: AbortSignal) => {
+    setPageStatus("loading");
+    try {
+      let usePlaceholder = false;
+      try {
+        const settingsRes = await fetch("/api/public/site-settings?key=artists_show_placeholder", {
+          signal,
+        });
+        const settingsJson = settingsRes.ok
+          ? ((await settingsRes.json().catch(() => ({}))) as { settings?: Record<string, string> })
+          : {};
+        if (signal.aborted) return;
+        // Як у адмінцы: заглушка ўключана, пакуль значэнне не роўна "false"
+        usePlaceholder =
+          settingsRes.ok && settingsJson.settings?.artists_show_placeholder !== "false";
+      } catch {
+        if (signal.aborted) return;
+        // Не ўдалося прачытаць налады — паказваем дадзеныя з БД, а не заглушку
+        usePlaceholder = false;
+      }
+
+      if (usePlaceholder) {
+        setArtists(PLACEHOLDER_ARTISTS);
+        setPageStatus("ready");
+        return;
+      }
+
+      const artistsRes = await fetch("/api/public/artists", { signal });
+      if (signal.aborted) return;
+      if (!artistsRes.ok) {
+        setArtists([]);
+        setPageStatus("error");
+        return;
+      }
+      const artistsJson = (await artistsRes.json()) as { items?: PublicArtistApiRow[] };
+      if (signal.aborted) return;
+      const items = artistsJson.items ?? [];
+      setArtists(items.map(mapPublicArtistRow));
+      setPageStatus("ready");
+    } catch {
+      if (signal.aborted) return;
+      setArtists([]);
+      setPageStatus("error");
+    }
   }, []);
 
-  // Set initial artists list based on placeholder setting
   useEffect(() => {
-    setArtists(showPlaceholder ? PLACEHOLDER_ARTISTS : []);
-  }, [showPlaceholder]);
-
-  // Load real artists
-  useEffect(() => {
-    const load = async () => {
-      const response = await fetch("/api/public/artists");
-      if (!response.ok) return;
-      const json = (await response.json()) as {
-        items?: Array<{
-          id: string;
-          slug: string;
-          name: string;
-          name_en: string | null;
-          genres: string[];
-          tagline: string | null;
-          bio: string | null;
-          location: string | null;
-          year_started: number | null;
-          initials: string | null;
-          social_links: { instagram?: string; youtube?: string; spotify?: string; telegram?: string } | null;
-          visual_json: {
-            gradientFrom?: string;
-            gradientTo?: string;
-            accent?: string;
-            accentRgb?: string;
-            pattern?: string;
-          } | null;
-          artist_tracks?: Array<{ title: string; audio_url?: string | null }>;
-        }>;
-      };
-      if (!json.items?.length) return;
-
-      setArtists(
-        json.items.map((item) => ({
-          id: item.slug || item.id,
-          name: item.name,
-          nameEn: item.name_en ?? item.name,
-          genres: item.genres ?? [],
-          tagline: item.tagline ?? "",
-          bio: item.bio ?? "",
-          tracks: (item.artist_tracks ?? []).map((track) => ({
-            title: track.title,
-            audioUrl: track.audio_url ?? null,
-          })),
-          gradientFrom: item.visual_json?.gradientFrom ?? "#2B5035",
-          gradientTo: item.visual_json?.gradientTo ?? "#0E1811",
-          accent: item.visual_json?.accent ?? "#7DBF9E",
-          accentRgb: item.visual_json?.accentRgb ?? "125, 191, 158",
-          initial: item.initials ?? item.name.charAt(0),
-          year: item.year_started ? String(item.year_started) : "2024",
-          location: item.location ?? "Беларусь",
-          socials: item.social_links ?? {},
-          pattern: parsePatternFromVisual(item.visual_json?.pattern),
-        }))
-      );
-    };
-    void load();
-  }, []);
+    const ac = new AbortController();
+    void loadArtistsPage(ac.signal);
+    return () => ac.abort();
+  }, [loadArtistsPage, loadNonce]);
 
   const filtered =
     activeGenre === "Усе"
@@ -682,52 +706,87 @@ export default function ArtistsPage() {
           </p>
         </motion.div>
 
-        {/* Genre filter */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.12, duration: 0.5 }}
-          className="flex flex-wrap justify-center gap-2 mb-12"
-        >
-          {uniqueGenres.map((genre) => (
-            <button
-              key={genre}
-              onClick={() => setActiveGenre(genre)}
-              className={cn(
-                "text-xs px-4 py-1.5 rounded-full border transition-all duration-300 font-medium",
-                activeGenre === genre
-                  ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                  : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
-              )}
-            >
-              {genre}
-            </button>
-          ))}
-        </motion.div>
-
-        {/* Artists grid */}
-        <motion.div layout className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          <AnimatePresence mode="popLayout">
-            {filtered.map((artist, i) => (
-              <ArtistCard
-                key={artist.id}
-                artist={artist}
-                index={i}
-                onClick={setSelected}
-              />
-            ))}
-          </AnimatePresence>
-        </motion.div>
-
-        {filtered.length === 0 && (
+        {pageStatus === "loading" && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-center py-20 text-muted-foreground"
+            className="flex flex-col items-center justify-center gap-4 py-28 text-muted-foreground"
           >
-            <Music className="h-10 w-10 mx-auto mb-3 opacity-20" strokeWidth={1} />
-            <p className="text-sm">Артысты не знойдзены</p>
+            <Loader2 className="h-10 w-10 animate-spin text-primary/70" strokeWidth={1.25} />
+            <p className="text-sm">Загрузка артыстаў…</p>
           </motion.div>
+        )}
+
+        {pageStatus === "error" && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col items-center justify-center gap-4 py-24 text-center px-4"
+          >
+            <Music className="h-10 w-10 text-muted-foreground/30" strokeWidth={1} />
+            <p className="text-sm text-muted-foreground max-w-sm">
+              Не ўдалося загрузіць спіс артыстаў. Праверце злучэнне і паспрабуйце яшчэ раз.
+            </p>
+            <button
+              type="button"
+              onClick={() => setLoadNonce((n) => n + 1)}
+              className="text-sm font-medium px-4 py-2 rounded-xl border border-border bg-card hover:bg-muted/60 transition-colors"
+            >
+              Паўтарыць
+            </button>
+          </motion.div>
+        )}
+
+        {pageStatus === "ready" && (
+          <>
+            {/* Genre filter */}
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.06, duration: 0.5 }}
+              className="flex flex-wrap justify-center gap-2 mb-12"
+            >
+              {uniqueGenres.map((genre) => (
+                <button
+                  key={genre}
+                  onClick={() => setActiveGenre(genre)}
+                  className={cn(
+                    "text-xs px-4 py-1.5 rounded-full border transition-all duration-300 font-medium",
+                    activeGenre === genre
+                      ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                      : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                  )}
+                >
+                  {genre}
+                </button>
+              ))}
+            </motion.div>
+
+            {/* Artists grid */}
+            <motion.div layout className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <AnimatePresence mode="popLayout">
+                {filtered.map((artist, i) => (
+                  <ArtistCard
+                    key={artist.id}
+                    artist={artist}
+                    index={i}
+                    onClick={setSelected}
+                  />
+                ))}
+              </AnimatePresence>
+            </motion.div>
+
+            {filtered.length === 0 && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center py-20 text-muted-foreground"
+              >
+                <Music className="h-10 w-10 mx-auto mb-3 opacity-20" strokeWidth={1} />
+                <p className="text-sm">Артысты не знойдзены</p>
+              </motion.div>
+            )}
+          </>
         )}
       </div>
 
