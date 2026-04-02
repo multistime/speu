@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Check, Heart, Star, Zap } from "lucide-react";
+import { Check, Heart, Loader2, Star, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Tier {
@@ -20,7 +20,7 @@ interface Tier {
   glowRgb: string;
 }
 
-const TIERS: Tier[] = [
+const PLACEHOLDER_TIERS: Tier[] = [
   {
     id: "supporter",
     name: "Падтрымальнік",
@@ -89,13 +89,70 @@ const iconByCode: Record<string, typeof Heart> = {
   coproducer: Zap,
 };
 
-export function SupportTiers() {
-  const [tiers, setTiers] = useState<Tier[]>(TIERS);
+function mapApiTier(tier: {
+  code: string;
+  name: string;
+  label_be: string | null;
+  description: string | null;
+  price_amount: number;
+  period: string;
+  perks: string[];
+  highlighted: boolean;
+  accent_color: string | null;
+  glow_rgb: string | null;
+}): Tier {
+  return {
+    id: tier.code,
+    name: tier.name,
+    belarusian: tier.label_be ?? tier.name,
+    price: `$${tier.price_amount}`,
+    period: tier.period,
+    description: tier.description ?? "",
+    perks: tier.perks ?? [],
+    highlighted: tier.highlighted,
+    icon: iconByCode[tier.code] ?? Heart,
+    accentColor: tier.accent_color ?? "#4A7CB5",
+    glowRgb: tier.glow_rgb ?? "74, 124, 181",
+  };
+}
 
-  useEffect(() => {
-    const load = async () => {
-      const response = await fetch("/api/public/support-tiers");
-      if (!response.ok) return;
+export function SupportTiers() {
+  const [tiers, setTiers] = useState<Tier[]>([]);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [loadNonce, setLoadNonce] = useState(0);
+
+  const loadTiers = useCallback(async (signal: AbortSignal) => {
+    setStatus("loading");
+    try {
+      let usePlaceholder = false;
+      try {
+        const settingsRes = await fetch("/api/public/site-settings?key=support_show_placeholder", {
+          signal,
+        });
+        const settingsJson = settingsRes.ok
+          ? ((await settingsRes.json().catch(() => ({}))) as { settings?: Record<string, string> })
+          : {};
+        if (signal.aborted) return;
+        usePlaceholder =
+          settingsRes.ok && settingsJson.settings?.support_show_placeholder !== "false";
+      } catch {
+        if (signal.aborted) return;
+        usePlaceholder = false;
+      }
+
+      if (usePlaceholder) {
+        setTiers(PLACEHOLDER_TIERS);
+        setStatus("ready");
+        return;
+      }
+
+      const response = await fetch("/api/public/support-tiers", { signal });
+      if (signal.aborted) return;
+      if (!response.ok) {
+        setTiers([]);
+        setStatus("error");
+        return;
+      }
       const json = (await response.json()) as {
         items?: Array<{
           code: string;
@@ -110,26 +167,58 @@ export function SupportTiers() {
           glow_rgb: string | null;
         }>;
       };
-      if (!json.items?.length) return;
-
-      setTiers(
-        json.items.map((tier) => ({
-          id: tier.code,
-          name: tier.name,
-          belarusian: tier.label_be ?? tier.name,
-          price: `$${tier.price_amount}`,
-          period: tier.period,
-          description: tier.description ?? "",
-          perks: tier.perks ?? [],
-          highlighted: tier.highlighted,
-          icon: iconByCode[tier.code] ?? Heart,
-          accentColor: tier.accent_color ?? "#4A7CB5",
-          glowRgb: tier.glow_rgb ?? "74, 124, 181",
-        }))
-      );
-    };
-    void load();
+      if (signal.aborted) return;
+      const items = json.items ?? [];
+      setTiers(items.map(mapApiTier));
+      setStatus("ready");
+    } catch {
+      if (signal.aborted) return;
+      setTiers([]);
+      setStatus("error");
+    }
   }, []);
+
+  useEffect(() => {
+    const ac = new AbortController();
+    void loadTiers(ac.signal);
+    return () => ac.abort();
+  }, [loadTiers, loadNonce]);
+
+  if (status === "loading") {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 py-20 md:py-28 text-muted-foreground max-w-5xl mx-auto">
+        <Loader2 className="h-10 w-10 animate-spin text-primary/70" strokeWidth={1.25} />
+        <p className="text-sm">Загрузка ўзроўняў падтрымкі…</p>
+      </div>
+    );
+  }
+
+  if (status === "error") {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 py-16 md:py-24 text-center px-4 max-w-5xl mx-auto">
+        <Heart className="h-10 w-10 text-muted-foreground/30" strokeWidth={1} />
+        <p className="text-sm text-muted-foreground max-w-sm">
+          Не ўдалося загрузіць узроўні падтрымкі. Праверце злучэнне і паспрабуйце яшчэ раз.
+        </p>
+        <button
+          type="button"
+          onClick={() => setLoadNonce((n) => n + 1)}
+          className="text-sm font-medium px-4 py-2 rounded-xl border border-border bg-card hover:bg-muted/60 transition-colors"
+        >
+          Паўтарыць
+        </button>
+      </div>
+    );
+  }
+
+  if (tiers.length === 0) {
+    return (
+      <div className="text-center py-16 md:py-20 text-muted-foreground max-w-5xl mx-auto">
+        <Heart className="h-10 w-10 mx-auto mb-3 opacity-20" strokeWidth={1} />
+        <p className="text-sm">Узроўні падтрымкі пакуль не наладжаны</p>
+      </div>
+    );
+  }
 
   return (
     <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">

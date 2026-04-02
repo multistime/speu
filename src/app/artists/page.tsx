@@ -371,6 +371,35 @@ function ArtistCard({ artist, onClick, index }: { artist: Artist; onClick: (a: A
   );
 }
 
+/* ── Mini equalizer (playing track indicator) ───────────────────────── */
+
+function TrackPlayingEqualizer({ color }: { color: string }) {
+  const bars = 4;
+  return (
+    <div
+      className="flex items-end justify-end gap-0.5 h-3.5 w-[18px] shrink-0 ml-auto"
+      aria-hidden
+    >
+      {Array.from({ length: bars }, (_, i) => (
+        <motion.div
+          key={i}
+          className="w-[2px] h-3.5 rounded-full origin-bottom"
+          style={{ backgroundColor: color }}
+          animate={{
+            scaleY: [0.35, 1, 0.5, 0.85, 0.35],
+          }}
+          transition={{
+            duration: 0.55 + i * 0.12,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: i * 0.07,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
 /* ── Track row in modal ──────────────────────────────────────────────── */
 
 function TrackRow({
@@ -438,11 +467,13 @@ function TrackRow({
       </div>
 
       <span
-        className={cn("text-sm flex-1", active ? "font-medium" : "text-foreground/80")}
+        className={cn("text-sm flex-1 min-w-0 truncate", active ? "font-medium" : "text-foreground/80")}
         style={active ? { color: artist.accent } : undefined}
       >
         {track.title}
       </span>
+
+      {canPlay && playing && <TrackPlayingEqualizer color={artist.accent} />}
 
       {canPlay && !playing && (
         <Play

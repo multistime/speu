@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Save, Settings, RotateCcw, X, Check, Plus, Trash2, Users } from "lucide-react";
+import { Save, Settings, RotateCcw, X, Check, Plus, Trash2, Users, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Setting = { key: string; value: string; description: string; updated_at: string };
@@ -16,7 +16,7 @@ const RADIO_KEYS = new Set([
   "radio_nowplaying_url",
 ]);
 
-const ARTISTS_KEYS = new Set(["artists_show_placeholder"]);
+const SECTION_SETTINGS_KEYS = new Set(["artists_show_placeholder", "support_show_placeholder"]);
 
 export default function AdminSettingsPage() {
   const [items, setItems] = useState<Setting[]>([]);
@@ -26,9 +26,11 @@ export default function AdminSettingsPage() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // artists_show_placeholder toggle
-  const [showPlaceholder, setShowPlaceholder] = useState(true);
-  const [savingPlaceholder, setSavingPlaceholder] = useState(false);
+  const [showArtistsPlaceholder, setShowArtistsPlaceholder] = useState(true);
+  const [savingArtistsPlaceholder, setSavingArtistsPlaceholder] = useState(false);
+
+  const [showSupportPlaceholder, setShowSupportPlaceholder] = useState(true);
+  const [savingSupportPlaceholder, setSavingSupportPlaceholder] = useState(false);
 
   // New custom key form
   const [newKey, setNewKey] = useState("");
@@ -41,13 +43,13 @@ export default function AdminSettingsPage() {
     if (!res.ok) { setLoading(false); return; }
     const { items: data }: { items: Setting[] } = await res.json();
 
-    // Extract artists_show_placeholder
-    const placeholderSetting = data.find((s) => s.key === "artists_show_placeholder");
-    if (placeholderSetting) {
-      setShowPlaceholder(placeholderSetting.value !== "false");
-    }
+    const artistsPh = data.find((s) => s.key === "artists_show_placeholder");
+    if (artistsPh) setShowArtistsPlaceholder(artistsPh.value !== "false");
 
-    setItems(data.filter((s) => !RADIO_KEYS.has(s.key) && !ARTISTS_KEYS.has(s.key)));
+    const supportPh = data.find((s) => s.key === "support_show_placeholder");
+    if (supportPh) setShowSupportPlaceholder(supportPh.value !== "false");
+
+    setItems(data.filter((s) => !RADIO_KEYS.has(s.key) && !SECTION_SETTINGS_KEYS.has(s.key)));
     setEdited({});
     setLoading(false);
   };
@@ -78,11 +80,11 @@ export default function AdminSettingsPage() {
     setSaving(false);
   };
 
-  const togglePlaceholder = async () => {
-    const prev = showPlaceholder;
+  const toggleArtistsPlaceholder = async () => {
+    const prev = showArtistsPlaceholder;
     const newVal = !prev;
-    setShowPlaceholder(newVal);
-    setSavingPlaceholder(true);
+    setShowArtistsPlaceholder(newVal);
+    setSavingArtistsPlaceholder(true);
     setError(null);
     const res = await fetch("/api/admin/settings", {
       method: "POST",
@@ -90,11 +92,30 @@ export default function AdminSettingsPage() {
       body: JSON.stringify([{ key: "artists_show_placeholder", value: newVal ? "true" : "false" }]),
     });
     if (!res.ok) {
-      setShowPlaceholder(prev);
+      setShowArtistsPlaceholder(prev);
       const d = await res.json().catch(() => ({}));
       setError(d.error ?? "Памылка захавання");
     }
-    setSavingPlaceholder(false);
+    setSavingArtistsPlaceholder(false);
+  };
+
+  const toggleSupportPlaceholder = async () => {
+    const prev = showSupportPlaceholder;
+    const newVal = !prev;
+    setShowSupportPlaceholder(newVal);
+    setSavingSupportPlaceholder(true);
+    setError(null);
+    const res = await fetch("/api/admin/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify([{ key: "support_show_placeholder", value: newVal ? "true" : "false" }]),
+    });
+    if (!res.ok) {
+      setShowSupportPlaceholder(prev);
+      const d = await res.json().catch(() => ({}));
+      setError(d.error ?? "Памылка захавання");
+    }
+    setSavingSupportPlaceholder(false);
   };
 
   const addKey = async () => {
@@ -165,19 +186,53 @@ export default function AdminSettingsPage() {
                 </p>
               </div>
               <button
-                onClick={togglePlaceholder}
-                disabled={savingPlaceholder}
-                aria-label="Пераключыць заглушку"
+                onClick={toggleArtistsPlaceholder}
+                disabled={savingArtistsPlaceholder}
+                aria-label="Пераключыць заглушку артыстаў"
                 className={cn(
                   "relative w-11 h-6 rounded-full transition-colors duration-200 shrink-0 focus:outline-none",
-                  showPlaceholder ? "bg-primary" : "bg-muted border border-border",
-                  savingPlaceholder && "opacity-60 pointer-events-none"
+                  showArtistsPlaceholder ? "bg-primary" : "bg-muted border border-border",
+                  savingArtistsPlaceholder && "opacity-60 pointer-events-none"
                 )}
               >
                 <span
                   className={cn(
                     "absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200",
-                    showPlaceholder ? "translate-x-5" : "translate-x-0"
+                    showArtistsPlaceholder ? "translate-x-5" : "translate-x-0"
+                  )}
+                />
+              </button>
+            </div>
+          </div>
+
+          {/* Support tiers section */}
+          <div className="glass rounded-2xl border border-border p-6 space-y-4">
+            <h2 className="text-sm font-semibold flex items-center gap-2">
+              <Heart className="w-4 h-4 text-primary" strokeWidth={1.75} />
+              Падтрымка
+            </h2>
+
+            <div className="flex items-center justify-between gap-4 py-1">
+              <div className="flex-1">
+                <p className="text-sm font-medium">Паказваць заглушку на старонцы падтрымкі і галоўнай</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Пакуль дадзеныя з базы не загружаны — адлюстроўваць прыкладныя карткі ўзроўняў
+                </p>
+              </div>
+              <button
+                onClick={toggleSupportPlaceholder}
+                disabled={savingSupportPlaceholder}
+                aria-label="Пераключыць заглушку падтрымкі"
+                className={cn(
+                  "relative w-11 h-6 rounded-full transition-colors duration-200 shrink-0 focus:outline-none",
+                  showSupportPlaceholder ? "bg-primary" : "bg-muted border border-border",
+                  savingSupportPlaceholder && "opacity-60 pointer-events-none"
+                )}
+              >
+                <span
+                  className={cn(
+                    "absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200",
+                    showSupportPlaceholder ? "translate-x-5" : "translate-x-0"
                   )}
                 />
               </button>
