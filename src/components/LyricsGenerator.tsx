@@ -68,7 +68,7 @@ const BLOCK_TYPES = [
 ];
 
 const TAG_COLORS: Record<string, { text: string; border: string }> = {
-  Verse:          { text: "dark:text-[#4ade80] text-[#3D6B98]",          border: "dark:border-[rgba(74,222,128,0.3)] border-[rgba(61,107,152,0.35)]" },
+  Verse:          { text: "dark:text-[#4ade80] text-[#35654D]",          border: "dark:border-[rgba(74,222,128,0.3)] border-[rgba(53,101,77,0.35)]" },
   Chorus:         { text: "text-[#fbbf24]",                               border: "border-[rgba(251,191,36,0.3)]" },
   Bridge:         { text: "text-[#c084fc]",                               border: "border-[rgba(192,132,252,0.3)]" },
   Outro:          { text: "dark:text-white/50 text-foreground/50",        border: "dark:border-white/10 border-border" },
@@ -130,7 +130,7 @@ function SelectChip<T extends string>({
             className={cn(
               "px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-200",
               value === opt.value
-                ? "dark:border-[rgba(74,222,128,0.5)] dark:bg-[rgba(74,222,128,0.12)] dark:text-[#4ade80] border-[rgba(61,107,152,0.5)] bg-[rgba(61,107,152,0.10)] text-[#3D6B98]"
+                ? "dark:border-[rgba(74,222,128,0.5)] dark:bg-[rgba(74,222,128,0.12)] dark:text-[#4ade80] border-[rgba(53,101,77,0.5)] bg-[rgba(53,101,77,0.10)] text-[#35654D]"
                 : "dark:border-white/10 border-border dark:bg-white/[0.04] bg-foreground/[0.04] dark:text-white/50 text-foreground/70 dark:hover:border-white/20 hover:border-border/60 dark:hover:text-white/80 hover:text-foreground"
             )}
             style={
@@ -331,7 +331,7 @@ export function LyricsGenerator() {
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5 }}
-          className="glass rounded-2xl dark:border-[rgba(74,222,128,0.1)] border-[rgba(61,107,152,0.15)] p-6 flex flex-col gap-6"
+          className="glass rounded-2xl dark:border-[rgba(74,222,128,0.1)] border-[rgba(53,101,77,0.15)] p-6 flex flex-col gap-6"
         >
           <div>
             <h2 className="font-mono text-sm dark:text-white/40 text-foreground/50 uppercase tracking-widest mb-1">
@@ -368,7 +368,7 @@ export function LyricsGenerator() {
             className={cn(
               "mt-auto flex items-center justify-center gap-2 py-3.5 rounded-xl font-semibold text-sm transition-all duration-300",
               canGenerate && !loading
-                ? "dark:bg-[#4ade80] dark:text-[#0b1210] dark:hover:shadow-[0_0_30px_rgba(74,222,128,0.5)] bg-[#3D6B98] text-white hover:shadow-[0_0_30px_rgba(61,107,152,0.4)] hover:scale-[1.01]"
+                ? "dark:bg-[#4ade80] dark:text-[#0b1210] dark:hover:shadow-[0_0_30px_rgba(74,222,128,0.5)] bg-[#35654D] text-white hover:shadow-[0_0_30px_rgba(53,101,77,0.4)] hover:scale-[1.01]"
                 : "dark:bg-white/[0.08] bg-foreground/[0.06] dark:text-white/30 text-foreground/30 cursor-not-allowed"
             )}
           >
@@ -391,7 +391,7 @@ export function LyricsGenerator() {
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
-          className="glass rounded-2xl dark:border-[rgba(74,222,128,0.1)] border-[rgba(61,107,152,0.15)] p-6 min-h-[480px] flex flex-col relative overflow-hidden"
+          className="glass rounded-2xl dark:border-[rgba(74,222,128,0.1)] border-[rgba(53,101,77,0.15)] p-6 min-h-[480px] flex flex-col relative overflow-hidden"
         >
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-mono text-sm dark:text-white/40 text-foreground/50 uppercase tracking-widest">
@@ -406,7 +406,7 @@ export function LyricsGenerator() {
                   title="Скапіяваць тэкст"
                 >
                   {copied ? (
-                    <Check className="h-4 w-4 dark:text-[#4ade80] text-[#3D6B98]" />
+                    <Check className="h-4 w-4 dark:text-[#4ade80] text-[#35654D]" />
                   ) : (
                     <Copy className="h-4 w-4" />
                   )}
@@ -418,7 +418,7 @@ export function LyricsGenerator() {
                   className={cn(
                     "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
                     saved
-                      ? "dark:text-[#4ade80] dark:bg-[rgba(74,222,128,0.1)] dark:border-[rgba(74,222,128,0.3)] text-[#3D6B98] bg-[rgba(61,107,152,0.10)] border border-[rgba(61,107,152,0.35)]"
+                      ? "dark:text-[#4ade80] dark:bg-[rgba(74,222,128,0.1)] dark:border-[rgba(74,222,128,0.3)] text-[#35654D] bg-[rgba(53,101,77,0.10)] border border-[rgba(53,101,77,0.35)]"
                       : "dark:text-white/50 text-foreground/60 border dark:border-white/10 border-border dark:hover:text-white hover:text-foreground dark:hover:border-white/20 hover:border-foreground/30"
                   )}
                 >
@@ -440,8 +440,8 @@ export function LyricsGenerator() {
                   className="flex flex-col items-center justify-center h-full gap-4 py-16"
                 >
                   <div className="relative">
-                    <div className="h-12 w-12 rounded-full border-2 dark:border-[rgba(74,222,128,0.2)] dark:border-t-[#4ade80] border-[rgba(61,107,152,0.2)] border-t-[#3D6B98] animate-spin" />
-                    <Sparkles className="absolute inset-0 m-auto h-5 w-5 dark:text-[#4ade80] text-[#3D6B98] opacity-60" />
+                    <div className="h-12 w-12 rounded-full border-2 dark:border-[rgba(74,222,128,0.2)] dark:border-t-[#4ade80] border-[rgba(53,101,77,0.2)] border-t-[#35654D] animate-spin" />
+                    <Sparkles className="absolute inset-0 m-auto h-5 w-5 dark:text-[#4ade80] text-[#35654D] opacity-60" />
                   </div>
                   <p className="text-sm dark:text-white/40 text-foreground/50 font-mono animate-pulse">
                     Ткём словы з паветра…
@@ -457,7 +457,7 @@ export function LyricsGenerator() {
                   exit={{ opacity: 0 }}
                   className="flex flex-col items-center justify-center h-full py-16 gap-3 text-center"
                 >
-                  <div className="h-16 w-16 rounded-full dark:border-[rgba(74,222,128,0.15)] border-[rgba(61,107,152,0.2)] border flex items-center justify-center">
+                  <div className="h-16 w-16 rounded-full dark:border-[rgba(74,222,128,0.15)] border-[rgba(53,101,77,0.2)] border flex items-center justify-center">
                     <Sparkles className="h-7 w-7 dark:text-white/20 text-foreground/25" />
                   </div>
                   <p className="dark:text-white/25 text-foreground/40 text-sm max-w-xs">
@@ -524,10 +524,10 @@ export function LyricsGenerator() {
                     className={cn(
                       "mt-3 flex items-center gap-2 w-full py-2 px-3 rounded-lg text-xs font-mono",
                       "dark:text-white/40 text-foreground/45",
-                      "dark:hover:text-[#4ade80] hover:text-[#3D6B98]",
-                      "dark:hover:bg-[rgba(74,222,128,0.07)] hover:bg-[rgba(61,107,152,0.06)]",
+                      "dark:hover:text-[#4ade80] hover:text-[#35654D]",
+                      "dark:hover:bg-[rgba(74,222,128,0.07)] hover:bg-[rgba(53,101,77,0.06)]",
                       "border border-dashed dark:border-white/[0.12] border-foreground/[0.12]",
-                      "dark:hover:border-[rgba(74,222,128,0.3)] hover:border-[rgba(61,107,152,0.3)]",
+                      "dark:hover:border-[rgba(74,222,128,0.3)] hover:border-[rgba(53,101,77,0.3)]",
                       "transition-all duration-150"
                     )}
                   >
@@ -609,7 +609,7 @@ export function LyricsGenerator() {
                       "border dark:border-white/10 border-border",
                       "px-3 py-2.5 text-sm dark:text-white/80 text-foreground leading-relaxed",
                       "resize-none focus:outline-none focus:ring-0",
-                      "dark:focus:border-[rgba(74,222,128,0.35)] focus:border-[rgba(61,107,152,0.4)]",
+                      "dark:focus:border-[rgba(74,222,128,0.35)] focus:border-[rgba(53,101,77,0.4)]",
                       "transition-colors",
                       "placeholder:dark:text-white/20 placeholder:text-foreground/30"
                     )}
@@ -624,7 +624,7 @@ export function LyricsGenerator() {
                   <motion.button
                     onClick={saveEdit}
                     whileTap={{ scale: 0.97 }}
-                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold dark:bg-[#4ade80] dark:text-[#0b1210] bg-[#3D6B98] text-white transition-all dark:hover:shadow-[0_0_20px_rgba(74,222,128,0.4)] hover:shadow-[0_0_20px_rgba(61,107,152,0.3)]"
+                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold dark:bg-[#4ade80] dark:text-[#0b1210] bg-[#35654D] text-white transition-all dark:hover:shadow-[0_0_20px_rgba(74,222,128,0.4)] hover:shadow-[0_0_20px_rgba(53,101,77,0.3)]"
                   >
                     Захаваць
                   </motion.button>

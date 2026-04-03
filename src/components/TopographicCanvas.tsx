@@ -184,7 +184,7 @@ export function TopographicCanvas({ isDark = true }: { isDark?: boolean }) {
         ctx.fillStyle = bg;
         ctx.fillRect(0, 0, width, height);
 
-        // Cornflower blue contour lines — subtle on light linen
+        // Forest moss contour lines — subtle on light linen
         const levels = staticMode
           ? [0.34, 0.46, 0.58, 0.70]
           : [0.28, 0.34, 0.40, 0.46, 0.52, 0.58, 0.64, 0.70];
@@ -197,7 +197,7 @@ export function TopographicCanvas({ isDark = true }: { isDark?: boolean }) {
             height,
             t,
             level,
-            `rgb(61,107,152)`,
+            `rgb(53,101,77)`,
             alpha,
             contourStep
           );

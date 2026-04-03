@@ -37,8 +37,8 @@ const PLACEHOLDER_TIERS: Tier[] = [
     highlighted: false,
     icon: Heart,
     // Cornflower / vasіlok blue — the Belarusian national flower
-    accentColor: "#4A7CB5",
-    glowRgb: "74, 124, 181",
+    accentColor: "#35654D",
+    glowRgb: "53, 101, 77",
   },
   {
     id: "patron",
@@ -111,8 +111,8 @@ function mapApiTier(tier: {
     perks: tier.perks ?? [],
     highlighted: tier.highlighted,
     icon: iconByCode[tier.code] ?? Heart,
-    accentColor: tier.accent_color ?? "#4A7CB5",
-    glowRgb: tier.glow_rgb ?? "74, 124, 181",
+    accentColor: tier.accent_color ?? "#35654D",
+    glowRgb: tier.glow_rgb ?? "53, 101, 77",
   };
 }
 

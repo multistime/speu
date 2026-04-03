@@ -270,7 +270,7 @@ export default function AdminSupportTiersPage() {
             <div className="flex gap-2 items-center">
               <input
                 className={inputCls}
-                placeholder="#4A7CB5"
+                placeholder="#35654D"
                 value={form.accentColor}
                 onChange={(e) => setForm({ ...form, accentColor: e.target.value })}
               />
@@ -284,10 +284,10 @@ export default function AdminSupportTiersPage() {
           </div>
 
           <div>
-            <label className={labelCls}>Glow RGB (напр. 74, 124, 181)</label>
+            <label className={labelCls}>Glow RGB (напр. 53, 101, 77)</label>
             <input
               className={inputCls}
-              placeholder="74, 124, 181"
+              placeholder="53, 101, 77"
               value={form.glowRgb}
               onChange={(e) => setForm({ ...form, glowRgb: e.target.value })}
             />

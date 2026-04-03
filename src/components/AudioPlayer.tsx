@@ -83,8 +83,8 @@ export function AudioPlayer({ isDark = true }: AudioPlayerProps) {
   const progress = (currentTime / track.duration) * 100;
 
   // Theme-resolved colors
-  const accent      = isDark ? "#7DBF9E" : "#3D6B98";
-  const accentRgb   = isDark ? "125,191,158" : "61,107,152";
+  const accent      = isDark ? "#7DBF9E" : "#35654D";
+  const accentRgb   = isDark ? "125,191,158" : "53,101,77";
   const fg          = isDark ? "rgba(255,255,255,0.90)" : "rgba(25,29,24,0.90)";
   const fgMuted     = isDark ? "rgba(255,255,255,0.40)" : "rgba(25,29,24,0.45)";
   const fgGhost     = isDark ? "rgba(255,255,255,0.30)" : "rgba(25,29,24,0.30)";

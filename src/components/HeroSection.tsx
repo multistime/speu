@@ -47,8 +47,8 @@ export function HeroSection({
   );
 
   // Theme-resolved color shortcuts
-  const accent      = isDark ? "#7DBF9E" : "#3D6B98";
-  const accentRgb   = isDark ? "125,191,158" : "61,107,152";
+  const accent      = isDark ? "#7DBF9E" : "#35654D";
+  const accentRgb   = isDark ? "125,191,158" : "53,101,77";
   const fg          = isDark ? "#E2E8DD" : "#191D18";
   const fgSub       = isDark ? "#C8DDD0" : "#4A5C4E";
   const fgMuted     = isDark ? "rgba(200,221,208,0.60)" : "rgba(45,65,50,0.65)";
@@ -56,7 +56,7 @@ export function HeroSection({
   const fgGhost     = isDark ? "rgba(200,221,208,0.25)" : "rgba(45,65,50,0.25)";
   const badgeBorder = isDark ? `rgba(${accentRgb},0.22)` : `rgba(${accentRgb},0.18)`;
   const badgeBg     = `rgba(${accentRgb},0.06)`;
-  const ctaPrimBg   = isDark ? "#7DBF9E" : "#3D6B98";
+  const ctaPrimBg   = isDark ? "#7DBF9E" : "#35654D";
   const ctaPrimFg   = isDark ? "#0E1811" : "#FFFFFF";
   const ctaGlow     = `rgba(${accentRgb},${isDark ? "0.38" : "0.28"})`;
   const ctaSecBrd   = `rgba(${accentRgb},0.22)`;

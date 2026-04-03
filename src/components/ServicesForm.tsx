@@ -26,7 +26,7 @@ const SERVICE_TYPES = [
     description: "Арыгінальная музыка на беларускай мове",
     icon: Music,
     color: "#4ade80",
-    colorLight: "#3D6B98",
+    colorLight: "#35654D",
   },
   {
     value: "text-to-song" as const,
@@ -100,10 +100,10 @@ export function ServicesForm() {
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="glass rounded-2xl dark:border-[rgba(74,222,128,0.2)] border-[rgba(61,107,152,0.25)] p-12 text-center"
+        className="glass rounded-2xl dark:border-[rgba(74,222,128,0.2)] border-[rgba(53,101,77,0.25)] p-12 text-center"
       >
-        <div className="inline-flex items-center justify-center h-16 w-16 rounded-full dark:bg-[rgba(74,222,128,0.1)] dark:border-[rgba(74,222,128,0.3)] bg-[rgba(61,107,152,0.08)] border border-[rgba(61,107,152,0.25)] mb-6">
-          <Check className="h-8 w-8 dark:text-[#4ade80] text-[#3D6B98]" />
+        <div className="inline-flex items-center justify-center h-16 w-16 rounded-full dark:bg-[rgba(74,222,128,0.1)] dark:border-[rgba(74,222,128,0.3)] bg-[rgba(53,101,77,0.08)] border border-[rgba(53,101,77,0.25)] mb-6">
+          <Check className="h-8 w-8 dark:text-[#4ade80] text-[#35654D]" />
         </div>
         <h3 className="text-xl font-semibold text-foreground mb-2">
           Заяўка атрымана
@@ -186,7 +186,7 @@ export function ServicesForm() {
               inputBase,
               errors.name
                 ? "border-red-500/40 focus:border-red-500/70"
-                : "dark:border-white/10 border-border dark:focus:border-[rgba(74,222,128,0.4)] dark:focus:bg-[rgba(74,222,128,0.03)] focus:border-[rgba(61,107,152,0.45)] focus:bg-[rgba(61,107,152,0.04)]"
+                : "dark:border-white/10 border-border dark:focus:border-[rgba(74,222,128,0.4)] dark:focus:bg-[rgba(74,222,128,0.03)] focus:border-[rgba(53,101,77,0.45)] focus:bg-[rgba(53,101,77,0.04)]"
             )}
           />
           {errors.name && (
@@ -205,7 +205,7 @@ export function ServicesForm() {
               inputBase,
               errors.email
                 ? "border-red-500/40 focus:border-red-500/70"
-                : "dark:border-white/10 border-border dark:focus:border-[rgba(74,222,128,0.4)] dark:focus:bg-[rgba(74,222,128,0.03)] focus:border-[rgba(61,107,152,0.45)] focus:bg-[rgba(61,107,152,0.04)]"
+                : "dark:border-white/10 border-border dark:focus:border-[rgba(74,222,128,0.4)] dark:focus:bg-[rgba(74,222,128,0.03)] focus:border-[rgba(53,101,77,0.45)] focus:bg-[rgba(53,101,77,0.04)]"
             )}
           />
           {errors.email && (
@@ -228,7 +228,7 @@ export function ServicesForm() {
             "resize-none",
             errors.description
               ? "border-red-500/40 focus:border-red-500/70"
-              : "dark:border-white/10 border-border dark:focus:border-[rgba(74,222,128,0.4)] dark:focus:bg-[rgba(74,222,128,0.03)] focus:border-[rgba(61,107,152,0.45)] focus:bg-[rgba(61,107,152,0.04)]"
+              : "dark:border-white/10 border-border dark:focus:border-[rgba(74,222,128,0.4)] dark:focus:bg-[rgba(74,222,128,0.03)] focus:border-[rgba(53,101,77,0.45)] focus:bg-[rgba(53,101,77,0.04)]"
           )}
         />
         {errors.description && (
@@ -247,7 +247,7 @@ export function ServicesForm() {
             className={cn(
               inputBase,
               "dark:border-white/10 border-border",
-              "dark:focus:border-[rgba(74,222,128,0.4)] focus:border-[rgba(61,107,152,0.45)]",
+              "dark:focus:border-[rgba(74,222,128,0.4)] focus:border-[rgba(53,101,77,0.45)]",
               "appearance-none cursor-pointer",
               "dark:text-white/70 text-foreground/70",
             )}
@@ -270,7 +270,7 @@ export function ServicesForm() {
             className={cn(
               inputBase,
               "dark:border-white/10 border-border",
-              "dark:focus:border-[rgba(74,222,128,0.4)] focus:border-[rgba(61,107,152,0.45)]",
+              "dark:focus:border-[rgba(74,222,128,0.4)] focus:border-[rgba(53,101,77,0.45)]",
               "dark:text-white/70 text-foreground/70",
               "dark:[color-scheme:dark] [color-scheme:light]",
             )}
@@ -287,7 +287,7 @@ export function ServicesForm() {
           "w-full flex items-center justify-center gap-2 py-4 rounded-xl font-semibold text-sm transition-all duration-300",
           isSubmitting
             ? "dark:bg-white/[0.08] bg-foreground/[0.06] dark:text-white/30 text-foreground/30 cursor-wait"
-            : "dark:bg-[#4ade80] dark:text-[#0b1210] dark:hover:shadow-[0_0_30px_rgba(74,222,128,0.5)] bg-[#3D6B98] text-white hover:shadow-[0_0_30px_rgba(61,107,152,0.4)] hover:scale-[1.01]"
+            : "dark:bg-[#4ade80] dark:text-[#0b1210] dark:hover:shadow-[0_0_30px_rgba(74,222,128,0.5)] bg-[#35654D] text-white hover:shadow-[0_0_30px_rgba(53,101,77,0.38)] hover:scale-[1.01]"
         )}
       >
         {isSubmitting ? (
