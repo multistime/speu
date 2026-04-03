@@ -12,15 +12,37 @@ type Stats = {
   pages_total: number;
 };
 
+type StatsErrorPayload = { error?: string; details?: string };
+
 export default function AdminPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/admin/stats")
-      .then((r) => r.json())
-      .then((d: Stats) => { setStats(d); setLoading(false); })
-      .catch(() => setLoading(false));
+      .then(async (r) => {
+        const d = (await r.json()) as Stats & StatsErrorPayload;
+        if (!r.ok) {
+          const msg =
+            typeof d.details === "string"
+              ? d.details
+              : typeof d.error === "string"
+                ? d.error
+                : `HTTP ${r.status}`;
+          setLoadError(msg);
+          setStats(null);
+          setLoading(false);
+          return;
+        }
+        setLoadError(null);
+        setStats(d);
+        setLoading(false);
+      })
+      .catch(() => {
+        setLoadError("Сеткавая памылка");
+        setLoading(false);
+      });
   }, []);
 
   const tiles = [
@@ -63,6 +85,17 @@ export default function AdminPage() {
         <p className="text-muted-foreground text-sm">
           Панэль кіравання кантэнтам, лэйблам і заяўкамі (SPEU).
         </p>
+        {loadError ? (
+          <p className="mt-4 text-sm text-destructive rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2">
+            Не ўдалося загрузіць лічбы: {loadError}
+            {loadError.includes("forbidden") || loadError === "forbidden" ? (
+              <span className="block mt-1 text-muted-foreground">
+                Зайдзіце зноў у акаўнт або праверце, што міграцыя{" "}
+                <code className="text-xs">get_my_speu_profile</code> ужытая на праекце Supabase.
+              </span>
+            ) : null}
+          </p>
+        ) : null}
       </div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">

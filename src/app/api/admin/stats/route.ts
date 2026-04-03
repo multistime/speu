@@ -12,6 +12,17 @@ export async function GET() {
     adminDb.schema("speu").from("service_requests").select("status", { count: "exact", head: false }),
   ]);
 
+  const batchErrors = [artists.error, pages.error, tiers.error, requests.error].filter(Boolean);
+  if (batchErrors.length > 0) {
+    return NextResponse.json(
+      {
+        error: "fetch_failed",
+        details: batchErrors.map((e) => e!.message).join(" · "),
+      },
+      { status: 500 }
+    );
+  }
+
   const artistsPublished = (artists.data ?? []).filter((a) => a.status === "published").length;
   const artistsTotal = artists.count ?? 0;
   const tiersActive = (tiers.data ?? []).filter((t) => t.is_active).length;

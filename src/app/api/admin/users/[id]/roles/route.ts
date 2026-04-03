@@ -3,6 +3,7 @@ import { z } from "zod";
 import { adminUserRolesPatchSchema } from "@/lib/admin/api-schemas";
 import { requireAdminApi } from "@/lib/auth/admin";
 import { writeAdminAuditLog } from "@/lib/supabase/admin-repos/audit";
+import { isSuperadminEmail } from "@/lib/admin/superadmin";
 import { createServiceRoleClient } from "@/lib/supabase/service";
 import { ADMIN_UI_ROLE_CODES, type AdminUiRoleCode } from "@/lib/admin/user-roles";
 
@@ -38,7 +39,19 @@ export async function PATCH(
     return NextResponse.json({ error: "invalid_payload", details: parsed.error.flatten() }, { status: 400 });
   }
 
-  const codes = [...new Set(parsed.data.codes)] as AdminUiRoleCode[];
+  let codes = [...new Set(parsed.data.codes)] as AdminUiRoleCode[];
+
+  const { data: targetAuth, error: targetAuthErr } = await adminDb.auth.admin.getUserById(targetId);
+  if (targetAuthErr || !targetAuth.user) {
+    return NextResponse.json(
+      { error: "target_user_not_found", details: targetAuthErr?.message },
+      { status: 404 }
+    );
+  }
+
+  if (isSuperadminEmail(targetAuth.user.email)) {
+    codes = [...new Set([...codes, "admin"])] as AdminUiRoleCode[];
+  }
 
   const { data: roleRows, error: rolesError } = await adminDb
     .schema("speu")

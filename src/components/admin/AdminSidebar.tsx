@@ -29,7 +29,7 @@ const adminNavItems = [
 
 export function AdminSidebar() {
   const pathname = usePathname();
-  const isProjectHub = pathname === "/admin/project";
+  const isProjectHub = pathname.startsWith("/admin/project");
 
   const linkClass = (active: boolean) =>
     cn(

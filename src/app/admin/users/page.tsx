@@ -22,6 +22,7 @@ type AdminUserListItem = {
   email_confirmed_at: string | null;
   display_name: string | null;
   is_admin: boolean;
+  is_superadmin?: boolean;
   role_codes: string[];
   product_role_codes: AdminUiRoleCode[];
   linked_artist: { id: string; name: string; slug: string } | null;
@@ -123,12 +124,15 @@ export default function AdminUsersPage() {
 
   const openUser = (u: AdminUserListItem) => {
     setSelected(u);
-    setEditCodes([...u.product_role_codes]);
+    const base = [...u.product_role_codes];
+    if (u.is_superadmin && !base.includes("admin")) base.push("admin");
+    setEditCodes(base);
     setLinkedArtistId(u.linked_artist?.id ?? "");
     setError(null);
   };
 
   const toggleCode = (code: AdminUiRoleCode) => {
+    if (selected?.is_superadmin && code === "admin") return;
     setEditCodes((prev) => {
       if (prev.includes(code)) {
         if (code === "artist") setLinkedArtistId("");
@@ -250,15 +254,25 @@ export default function AdminUsersPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {items.map((u) => (
+                  {items.map((u) => {
+                    const codesForBadges =
+                      u.role_codes.length > 0 ? u.role_codes : (u.product_role_codes ?? []);
+                    return (
                     <tr key={u.id} className="border-b border-border/80 last:border-0 hover:bg-muted/20">
                       <td className="p-3 align-top">
                         <p className="font-mono text-xs break-all text-foreground">{u.email ?? "—"}</p>
-                        {u.is_admin ? (
-                          <Badge variant="secondary" className="mt-1">
-                            is_admin
-                          </Badge>
-                        ) : null}
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {u.is_superadmin ? (
+                            <Badge variant="default" className="text-xs">
+                              суперадмін
+                            </Badge>
+                          ) : null}
+                          {u.is_admin ? (
+                            <Badge variant="secondary" className="text-xs">
+                              is_admin
+                            </Badge>
+                          ) : null}
+                        </div>
                       </td>
                       <td className="p-3 align-top hidden sm:table-cell text-muted-foreground">
                         {u.display_name ?? "—"}
@@ -268,10 +282,10 @@ export default function AdminUsersPage() {
                       </td>
                       <td className="p-3 align-top">
                         <div className="flex flex-wrap gap-1">
-                          {u.role_codes.length === 0 ? (
+                          {codesForBadges.length === 0 ? (
                             <span className="text-xs text-muted-foreground">без роляў у табліцы</span>
                           ) : (
-                            u.role_codes.map((c) => (
+                            codesForBadges.map((c) => (
                               <Badge key={c} variant="outline">
                                 {roleLabel(c)}
                               </Badge>
@@ -285,7 +299,8 @@ export default function AdminUsersPage() {
                         </Button>
                       </td>
                     </tr>
-                  ))}
+                  );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -356,7 +371,14 @@ export default function AdminUsersPage() {
               </div>
               <div className="flex flex-col gap-0.5">
                 <dt className="text-muted-foreground">Профіль: адмін (даступ у адмінку)</dt>
-                <dd>{selected.is_admin ? "так" : "не"}</dd>
+                <dd>
+                  {selected.is_admin ? "так" : "не"}
+                  {selected.is_superadmin ? (
+                    <span className="block text-xs text-muted-foreground mt-1">
+                      Галоўны адмін: ролю «Адмін» у спісе нельга адключыць; на серверы яна заўсёды захоўваецца.
+                    </span>
+                  ) : null}
+                </dd>
               </div>
               <div className="flex flex-col gap-0.5">
                 <dt className="text-muted-foreground">Карточка артыста лэйбла (1:1)</dt>
@@ -382,20 +404,29 @@ export default function AdminUsersPage() {
             <div>
               <p className="text-sm font-medium text-foreground mb-3">Правы (можна змяняць)</p>
               <ul className="space-y-2">
-                {ADMIN_UI_ROLE_CODES.map((code) => (
-                  <li key={code}>
-                    <label className="flex items-center gap-3 cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={editCodes.includes(code)}
-                        onChange={() => toggleCode(code)}
-                        className="size-4 rounded border-border accent-primary"
-                      />
-                      <span className="text-sm">{ADMIN_UI_ROLE_LABELS[code]}</span>
-                      <span className="text-xs text-muted-foreground font-mono">({code})</span>
-                    </label>
-                  </li>
-                ))}
+                {ADMIN_UI_ROLE_CODES.map((code) => {
+                  const lockedSuperadmin = Boolean(selected.is_superadmin && code === "admin");
+                  return (
+                    <li key={code}>
+                      <label
+                        className={`flex items-center gap-3 select-none ${lockedSuperadmin ? "cursor-not-allowed opacity-90" : "cursor-pointer"}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={editCodes.includes(code)}
+                          disabled={lockedSuperadmin}
+                          onChange={() => toggleCode(code)}
+                          className="size-4 rounded border-border accent-primary disabled:cursor-not-allowed"
+                        />
+                        <span className="text-sm">{ADMIN_UI_ROLE_LABELS[code]}</span>
+                        <span className="text-xs text-muted-foreground font-mono">({code})</span>
+                        {lockedSuperadmin ? (
+                          <span className="text-xs text-muted-foreground">· заўсёды ўключана</span>
+                        ) : null}
+                      </label>
+                    </li>
+                  );
+                })}
               </ul>
               <p className="text-xs text-muted-foreground mt-3">
                 «Адмін» — доступ у адмінку. «Слухач» / «Артыст» — радкі ў{" "}

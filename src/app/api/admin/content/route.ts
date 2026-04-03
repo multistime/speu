@@ -18,18 +18,54 @@ export async function GET() {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
-  const { data, error } = await adminDb
+  const { data: pages, error: pagesError } = await adminDb
     .schema("speu")
     .from("content_pages")
-    .select(
-      "id, slug, title, status, visible_on_site, content_blocks(id, block_key, block_type, order_index, enabled, payload_json)"
-    )
+    .select("id, slug, title, status, visible_on_site")
     .order("slug", { ascending: true });
 
-  if (error) {
-    return NextResponse.json({ error: "fetch_failed" }, { status: 500 });
+  if (pagesError) {
+    return NextResponse.json(
+      { error: "fetch_failed", details: pagesError.message },
+      { status: 500 }
+    );
   }
-  return NextResponse.json({ items: data ?? [] });
+
+  const pageList = pages ?? [];
+  const pageIds = pageList.map((p) => p.id);
+  const { data: blockRows, error: blocksError } =
+    pageIds.length > 0
+      ? await adminDb
+          .schema("speu")
+          .from("content_blocks")
+          .select("id, page_id, block_key, block_type, order_index, enabled, payload_json")
+          .in("page_id", pageIds)
+          .order("page_id", { ascending: true })
+          .order("order_index", { ascending: true })
+      : { data: [] as Record<string, unknown>[], error: null };
+
+  if (blocksError) {
+    return NextResponse.json(
+      { error: "fetch_failed", details: blocksError.message },
+      { status: 500 }
+    );
+  }
+
+  const blocksByPage = new Map<number, unknown[]>();
+  for (const row of blockRows ?? []) {
+    const pid = row.page_id as number;
+    const list = blocksByPage.get(pid) ?? [];
+    const { page_id: _p, ...rest } = row as Record<string, unknown>;
+    list.push(rest);
+    blocksByPage.set(pid, list);
+  }
+
+  const items = pageList.map((p) => ({
+    ...p,
+    content_blocks: blocksByPage.get(p.id) ?? [],
+  }));
+
+  return NextResponse.json({ items });
 }
 
 export async function POST(request: Request) {
