@@ -20,6 +20,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Link Vercel project (.vercel/ not in git)
+        env:
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+        run: |
+          if [ -z "$VERCEL_PROJECT_ID" ] || [ -z "$VERCEL_ORG_ID" ]; then
+            echo "::error::У рэпазіторыі павінны быць сакрэты VERCEL_PROJECT_ID і VERCEL_ORG_ID (гл. AGENTS.md). Без іх vercel pull у CI не знаходзіць праект."
+            exit 1
+          fi
+          mkdir -p .vercel
+          node -e "require('fs').writeFileSync('.vercel/project.json', JSON.stringify({ projectId: process.env.VERCEL_PROJECT_ID, orgId: process.env.VERCEL_ORG_ID }))"
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -49,6 +61,7 @@ jobs:
             --token=${{ secrets.VERCEL_TOKEN }} || true
 
       - name: Comment on commit
+        continue-on-error: true
         uses: actions/github-script@v7
         with:
           script: |

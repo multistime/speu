@@ -33,7 +33,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ### GitHub Actions — сакрэты
 
-У рэпазіторыі павінны быць: `VERCEL_TOKEN`, `VERCEL_ORG_ID` (звычайна `team_*` з `.vercel/project.json`). Environments: `staging`, `production` (для адабрэння promote пры неабходнасці).
+У рэпазіторыі павінны быць: `VERCEL_TOKEN`, `VERCEL_ORG_ID` (`team_*`), **`VERCEL_PROJECT_ID`** (`prj_*` з лакальнага `.vercel/project.json` → `projectId`). Без `VERCEL_PROJECT_ID` у CI няма `.vercel/project.json` (каталог у `.gitignore`), і `vercel pull` часта падае. Environments: `staging`, `production` (для адабрэння promote пры неабходнасці).
 
 ### Калі агент робіць дэплой з машыны карыстальніка (Vercel CLI)
 

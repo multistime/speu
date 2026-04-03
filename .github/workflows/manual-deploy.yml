@@ -55,6 +55,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Link Vercel project (.vercel/ not in git)
+        env:
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+        run: |
+          if [ -z "$VERCEL_PROJECT_ID" ] || [ -z "$VERCEL_ORG_ID" ]; then
+            echo "::error::Нужны секреты VERCEL_PROJECT_ID и VERCEL_ORG_ID (см. AGENTS.md)."
+            exit 1
+          fi
+          mkdir -p .vercel
+          node -e "require('fs').writeFileSync('.vercel/project.json', JSON.stringify({ projectId: process.env.VERCEL_PROJECT_ID, orgId: process.env.VERCEL_ORG_ID }))"
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
