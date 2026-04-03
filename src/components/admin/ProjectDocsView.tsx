@@ -3,73 +3,29 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import {
-  ArrowUp,
-  BookOpen,
-  ChevronRight,
-  Copy,
-  ListTodo,
-  Map,
-  PanelLeft,
-} from "lucide-react";
+import { ArrowUp, ChevronRight, Copy, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { projectDocMarkdownComponents } from "@/components/admin/project-doc-markdown";
-
-const SECTION_IDS = {
-  overview: "project-overview",
-  roadmap: "project-roadmap",
-  tickets: "project-tickets",
-  readme: "project-readme",
-} as const;
-
-type SectionKey = keyof typeof SECTION_IDS;
-
-const navSections: {
-  key: SectionKey;
-  label: string;
-  file: string;
-  icon: typeof BookOpen;
-  blurb: string;
-}[] = [
-  {
-    key: "overview",
-    label: "База ведаў",
-    file: "OVERVIEW.md",
-    icon: BookOpen,
-    blurb: "Прадукт, стэйкхолдэры, рызыкі",
-  },
-  {
-    key: "roadmap",
-    label: "Роадмэп",
-    file: "ROADMAP.md",
-    icon: Map,
-    blurb: "Планы па часе",
-  },
-  {
-    key: "tickets",
-    label: "Тікеты",
-    file: "TICKETS.md",
-    icon: ListTodo,
-    blurb: "Бэклог і статусы",
-  },
-  {
-    key: "readme",
-    label: "Структура файлаў",
-    file: "README.md",
-    icon: PanelLeft,
-    blurb: "Што за што адказвае",
-  },
-];
+import { scrollToProjectDocSection } from "@/components/admin/ProjectHubSectionNav";
+import type { ProjectHubLinks } from "@/lib/project-hub-links";
+import {
+  PROJECT_DOCS_NAV_SECTIONS,
+  PROJECT_DOCS_SECTION_IDS,
+  type ProjectDocsSectionKey,
+} from "@/lib/project-docs-nav-data";
 
 type ProjectDocsViewProps = {
   overview: string;
   roadmap: string;
   tickets: string;
   readme: string;
+  hubLinks: ProjectHubLinks;
+  /** Host бягучага запыту (адмінка) */
+  requestHost: string | null;
 };
 
 function sectionSource(
-  key: SectionKey,
+  key: ProjectDocsSectionKey,
   props: Pick<ProjectDocsViewProps, "overview" | "roadmap" | "tickets" | "readme">
 ): string {
   switch (key) {
@@ -84,53 +40,70 @@ function sectionSource(
   }
 }
 
-export function ProjectDocsView({ overview, roadmap, tickets, readme }: ProjectDocsViewProps) {
+function HubEnvBadge({ deployEnv }: { deployEnv: ProjectHubLinks["deployEnv"] }) {
+  if (!deployEnv) return null;
+  const styles =
+    deployEnv === "production"
+      ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/25"
+      : deployEnv === "preview"
+        ? "bg-amber-500/15 text-amber-800 dark:text-amber-400 border-amber-500/25"
+        : "bg-muted text-muted-foreground border-border";
+  const labels = {
+    production: "Vercel: production",
+    preview: "Vercel: preview",
+    development: "Vercel: development",
+  } as const;
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
+        styles
+      )}
+    >
+      {labels[deployEnv]}
+    </span>
+  );
+}
+
+function QuickEnvLink({
+  item,
+  variant = "solid",
+}: {
+  item: { label: string; href: string };
+  variant?: "solid" | "ghost";
+}) {
+  return (
+    <a
+      href={item.href}
+      target="_blank"
+      rel="noreferrer noopener"
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-lg text-xs font-medium transition-colors",
+        variant === "solid"
+          ? "border border-primary/25 bg-primary/10 px-3 py-2 text-primary hover:bg-primary/15"
+          : "text-muted-foreground hover:text-primary underline-offset-2 hover:underline"
+      )}
+    >
+      {item.label}
+      <ExternalLink className="w-3 h-3 opacity-70" aria-hidden />
+    </a>
+  );
+}
+
+export function ProjectDocsView({
+  overview,
+  roadmap,
+  tickets,
+  readme,
+  hubLinks,
+  requestHost,
+}: ProjectDocsViewProps) {
   const sources = useMemo(
     () => ({ overview, roadmap, tickets, readme }),
     [overview, roadmap, tickets, readme]
   );
 
-  const [activeId, setActiveId] = useState<string>(SECTION_IDS.overview);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  /** На мабільным змест па змаўчанні згорнуты — спачатку кантэнт; на lg заўсёды бачны. */
-  const [showNav, setShowNav] = useState(false);
-
-  const scrollToId = useCallback((id: string) => {
-    const el = document.getElementById(id);
-    el?.scrollIntoView({ behavior: "smooth", block: "start" });
-    try {
-      history.replaceState(null, "", `#${id}`);
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
-  useEffect(() => {
-    const hash = window.location.hash?.slice(1);
-    if (hash && document.getElementById(hash)) {
-      requestAnimationFrame(() => document.getElementById(hash)?.scrollIntoView({ block: "start" }));
-      setActiveId(hash);
-    }
-  }, []);
-
-  useEffect(() => {
-    const ids = navSections.map((s) => SECTION_IDS[s.key]);
-    const els = ids.map((id) => document.getElementById(id)).filter(Boolean) as HTMLElement[];
-    if (els.length === 0) return;
-
-    const obs = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
-        if (visible[0]?.target?.id) setActiveId(visible[0].target.id);
-      },
-      { rootMargin: "-12% 0px -55% 0px", threshold: [0, 0.1, 0.25, 0.5, 1] }
-    );
-
-    els.forEach((el) => obs.observe(el));
-    return () => obs.disconnect();
-  }, [overview, roadmap, tickets, readme]);
 
   const copySectionLink = useCallback(async (id: string) => {
     const url = `${window.location.origin}${window.location.pathname}#${id}`;
@@ -150,24 +123,75 @@ export function ProjectDocsView({ overview, roadmap, tickets, readme }: ProjectD
       {/* Hero */}
       <header className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-primary/10 via-card to-card p-6 sm:p-8">
         <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-primary/5 blur-3xl pointer-events-none" />
-        <div className="relative space-y-3 max-w-3xl">
+        <div className="relative space-y-4 max-w-4xl">
+          {/* Спасылкі на асяроддзі і інструменты */}
+          <div className="rounded-xl border border-border/90 bg-background/55 backdrop-blur-md p-4 space-y-3 shadow-sm">
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+              <div className="space-y-1">
+                <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-semibold">
+                  Сайт: прадакшн і стэйдж
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <QuickEnvLink item={hubLinks.production} />
+                  <QuickEnvLink item={hubLinks.staging} />
+                </div>
+                <p className="text-[11px] text-muted-foreground leading-snug max-w-2xl">
+                  URLы наладжваюцца ў Vercel → Environment Variables:{" "}
+                  <code className="font-mono text-[10px] bg-muted/80 px-1 rounded">NEXT_PUBLIC_SPEU_PRODUCTION_URL</code>,{" "}
+                  <code className="font-mono text-[10px] bg-muted/80 px-1 rounded">NEXT_PUBLIC_SPEU_STAGING_URL</code>.
+                  Калі стэйдж не зададзены, адкрываецца спіс preview-дэплояў на Vercel.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                <HubEnvBadge deployEnv={hubLinks.deployEnv} />
+                {requestHost ? (
+                  <span className="text-[11px] text-muted-foreground font-mono">
+                    адмінка: {requestHost}
+                  </span>
+                ) : null}
+              </div>
+            </div>
+            <div className="h-px bg-border/80" />
+            <div className="flex flex-wrap gap-x-5 gap-y-2">
+              {hubLinks.tooling.map((t) => (
+                <QuickEnvLink key={t.href} item={t} variant="ghost" />
+              ))}
+              <a
+                href={new URL("/admin/project", hubLinks.production.href).href}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-primary underline-offset-2 hover:underline"
+              >
+                Хаб на прадакшне
+                <ExternalLink className="w-3 h-3 opacity-70" aria-hidden />
+              </a>
+            </div>
+            {hubLinks.publicSiteOrigin ? (
+              <p className="text-[11px] text-muted-foreground">
+                <span className="font-medium text-foreground/80">NEXT_PUBLIC_SITE_URL:</span>{" "}
+                <span className="font-mono">{hubLinks.publicSiteOrigin}</span>
+              </p>
+            ) : null}
+          </div>
+
           <p className="text-xs uppercase tracking-[0.2em] text-primary/80 font-medium">Інфополе праекту</p>
           <h1 className="font-display text-3xl sm:text-4xl font-semibold tracking-tight text-foreground">
             Speu — база ведаў і планы
           </h1>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Усё ў адным скроле: агляд прадукту, роадмэп, тікеты і апісанне файлаў. Крыніца праўды — markdown у{" "}
+            Усё ў адным скроле: агляд прадукту, роадмэп, тікеты і апісанне файлаў. Змест па раздзелах — у бакавым блоцы{" "}
+            <span className="font-medium text-foreground/85">Праект</span>. Крыніца праўды — markdown у{" "}
             <code className="text-xs font-mono bg-background/60 px-1.5 py-0.5 rounded border border-border/80">
               docs/project/
             </code>
             . Я абнаўляю гэтыя файлы разам з вамі; пасля змен перазапусціце dev або задэплойце.
           </p>
           <div className="flex flex-wrap gap-2 pt-1">
-            {navSections.map(({ key, label, file }) => (
+            {PROJECT_DOCS_NAV_SECTIONS.map(({ key, label, file }) => (
               <button
                 key={key}
                 type="button"
-                onClick={() => scrollToId(SECTION_IDS[key])}
+                onClick={() => scrollToProjectDocSection(PROJECT_DOCS_SECTION_IDS[key])}
                 className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/50 px-3 py-1.5 text-xs font-medium text-foreground/80 hover:bg-muted hover:text-foreground transition-colors"
               >
                 <ChevronRight className="w-3.5 h-3.5 text-primary" strokeWidth={2} />
@@ -179,57 +203,9 @@ export function ProjectDocsView({ overview, roadmap, tickets, readme }: ProjectD
         </div>
       </header>
 
-      <div className="flex flex-col lg:flex-row gap-8 lg:gap-10 items-start">
-        <button
-          type="button"
-          onClick={() => setShowNav((v) => !v)}
-          className="lg:hidden w-full flex items-center justify-center gap-2 rounded-xl border border-border bg-card/80 py-2.5 text-sm font-medium text-foreground"
-        >
-          <PanelLeft className="w-4 h-4" strokeWidth={1.75} />
-          {showNav ? "Схаваць змест" : "Паказаць змест"}
-        </button>
-
-        <aside
-          className={cn(
-            "w-full lg:w-56 shrink-0 lg:sticky lg:top-24 space-y-3",
-            showNav ? "block" : "hidden",
-            "lg:block"
-          )}
-        >
-          <div className="glass rounded-2xl border border-border p-3">
-            <p className="px-2 pt-1 pb-2 text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-              На старонцы
-            </p>
-            <nav className="space-y-0.5" aria-label="Раздзелы">
-              {navSections.map(({ key, label, icon: Icon, blurb, file }) => {
-                const id = SECTION_IDS[key];
-                const active = activeId === id;
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => scrollToId(id)}
-                    className={cn(
-                      "w-full text-left rounded-xl px-2.5 py-2 transition-colors flex gap-2.5 items-start",
-                      active ? "bg-primary/12 text-primary" : "text-foreground/75 hover:bg-muted"
-                    )}
-                  >
-                    <Icon className="w-4 h-4 shrink-0 mt-0.5" strokeWidth={1.75} />
-                    <span className="min-w-0">
-                      <span className="block text-sm font-medium leading-tight">{label}</span>
-                      <span className="block text-[11px] text-muted-foreground mt-0.5 leading-snug">{blurb}</span>
-                      <span className="block text-[10px] font-mono text-muted-foreground/70 mt-1">{file}</span>
-                    </span>
-                  </button>
-                );
-              })}
-            </nav>
-          </div>
-        </aside>
-
-        <div className="min-w-0 flex-1 space-y-14 sm:space-y-16 pb-24">
-          {navSections.map(({ key, label, file }) => {
-            const id = SECTION_IDS[key];
+      <div className="min-w-0 space-y-14 sm:space-y-16 pb-24">
+          {PROJECT_DOCS_NAV_SECTIONS.map(({ key, label, file }) => {
+            const id = PROJECT_DOCS_SECTION_IDS[key];
             const source = sectionSource(key, sources);
             return (
               <section
@@ -266,7 +242,6 @@ export function ProjectDocsView({ overview, roadmap, tickets, readme }: ProjectD
               </section>
             );
           })}
-        </div>
       </div>
 
       {showBackTop ? (
