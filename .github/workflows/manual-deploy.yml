@@ -1,0 +1,168 @@
+# Ручной деплой: только staging, только production (promote) или staging → production.
+# GitHub → Actions → Manual deploy (Vercel) → Run workflow.
+
+name: Manual deploy (Vercel)
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'staging — превью + alias staging-speu; production — promote; both — оба подряд'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+          - both
+      deployment_url:
+        description: 'Только для production: URL превью. Пусто — первый https://speu-* из vercel ls (ненадёжно)'
+        required: false
+        type: string
+      confirm:
+        description: 'Для production или both обязательно: yes (при staging можно не трогать)'
+        required: false
+        default: 'no'
+        type: string
+
+jobs:
+  gate:
+    name: Validate inputs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check confirm for production paths
+        run: |
+          target="${{ github.event.inputs.target }}"
+          confirm="${{ github.event.inputs.confirm }}"
+          if [ "$target" = "production" ] || [ "$target" = "both" ]; then
+            if [ "$confirm" != "yes" ]; then
+              echo "::error::Для target=production или both укажите confirm: yes"
+              exit 1
+            fi
+          fi
+
+  staging:
+    name: Deploy to staging
+    needs: gate
+    if: github.event.inputs.target == 'staging' || github.event.inputs.target == 'both'
+    runs-on: ubuntu-latest
+    outputs:
+      url: ${{ steps.deploy.outputs.url }}
+    environment:
+      name: staging
+      url: ${{ steps.deploy.outputs.url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Pull Vercel Environment (preview)
+        run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build
+        run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy to Staging
+        id: deploy
+        run: |
+          URL=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})
+          echo "url=$URL" >> $GITHUB_OUTPUT
+          echo "Staging URL: $URL"
+
+      - name: Assign staging alias
+        run: |
+          vercel alias set ${{ steps.deploy.outputs.url }} staging-speu.vercel.app \
+            --token=${{ secrets.VERCEL_TOKEN }} || true
+
+      - name: Summary
+        run: |
+          echo "## Staging" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**URL:** ${{ steps.deploy.outputs.url }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Alias:** https://staging-speu.vercel.app" >> $GITHUB_STEP_SUMMARY
+
+  promote-after-staging:
+    name: Promote to Production (after CI staging)
+    needs: [gate, staging]
+    if: github.event.inputs.target == 'both' && github.event.inputs.confirm == 'yes'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ steps.promote.outputs.prod_url }}
+
+    steps:
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Promote to Production
+        id: promote
+        run: |
+          vercel promote ${{ needs.staging.outputs.url }} \
+            --token=${{ secrets.VERCEL_TOKEN }}
+          PROD_URL=$(vercel ls --token=${{ secrets.VERCEL_TOKEN }} \
+            --scope=${{ secrets.VERCEL_ORG_ID }} 2>/dev/null \
+            | grep "Production" | head -1 | awk '{print $2}' || echo "https://speu.vercel.app")
+          echo "prod_url=$PROD_URL" >> $GITHUB_OUTPUT
+          echo "Promoted: $PROD_URL"
+
+      - name: Summary
+        run: |
+          echo "## Production (from both)" >> $GITHUB_STEP_SUMMARY
+          echo "| From | \`${{ needs.staging.outputs.url }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Production | ${{ steps.promote.outputs.prod_url }} |" >> $GITHUB_STEP_SUMMARY
+
+  promote-only:
+    name: Promote to Production (existing preview)
+    needs: gate
+    if: github.event.inputs.target == 'production' && github.event.inputs.confirm == 'yes'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ steps.promote.outputs.prod_url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Determine deployment URL
+        id: url
+        run: |
+          INPUT_URL="${{ github.event.inputs.deployment_url }}"
+          if [ -n "$INPUT_URL" ]; then
+            echo "deploy_url=$INPUT_URL" >> $GITHUB_OUTPUT
+            echo "Using provided URL: $INPUT_URL"
+          else
+            LATEST=$(vercel ls --token=${{ secrets.VERCEL_TOKEN }} \
+              --scope=${{ secrets.VERCEL_ORG_ID }} 2>/dev/null \
+              | grep -E "https://speu-" | head -1 | awk '{print $2}')
+            echo "deploy_url=$LATEST" >> $GITHUB_OUTPUT
+            echo "Using latest from vercel ls: $LATEST"
+          fi
+
+      - name: Promote to Production
+        id: promote
+        run: |
+          vercel promote ${{ steps.url.outputs.deploy_url }} \
+            --token=${{ secrets.VERCEL_TOKEN }}
+          PROD_URL=$(vercel ls --token=${{ secrets.VERCEL_TOKEN }} \
+            --scope=${{ secrets.VERCEL_ORG_ID }} 2>/dev/null \
+            | grep "Production" | head -1 | awk '{print $2}' || echo "https://speu.vercel.app")
+          echo "prod_url=$PROD_URL" >> $GITHUB_OUTPUT
+          echo "Promoted to production: $PROD_URL"
+
+      - name: Summary
+        run: |
+          echo "## Production (promote only)" >> $GITHUB_STEP_SUMMARY
+          echo "| From | \`${{ steps.url.outputs.deploy_url }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Production | ${{ steps.promote.outputs.prod_url }} |" >> $GITHUB_STEP_SUMMARY
