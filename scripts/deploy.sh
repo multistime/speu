@@ -64,7 +64,7 @@ cmd_staging() {
   mkdir -p "$STATE_DIR"
   printf '%s\n' "$url" >"$STATE_FILE"
   echo "==> Сохранён URL: $STATE_FILE"
-  echo "==> Alias → $STAGING_ALIAS…"
+  echo "==> Alias → ${STAGING_ALIAS}…"
   run_vercel alias set "$url" "$STAGING_ALIAS" || true
   echo "==> Staging: $url"
   echo "    Публичный алиас: https://$STAGING_ALIAS"
