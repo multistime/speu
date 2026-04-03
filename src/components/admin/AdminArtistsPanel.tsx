@@ -67,9 +67,25 @@ export function AdminArtistsPanel({ onCatalogChanged }: AdminArtistsPanelProps) 
 
   const load = async () => {
     setLoading(true);
+    setError(null);
     const res = await fetch("/api/admin/artists");
-    const data = await res.json();
-    setItems(data.items ?? []);
+    const data = (await res.json().catch(() => ({}))) as {
+      items?: Artist[];
+      error?: string;
+      details?: string;
+    };
+    if (!res.ok) {
+      setError(
+        typeof data.details === "string"
+          ? data.details
+          : typeof data.error === "string"
+            ? data.error
+            : `Памылка загрузкі (${res.status})`,
+      );
+      setItems([]);
+    } else {
+      setItems(data.items ?? []);
+    }
     setLoading(false);
   };
 
