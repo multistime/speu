@@ -1,26 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { adminUserRolesPatchSchema } from "@/lib/admin/api-schemas";
 import { requireAdminApi } from "@/lib/auth/admin";
 import { writeAdminAuditLog } from "@/lib/supabase/admin-repos/audit";
 import { ADMIN_UI_ROLE_CODES, type AdminUiRoleCode } from "@/lib/admin/user-roles";
-
-const uiRoleEnum = z.enum(ADMIN_UI_ROLE_CODES);
-
-const patchSchema = z
-  .object({
-    codes: z.array(uiRoleEnum),
-    /** Required when `artist` is in codes: label artist card (speu.artists.id) to bind 1:1 */
-    linkedArtistId: z.string().uuid().nullable().optional(),
-  })
-  .superRefine((data, ctx) => {
-    if (data.codes.includes("artist") && !data.linkedArtistId) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Пры ролі «артыст» абярыце карточку артыста лэйбла",
-        path: ["linkedArtistId"],
-      });
-    }
-  });
 
 const MANAGED_CODES = new Set<string>(ADMIN_UI_ROLE_CODES);
 
@@ -37,7 +20,7 @@ export async function PATCH(
   }
 
   const body = await request.json().catch(() => null);
-  const parsed = patchSchema.safeParse(body);
+  const parsed = adminUserRolesPatchSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: "invalid_payload", details: parsed.error.flatten() }, { status: 400 });
   }

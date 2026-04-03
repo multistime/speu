@@ -1,23 +1,7 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
+import { adminSongPayloadSchema } from "@/lib/admin/api-schemas";
 import { requireAdminApi } from "@/lib/auth/admin";
 import { writeAdminAuditLog } from "@/lib/supabase/admin-repos/audit";
-
-const songSchema = z.object({
-  id: z.string().uuid().optional(),
-  /** Credited artists in order; first is primary (denormalized artist_id). */
-  artistIds: z.array(z.string().uuid()).min(1),
-  albumId: z.string().uuid().optional().nullable(),
-  title: z.string().min(1),
-  audioUrl: z.string().optional().nullable(),
-  externalUrl: z.string().optional().nullable(),
-  coverUrl: z.string().optional().nullable(),
-  durationSec: z.number().int().optional().nullable(),
-  trackNumber: z.number().int().optional().nullable(),
-  sortOrder: z.number().int().default(0),
-  isPublished: z.boolean().default(true),
-  playOnRadio: z.boolean().default(false),
-});
 
 export async function GET() {
   const { adminDb, user } = await requireAdminApi();
@@ -93,7 +77,7 @@ export async function POST(request: Request) {
   if (!user || !adminDb) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const payload = await request.json().catch(() => null);
-  const parsed = songSchema.safeParse(payload);
+  const parsed = adminSongPayloadSchema.safeParse(payload);
   if (!parsed.success) {
     return NextResponse.json({ error: "invalid_payload", details: parsed.error.flatten() }, { status: 400 });
   }
