@@ -624,7 +624,10 @@ function AdminLabelPageInner() {
                         {song.is_published ? "✓" : "черновик"}
                       </span>
                       {song.play_on_radio && (
-                        <span className="text-xs px-2 py-1 rounded border border-sky-500/30 text-sky-600 bg-sky-500/10" title="У плэйлісце радыё">
+                        <span
+                          className="text-xs px-2 py-1 rounded border border-primary/30 text-primary bg-primary/10"
+                          title="У плэйлісце радыё"
+                        >
                           📻
                         </span>
                       )}

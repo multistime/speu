@@ -36,7 +36,7 @@ const PLACEHOLDER_TIERS: Tier[] = [
     ],
     highlighted: false,
     icon: Heart,
-    // Cornflower / vasіlok blue — the Belarusian national flower
+    // Лясны мох — асноўны зялёны акцэнт светлай тэмы (згодна з handoff)
     accentColor: "#35654D",
     glowRgb: "53, 101, 77",
   },
