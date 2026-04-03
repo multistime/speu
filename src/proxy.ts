@@ -55,13 +55,9 @@ export default async function proxy(request: NextRequest) {
   if (routeSlug && !pathname.startsWith("/admin")) {
     let skipRedirect = false;
     if (user) {
-      const { data: profile } = await supabase
-        .schema("speu")
-        .from("profiles")
-        .select("is_admin")
-        .eq("id", user.id)
-        .maybeSingle();
-      skipRedirect = Boolean(profile?.is_admin);
+      const { data: profRows } = await supabase.rpc("get_my_speu_profile");
+      const prof = Array.isArray(profRows) ? profRows[0] : profRows;
+      skipRedirect = Boolean(prof && typeof prof === "object" && "is_admin" in prof && prof.is_admin);
     }
     if (!skipRedirect) {
       const { data: page } = await supabase

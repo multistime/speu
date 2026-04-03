@@ -4,17 +4,16 @@ import { getAdminDatabaseClient } from "@/lib/supabase/service";
 import type { SpeuProfile } from "@/lib/supabase/speu";
 
 async function fetchAdminProfile(supabase: Awaited<ReturnType<typeof createClient>>, userId: string): Promise<SpeuProfile | null> {
-  const { data, error } = await supabase
-    .schema("speu")
-    .from("profiles")
-    .select("id, display_name, is_admin")
-    .eq("id", userId)
-    .maybeSingle();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user || user.id !== userId) return null;
+
+  const { data, error } = await supabase.rpc("get_my_speu_profile");
   if (error) {
     console.error("[requireAdmin]", error.message);
     return null;
   }
-  return data as SpeuProfile | null;
+  const row = Array.isArray(data) ? data[0] : data;
+  return (row ?? null) as SpeuProfile | null;
 }
 
 export async function requireAdminPage() {
