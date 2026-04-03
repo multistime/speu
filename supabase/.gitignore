@@ -1,6 +1,7 @@
 # Supabase
 .branches
 .temp
+_manual_apply_migrations_ordered.sql
 
 # dotenvx
 .env.keys

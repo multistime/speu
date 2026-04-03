@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAdminApi } from "@/lib/auth/admin";
 import type { AdminUiRoleCode } from "@/lib/admin/user-roles";
 import { ADMIN_UI_ROLE_CODES } from "@/lib/admin/user-roles";
+import { createServiceRoleClient } from "@/lib/supabase/service";
 
 const UI_ROLE_SET = new Set<string>(ADMIN_UI_ROLE_CODES);
 
@@ -23,8 +24,20 @@ export type AdminUserListItem = {
 };
 
 export async function GET(request: Request) {
-  const { adminDb, user } = await requireAdminApi();
-  if (!user || !adminDb) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const { user } = await requireAdminApi();
+  if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+
+  const adminDb = createServiceRoleClient();
+  if (!adminDb) {
+    return NextResponse.json(
+      {
+        error: "service_role_missing",
+        details:
+          "Дадайце SUPABASE_SERVICE_ROLE_KEY у Vercel (Production) — патрэбна для auth.admin.listUsers і чытання speu.*.",
+      },
+      { status: 503 },
+    );
+  }
 
   const { searchParams } = new URL(request.url);
   const q = (searchParams.get("q") ?? "").trim().toLowerCase();

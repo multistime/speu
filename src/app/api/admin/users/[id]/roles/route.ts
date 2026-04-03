@@ -3,6 +3,7 @@ import { z } from "zod";
 import { adminUserRolesPatchSchema } from "@/lib/admin/api-schemas";
 import { requireAdminApi } from "@/lib/auth/admin";
 import { writeAdminAuditLog } from "@/lib/supabase/admin-repos/audit";
+import { createServiceRoleClient } from "@/lib/supabase/service";
 import { ADMIN_UI_ROLE_CODES, type AdminUiRoleCode } from "@/lib/admin/user-roles";
 
 const MANAGED_CODES = new Set<string>(ADMIN_UI_ROLE_CODES);
@@ -11,8 +12,20 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { adminDb, user } = await requireAdminApi();
-  if (!user || !adminDb) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const { user } = await requireAdminApi();
+  if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+
+  const adminDb = createServiceRoleClient();
+  if (!adminDb) {
+    return NextResponse.json(
+      {
+        error: "service_role_missing",
+        details:
+          "Для захавання роляў на серверы патрэбны SUPABASE_SERVICE_ROLE_KEY (Vercel → Environment Variables → Production).",
+      },
+      { status: 503 },
+    );
+  }
 
   const { id: targetId } = await params;
   if (!z.string().uuid().safeParse(targetId).success) {
