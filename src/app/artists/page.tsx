@@ -157,7 +157,7 @@ const PLACEHOLDER_ARTISTS: Artist[] = [
     nameEn: "Zhytnik",
     genres: ["Folk Pop", "Indie"],
     tagline: "Жытнёвыя словы для новага пакалення",
-    bio: "Жытнік — сольны праект, дзе фальклорныя традыцыі пераплятаюцца з сучасным інді-попам. Мелодыі жытнёвых палёў і рамантыка вёскі ў новай упакоўцы. Музыка для тых, хто памятае карані.",
+    bio: "Жытнік — сольны праект, дзе фальклорныя традыцыі пераплятаюцца з сучасным інды-попам. Мелодыі жытнёвых палёў і рамантыка вёскі ў новай упакоўцы. Музыка для тых, хто памятае карані.",
     tracks: [
       { title: "Жыта" },
       { title: "Летні дождж" },
@@ -653,7 +653,7 @@ function ArtistModal({ artist, onClose }: { artist: Artist; onClose: () => void 
                 }}
               >
                 <ExternalLink className="h-3 w-3" strokeWidth={1.5} />
-                Профіль
+                Старонка
               </a>
             </div>
           </motion.div>
@@ -746,7 +746,7 @@ export default function ArtistsPage() {
             Каталог
           </p>
           <h1 className="font-display text-4xl sm:text-5xl font-semibold text-foreground mb-4 leading-tight italic">
-            Артысты Speǔ
+            Артысты Спеў
           </h1>
           <p className="text-muted-foreground max-w-xl mx-auto text-sm leading-relaxed">
             Беларускія музыканты, якія ствараюць арыгінальную музыку на роднай мове.
@@ -761,7 +761,7 @@ export default function ArtistsPage() {
             className="flex flex-col items-center justify-center gap-4 py-28 text-muted-foreground"
           >
             <Loader2 className="h-10 w-10 animate-spin text-primary/70" strokeWidth={1.25} />
-            <p className="text-sm">Загрузка артыстаў…</p>
+            <p className="text-sm">Загружаюцца артысты…</p>
           </motion.div>
         )}
 

@@ -4,7 +4,7 @@ import { RadioPlayer } from "@/components/radio/RadioPlayer";
 export const metadata = {
   title: "Радыё Мара — Спеў",
   description:
-    "Радыё Мара — онлайн-радыё Speu: плэйліст з каталога песень або жывы струмень.",
+    "Радыё Мара — онлайн-радыё Спеў: плэйліст з каталога песень або жывы струмень.",
 };
 
 export default function RadioPage() {
@@ -23,7 +23,7 @@ export default function RadioPage() {
             <span className="text-primary not-italic">24/7</span>
           </h1>
           <p className="text-muted-foreground max-w-2xl mx-auto text-sm leading-relaxed">
-            Радыё Мара — бесперапынны беларускі гук ад Speu. Калі ў каталогу ёсць песні з
+            Радыё Мара — бесперапынны беларускі гук лейбла Спеў. Калі ў каталогу ёсць песні з
             адзнакай «на радыё», яны круцяцца ў выпадковым парадку ў браўзеры. Таксама можна
             падключыць класічны аўдыя-струмень (Icecast / HLS) у наладах адміністратара.
           </p>

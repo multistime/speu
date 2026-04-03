@@ -338,7 +338,7 @@ export function LyricsGenerator() {
               Параметры
             </h2>
             <p className="dark:text-white/60 text-foreground/60 text-sm">
-              Настроіце атмасферу, затым генеруйце.
+              Наладзьце параметры ніжэй, затым стварыце тэкст.
             </p>
           </div>
 
@@ -349,7 +349,7 @@ export function LyricsGenerator() {
             onChange={setGenre}
           />
           <SelectChip<Mood>
-            label="Настрой"
+            label="Настроенне"
             options={MOODS}
             value={mood}
             onChange={setMood}
@@ -423,7 +423,7 @@ export function LyricsGenerator() {
                   )}
                 >
                   <BookmarkPlus className="h-3.5 w-3.5" />
-                  {saved ? "Захавана!" : "Захаваць у кабінет"}
+                  {saved ? "Захавана!" : "Захаваць у асабістым кабінеце"}
                 </motion.button>
               </div>
             )}
@@ -444,7 +444,7 @@ export function LyricsGenerator() {
                     <Sparkles className="absolute inset-0 m-auto h-5 w-5 dark:text-[#4ade80] text-[#35654D] opacity-60" />
                   </div>
                   <p className="text-sm dark:text-white/40 text-foreground/50 font-mono animate-pulse">
-                    Ткём словы з паветра…
+                    Пляцем словы з паветра…
                   </p>
                 </motion.div>
               )}
@@ -461,7 +461,7 @@ export function LyricsGenerator() {
                     <Sparkles className="h-7 w-7 dark:text-white/20 text-foreground/25" />
                   </div>
                   <p className="dark:text-white/25 text-foreground/40 text-sm max-w-xs">
-                    Выберыце жанр, настрой і тэму, каб актываваць генератар
+                    Выберыце жанр, настроенне і тэму, каб запусціць генератар
                   </p>
                 </motion.div>
               )}
@@ -492,7 +492,7 @@ export function LyricsGenerator() {
                     <span>·</span>
                     <span className="flex items-center gap-1">
                       <Pencil className="h-2.5 w-2.5" />
-                      Двойны клік / навесці
+                      Падвойны пстрык / навядзіце курсор
                     </span>
                     <span>·</span>
                     <span className="flex items-center gap-1">

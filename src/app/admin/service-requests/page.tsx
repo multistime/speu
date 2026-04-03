@@ -100,7 +100,7 @@ export default function AdminServiceRequestsPage() {
 
       <div className="glass rounded-2xl border border-border p-6">
         {loading ? (
-          <p className="text-sm text-muted-foreground">Загрузка...</p>
+          <p className="text-sm text-muted-foreground">Загружаецца…</p>
         ) : items.length === 0 ? (
           <p className="text-sm text-muted-foreground">Пакуль няма заявак.</p>
         ) : (

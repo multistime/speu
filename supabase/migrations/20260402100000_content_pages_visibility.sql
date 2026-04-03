@@ -11,9 +11,9 @@ alter table speu.content_pages add constraint content_pages_home_must_be_visible
 -- Routable sections that were missing from CMS rows
 insert into speu.content_pages (slug, title, status, visible_on_site, seo_title, seo_description)
 values
-  ('radio', 'Радыё Мара', 'published', true, 'Радыё Мара — Speu', 'Онлайн-радыё і плэйліст беларускай музыкі'),
-  ('generator', 'Генератар', 'published', true, 'Генератар тэкстаў — Speu', 'Інструмент для тэкстаў песень на беларускай мове'),
-  ('cabinet', 'Кабінет', 'published', true, 'Кабінет — Speu', 'Асабісты кабінет')
+  ('radio', 'Радыё Мара', 'published', true, 'Радыё Мара — Спеў', 'Онлайн-радыё і плэйліст беларускай музыкі'),
+  ('generator', 'Генератар', 'published', true, 'Генератар тэкстаў — Спеў', 'Інструмент для тэкстаў песень на беларускай мове'),
+  ('cabinet', 'Кабінет', 'published', true, 'Кабінет — Спеў', 'Асабісты кабінет')
 on conflict (slug) do nothing;
 
 -- RLS: anon sees only published pages that are visible (home always visible via constraint)

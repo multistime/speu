@@ -520,7 +520,7 @@ export function AdminArtistsPanel({ onCatalogChanged }: AdminArtistsPanelProps) 
           </button>
         </div>
         {loading ? (
-          <p className="text-sm text-muted-foreground">Загрузка...</p>
+          <p className="text-sm text-muted-foreground">Загружаецца…</p>
         ) : items.length === 0 ? (
           <p className="text-sm text-muted-foreground">Артысты не знойдзены</p>
         ) : (

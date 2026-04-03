@@ -176,7 +176,7 @@ export function ProjectDocsView({
 
           <p className="text-xs uppercase tracking-[0.2em] text-primary/80 font-medium">Інфополе праекту</p>
           <h1 className="font-display text-3xl sm:text-4xl font-semibold tracking-tight text-foreground">
-            Speu — база ведаў і планы
+            Спеў — база ведаў і планы
           </h1>
           <p className="text-sm text-muted-foreground leading-relaxed">
             Усё ў адным скроле: агляд прадукту, роадмэп, тікеты і апісанне файлаў. Змест па раздзелах — у бакавым блоцы{" "}

@@ -349,7 +349,7 @@ export default function AdminSupportTiersPage() {
           </button>
         </div>
         {loading ? (
-          <p className="text-sm text-muted-foreground">Загрузка...</p>
+          <p className="text-sm text-muted-foreground">Загружаецца…</p>
         ) : (
           <div className="space-y-2">
             {items.map((tier) => (

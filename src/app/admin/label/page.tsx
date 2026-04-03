@@ -22,6 +22,7 @@ type Album = {
 type Song = {
   id: string;
   artist_id: string;
+  artist_ids?: string[];
   album_id: string | null;
   title: string;
   audio_url: string | null;
@@ -33,6 +34,7 @@ type Song = {
   is_published: boolean;
   play_on_radio: boolean;
   artists?: { id: string; name: string; slug: string };
+  artists_list?: { id: string; name: string; slug: string }[];
   albums?: { id: string; title: string } | null;
 };
 
@@ -49,7 +51,7 @@ const emptyAlbumForm = {
 
 const emptySongForm = {
   id: "",
-  artistId: "",
+  artistIds: [] as string[],
   albumId: "",
   title: "",
   audioUrl: "",
@@ -67,6 +69,24 @@ function formatDuration(sec: number | null) {
   const m = Math.floor(sec / 60);
   const s = sec % 60;
   return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+async function fetchCatalogData() {
+  const [artistsRes, albumsRes, songsRes] = await Promise.all([
+    fetch("/api/admin/artists"),
+    fetch("/api/admin/albums"),
+    fetch("/api/admin/songs"),
+  ]);
+  const [ad, ald, sd] = await Promise.all([
+    artistsRes.json(),
+    albumsRes.json(),
+    songsRes.json(),
+  ]);
+  return {
+    artists: (ad.items ?? []) as Artist[],
+    albums: (ald.items ?? []) as Album[],
+    songs: (sd.items ?? []) as Song[],
+  };
 }
 
 function AdminLabelPageInner() {
@@ -102,30 +122,42 @@ function AdminLabelPageInner() {
 
   const loadAll = async () => {
     setLoading(true);
-    const [artistsRes, albumsRes, songsRes] = await Promise.all([
-      fetch("/api/admin/artists"),
-      fetch("/api/admin/albums"),
-      fetch("/api/admin/songs"),
-    ]);
-    const [ad, ald, sd] = await Promise.all([
-      artistsRes.json(),
-      albumsRes.json(),
-      songsRes.json(),
-    ]);
-    setArtists(ad.items ?? []);
-    setAlbums(ald.items ?? []);
-    setSongs(sd.items ?? []);
+    const d = await fetchCatalogData();
+    setArtists(d.artists);
+    setAlbums(d.albums);
+    setSongs(d.songs);
     setLoading(false);
   };
 
   useEffect(() => {
-    loadAll();
+    let active = true;
+    void Promise.resolve().then(async () => {
+      if (!active) return;
+      setLoading(true);
+      const d = await fetchCatalogData();
+      if (!active) return;
+      setArtists(d.artists);
+      setAlbums(d.albums);
+      setSongs(d.songs);
+      setLoading(false);
+    });
+    return () => {
+      active = false;
+    };
   }, []);
 
-  // Albums filtered by selected artist in song form
-  const albumsForArtist = albums.filter(
-    (a) => a.artist_id === songForm.artistId
-  );
+  const albumsForSong = albums.filter((a) => songForm.artistIds.includes(a.artist_id));
+
+  const toggleSongArtist = (artistId: string) => {
+    setSongForm((f) => {
+      const has = f.artistIds.includes(artistId);
+      const nextIds = has ? f.artistIds.filter((x) => x !== artistId) : [...f.artistIds, artistId];
+      const albumOk =
+        f.albumId &&
+        albums.some((al) => al.id === f.albumId && nextIds.includes(al.artist_id));
+      return { ...f, artistIds: nextIds, albumId: albumOk ? f.albumId : "" };
+    });
+  };
 
   // Upload directly to Supabase Storage from browser (bypasses Vercel 4.5 MB limit)
   const uploadAudio = async (file: File): Promise<string | null> => {
@@ -159,8 +191,8 @@ function AdminLabelPageInner() {
   };
 
   const saveSong = async () => {
-    if (!songForm.title || !songForm.artistId) {
-      setError("Патрабуецца назва і артыст");
+    if (!songForm.title || songForm.artistIds.length === 0) {
+      setError("Патрабуецца назва і хаця б адзін артыст");
       return;
     }
     setSaving(true);
@@ -182,7 +214,7 @@ function AdminLabelPageInner() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         id: songForm.id || undefined,
-        artistId: songForm.artistId,
+        artistIds: songForm.artistIds,
         albumId: songForm.albumId || null,
         title: songForm.title,
         audioUrl,
@@ -219,9 +251,11 @@ function AdminLabelPageInner() {
   };
 
   const editSong = (song: Song) => {
+    const ids =
+      song.artist_ids && song.artist_ids.length > 0 ? song.artist_ids : [song.artist_id];
     setSongForm({
       id: song.id,
-      artistId: song.artist_id,
+      artistIds: ids,
       albumId: song.album_id ?? "",
       title: song.title,
       audioUrl: song.audio_url ?? "",
@@ -395,31 +429,46 @@ function AdminLabelPageInner() {
             </h2>
 
             <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <label className={labelCls}>Артыст *</label>
-                <select
-                  className={inputCls}
-                  value={songForm.artistId}
-                  onChange={(e) => setSongForm({ ...songForm, artistId: e.target.value, albumId: "" })}
-                >
-                  <option value="">— выбраць —</option>
-                  {artists.map((a) => (
-                    <option key={a.id} value={a.id}>{a.name}</option>
-                  ))}
-                </select>
+              <div className="md:col-span-2">
+                <label className={labelCls}>Артысты на трэку *</label>
+                <p className="text-[11px] text-muted-foreground mb-2">
+                  Некалькі артыстаў (колабы). Парадак у спісе — парадак у крэдытах; першы лічыцца асноўным для сартавання.
+                </p>
+                <div className="max-h-44 overflow-y-auto rounded-lg border border-border bg-muted/30 p-3 space-y-2">
+                  {artists.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">Спачатку дадайце артыстаў на ўкладцы «Артысты».</p>
+                  ) : (
+                    artists.map((a) => (
+                      <label
+                        key={a.id}
+                        className="flex items-center gap-2.5 cursor-pointer select-none text-sm"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={songForm.artistIds.includes(a.id)}
+                          onChange={() => toggleSongArtist(a.id)}
+                          className="w-4 h-4 rounded border-border accent-primary shrink-0"
+                        />
+                        <span>{a.name}</span>
+                      </label>
+                    ))
+                  )}
+                </div>
               </div>
 
-              <div>
+              <div className="md:col-span-2">
                 <label className={labelCls}>Альбом (неабавязкова)</label>
                 <select
                   className={inputCls}
                   value={songForm.albumId}
                   onChange={(e) => setSongForm({ ...songForm, albumId: e.target.value })}
-                  disabled={!songForm.artistId}
+                  disabled={songForm.artistIds.length === 0}
                 >
                   <option value="">— без альбома —</option>
-                  {albumsForArtist.map((a) => (
-                    <option key={a.id} value={a.id}>{a.title}</option>
+                  {albumsForSong.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.title} ({artists.find((ar) => ar.id === a.artist_id)?.name ?? a.artist_id})
+                    </option>
                   ))}
                 </select>
               </div>
@@ -454,7 +503,7 @@ function AdminLabelPageInner() {
                     />
                   </label>
                   {uploadProgress === "uploading" && (
-                    <span className="text-xs text-muted-foreground animate-pulse">Загрузка...</span>
+                    <span className="text-xs text-muted-foreground animate-pulse">Загружаецца…</span>
                   )}
                   {uploadProgress === "done" && (
                     <span className="flex items-center gap-1 text-xs text-green-500"><Check className="w-3 h-3" /> Загружана</span>
@@ -590,8 +639,8 @@ function AdminLabelPageInner() {
               </button>
             </div>
             {loading ? (
-              <p className="text-sm text-muted-foreground">Загрузка...</p>
-            ) : songs.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Загружаецца…</p>
+              ) : songs.length === 0 ? (
               <p className="text-sm text-muted-foreground">Песні не знойдзены</p>
             ) : (
               <div className="space-y-2">
@@ -603,7 +652,9 @@ function AdminLabelPageInner() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{song.title}</p>
                       <p className="text-xs text-muted-foreground truncate">
-                        {song.artists?.name ?? "—"}
+                        {song.artists_list && song.artists_list.length > 0
+                          ? song.artists_list.map((x) => x.name).join(" · ")
+                          : (song.artists?.name ?? "—")}
                         {song.albums ? ` · ${song.albums.title}` : ""}
                         {song.duration_sec ? ` · ${formatDuration(song.duration_sec)}` : ""}
                       </p>
@@ -621,7 +672,7 @@ function AdminLabelPageInner() {
                         </a>
                       )}
                       <span className={`text-xs px-2 py-1 rounded border ${song.is_published ? "border-green-500/30 text-green-600 bg-green-500/10" : "border-border text-muted-foreground bg-muted"}`}>
-                        {song.is_published ? "✓" : "черновик"}
+                        {song.is_published ? "✓" : "чарнавік"}
                       </span>
                       {song.play_on_radio && (
                         <span
@@ -775,7 +826,7 @@ function AdminLabelPageInner() {
               </button>
             </div>
             {loading ? (
-              <p className="text-sm text-muted-foreground">Загрузка...</p>
+              <p className="text-sm text-muted-foreground">Загружаецца…</p>
             ) : albums.length === 0 ? (
               <p className="text-sm text-muted-foreground">Альбомы не знойдзены</p>
             ) : (
@@ -837,7 +888,7 @@ function AdminLabelPageInner() {
 export default function AdminLabelPage() {
   return (
     <Suspense
-      fallback={<p className="text-sm text-muted-foreground p-6">Загрузка...</p>}
+      fallback={<p className="text-sm text-muted-foreground p-6">Загружаецца…</p>}
     >
       <AdminLabelPageInner />
     </Suspense>

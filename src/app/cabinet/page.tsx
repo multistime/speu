@@ -296,7 +296,7 @@ export default function CabinetPage() {
             >
               <LogIn className="h-4 w-4" />
               {loading
-                ? "Загрузка..."
+                ? "Загружаецца…"
                 : mode === "signin"
                 ? "Увайсці"
                 : "Стварыць акаўнт"}

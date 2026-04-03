@@ -12,14 +12,20 @@ function pickAudioUrl(row: {
   return null;
 }
 
-function artistNameFromRow(artists: unknown): string | null {
-  if (!artists) return null;
-  if (Array.isArray(artists)) {
-    const first = artists[0] as { name?: string } | undefined;
-    return first?.name ?? null;
-  }
-  const o = artists as { name?: string };
-  return o.name ?? null;
+function artistNamesFromTrackRow(trackArtists: unknown): string | null {
+  if (!trackArtists || !Array.isArray(trackArtists)) return null;
+  const sorted = [...(trackArtists as { sort_order?: number; artists?: { name?: string } | { name?: string }[] }[])].sort(
+    (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)
+  );
+  const names = sorted
+    .map((row) => {
+      const a = row.artists;
+      const one = Array.isArray(a) ? a[0] : a;
+      return one?.name?.trim() || null;
+    })
+    .filter(Boolean) as string[];
+  if (names.length === 0) return null;
+  return names.join(", ");
 }
 
 export async function GET() {
@@ -45,7 +51,20 @@ export async function GET() {
   const { data: trackRows, error: tracksError } = await supabase
     .schema("speu")
     .from("artist_tracks")
-    .select("id, title, audio_url, external_url, cover_url, duration_sec, artists(name)")
+    .select(
+      `
+      id,
+      title,
+      audio_url,
+      external_url,
+      cover_url,
+      duration_sec,
+      track_artists (
+        sort_order,
+        artists ( name )
+      )
+    `
+    )
     .eq("play_on_radio", true)
     .eq("is_published", true)
     .order("sort_order", { ascending: true });
@@ -62,7 +81,7 @@ export async function GET() {
       external_url: string | null;
       cover_url: string | null;
       duration_sec: number | null;
-      artists: unknown;
+      track_artists: unknown;
     }) => {
       const url = pickAudioUrl(row);
       if (!url) return null;
@@ -72,7 +91,7 @@ export async function GET() {
         audioUrl: url,
         coverUrl: row.cover_url,
         durationSec: row.duration_sec,
-        artistName: artistNameFromRow(row.artists),
+        artistName: artistNamesFromTrackRow(row.track_artists),
       };
     })
     .filter(Boolean) as Array<{

@@ -222,7 +222,7 @@ export function ServicesForm() {
         <textarea
           {...register("description")}
           rows={4}
-          placeholder="Апішыце ваш праект — жанр, настрой, рэферэнсы, мэта…"
+          placeholder="Апішыце ваш праект — жанр, настроенне, рэферэнсы, мэта…"
           className={cn(
             inputBase,
             "resize-none",
@@ -298,7 +298,7 @@ export function ServicesForm() {
         ) : (
           <>
             <Send className="h-4 w-4" />
-            Адправіць заяўку
+            Даслаць заяўку
           </>
         )}
       </motion.button>

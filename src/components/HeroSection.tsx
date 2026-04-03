@@ -180,7 +180,7 @@ export function HeroSection({
               style={{ color: fgMuted }}
             >
               Мы ствараем добрую музыку на беларускай мове — ад фолку да
-              электронікі. Корань у зямлі. Голас наперадзе.
+              электронікі. Корань у зямлі. Мова наперад.
             </motion.p>
 
             {/* CTA buttons */}
@@ -260,7 +260,7 @@ export function HeroSection({
           className="text-[10px] font-mono tracking-widest uppercase"
           style={{ color: fgGhost }}
         >
-          Гартай
+          Уніз
         </span>
         <motion.div
           animate={{ y: [0, 8, 0] }}

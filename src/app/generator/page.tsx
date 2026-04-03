@@ -1,8 +1,9 @@
 import { LyricsGenerator } from "@/components/LyricsGenerator";
 
 export const metadata = {
-  title: "Спеу-генератар — Спеў",
-  description: "Спеу-генератар — інструмент для напісання тэкстаў песень на беларускай мове. Выберыце жанр, настрой і тэму.",
+  title: "Генератар Спеў",
+  description:
+    "Генератар Спеў — інструмент для напісання тэкстаў песень на беларускай мове. Выберыце жанр, настроенне і тэму.",
 };
 
 export default function GeneratorPage() {
@@ -19,7 +20,7 @@ export default function GeneratorPage() {
                 stroke="currentColor" strokeWidth="1" strokeLinecap="round" className="text-primary" strokeOpacity="0.65" />
             </svg>
             <span className="text-[11px] font-mono text-primary tracking-widest uppercase">
-              Спеу-генератар
+              Генератар Спеў
             </span>
           </div>
           <h1 className="font-display text-4xl sm:text-5xl font-semibold text-foreground mb-4 leading-tight italic">
@@ -27,7 +28,7 @@ export default function GeneratorPage() {
             <span className="text-primary not-italic">беларускі тэкст</span>
           </h1>
           <p className="text-muted-foreground max-w-xl mx-auto text-sm leading-relaxed">
-            Выберыце жанр, настрой і тэму — генератар стварыць структураваны
+            Выберыце жанр, настроенне і тэму — генератар стварыць структураваны
             тэкст для вашай песні на беларускай мове.
           </p>
         </div>
@@ -38,8 +39,8 @@ export default function GeneratorPage() {
         <div className="mt-10 max-w-4xl mx-auto glass rounded-xl border border-border p-4 text-center">
           <p className="text-xs text-muted-foreground/70">
             <span className="text-primary/70 font-mono">ПАДКАЗКА:</span>{" "}
-            Скапіруйце згенераваны тэкст і выкарыстоўвайце яго для стварэння музыкі
-            у любым зручным інструменце. Захавайце ў кабінет, каб пабудаваць свой архіў.
+            Скапіюйце згенераваны тэкст і выкарыстоўвайце яго для стварэння музыкі
+            ў любым зручным інструменце. Захавайце праз асабісты кабінет, каб назапашваць тэксты.
           </p>
         </div>
       </div>

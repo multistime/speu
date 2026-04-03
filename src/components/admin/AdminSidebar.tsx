@@ -12,6 +12,7 @@ import {
   Radio,
   Settings,
   BookMarked,
+  Users,
 } from "lucide-react";
 import { ProjectHubSectionNav } from "@/components/admin/ProjectHubSectionNav";
 
@@ -21,6 +22,7 @@ const adminNavItems = [
   { href: "/admin/label", label: "Лэйбл", icon: Music },
   { href: "/admin/support-tiers", label: "Падтрымка", icon: Heart },
   { href: "/admin/service-requests", label: "Заяўкі", icon: Inbox },
+  { href: "/admin/users", label: "Карыстальнікі", icon: Users },
   { href: "/admin/radio", label: "Радыё", icon: Radio },
   { href: "/admin/settings", label: "Наладкі", icon: Settings },
 ];

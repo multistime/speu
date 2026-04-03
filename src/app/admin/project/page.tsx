@@ -7,7 +7,7 @@ import { getProjectHubLinks } from "@/lib/project-hub-links";
 
 export const metadata: Metadata = {
   title: "Праект — дакументацыя",
-  description: "База ведаў, роадмэп і тікеты Speu (markdown з docs/project).",
+  description: "База ведаў, роадмэп і тікеты Спеў (markdown з docs/project).",
 };
 
 async function loadProjectDoc(filename: string): Promise<string> {

@@ -89,7 +89,7 @@ function GlobalPlayerProgress({ track }: { track: PlayerTrack }) {
       ref={railRef}
       role="slider"
       tabIndex={canSeek ? 0 : -1}
-      aria-label="Пазіцыя прайграваньня"
+      aria-label="Пазіцыя прайгравання"
       aria-valuemin={0}
       aria-valuemax={canSeek ? Math.round(duration) : 0}
       aria-valuenow={canSeek ? Math.round(currentTime) : 0}
@@ -98,7 +98,7 @@ function GlobalPlayerProgress({ track }: { track: PlayerTrack }) {
           ? `${formatPlayerTime(currentTime)} з ${formatPlayerTime(duration)}`
           : isPlaying
             ? "Жывы струмень"
-            : "Даўжыньня невядомая"
+            : "Даўжыня невядомая"
       }
       aria-disabled={!canSeek}
       onPointerDown={onPointerDown}
@@ -289,7 +289,7 @@ export function GlobalPlayer() {
               <button
                 type="button"
                 onClick={() => togglePlay(track)}
-                aria-label={isPlaying ? "Пауза" : "Прайграць"}
+                aria-label={isPlaying ? "Паўза" : "Прайграць"}
                 className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-105"
                 style={{
                   background: track.accentColor ?? "var(--primary)",

@@ -31,6 +31,15 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
+/** Скланенне пасля лічбы: 1 трэк, 2–4 трэкі, 5+ трэкаў */
+function belTrackCountWord(n: number): string {
+  if (n === 1) return "трэк";
+  const m10 = n % 10;
+  const m100 = n % 100;
+  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return "трэкі";
+  return "трэкаў";
+}
+
 export function RadioPlayer() {
   const [data, setData] = useState<RadioPayload | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -123,7 +132,7 @@ export function RadioPlayer() {
     return (
       <div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" />
-        Загрузка радыё…
+        Загружаецца радыё…
       </div>
     );
   }
@@ -154,7 +163,7 @@ export function RadioPlayer() {
         </p>
         <ul className="list-disc list-inside space-y-1 text-xs leading-relaxed">
           <li>
-            У <span className="font-mono text-primary/90">Адмінка → Песні</span> загрузіце MP3,
+            У <span className="font-mono text-primary/90">Адмінка → Песні</span> запампуйце MP3,
             уключыце <strong>«На радыё»</strong> і апублікуйце трэк і артыста.
           </li>
           <li>
@@ -196,7 +205,7 @@ export function RadioPlayer() {
             )}
             <p className="text-xs text-muted-foreground/70 mt-2">
               Плэйліст у выпадковым парадку · {shuffledTracks.length}{" "}
-              {shuffledTracks.length === 1 ? "трэк" : "трэкаў"}
+              {belTrackCountWord(shuffledTracks.length)}
             </p>
           </div>
         </div>

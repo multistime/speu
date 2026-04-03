@@ -82,7 +82,7 @@ export default function AdminContentPage() {
       <div className="glass rounded-2xl border border-border p-6">
         <h2 className="text-sm font-semibold text-foreground mb-4">Старонкі</h2>
         {loading ? (
-          <p className="text-sm text-muted-foreground">Загрузка...</p>
+          <p className="text-sm text-muted-foreground">Загружаецца…</p>
         ) : sorted.length === 0 ? (
           <p className="text-sm text-muted-foreground">Няма запісаў у content_pages</p>
         ) : (

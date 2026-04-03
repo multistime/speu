@@ -198,7 +198,7 @@ export function Footer({ visibleHrefs }: FooterProps) {
                 stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
             </svg>
             <p className="text-xs text-muted-foreground/40 font-mono">
-              © 2025 Спеў. Корань у мове.
+              © 2026 Спеў. Корань у мове.
             </p>
           </div>
 

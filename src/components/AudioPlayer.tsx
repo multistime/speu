@@ -21,9 +21,9 @@ interface Track {
 }
 
 const DEMO_TRACKS: Track[] = [
-  { id: "1", title: "Балота", artist: "Speǔ", duration: 214 },
-  { id: "2", title: "Туман над Нёманам", artist: "Speǔ feat. AI-01", duration: 187 },
-  { id: "3", title: "Лясны Сігнал", artist: "Speǔ", duration: 263 },
+  { id: "1", title: "Балота", artist: "Спеў", duration: 214 },
+  { id: "2", title: "Туман над Нёманам", artist: "Спеў feat. AI-01", duration: 187 },
+  { id: "3", title: "Лясны Сігнал", artist: "Спеў", duration: 263 },
 ];
 
 function formatTime(seconds: number): string {
