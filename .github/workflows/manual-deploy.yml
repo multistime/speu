@@ -3,6 +3,10 @@
 
 name: Manual deploy (Vercel)
 
+env:
+  SPEU_VERCEL_ORG_ID: team_GwG38eWYSvJL97bK46B27Gzg
+  SPEU_VERCEL_PROJECT_ID: prj_saDxiOFBgbM0xXzfeDIYB7YYo1w6
+
 on:
   workflow_dispatch:
     inputs:
@@ -60,17 +64,16 @@ jobs:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
         run: |
-          if [ -z "$VERCEL_PROJECT_ID" ] || [ -z "$VERCEL_ORG_ID" ]; then
-            echo "::error::Нужны секреты VERCEL_PROJECT_ID и VERCEL_ORG_ID (см. AGENTS.md)."
-            exit 1
-          fi
+          ORG="${VERCEL_ORG_ID:-$SPEU_VERCEL_ORG_ID}"
+          PROJ="${VERCEL_PROJECT_ID:-$SPEU_VERCEL_PROJECT_ID}"
           mkdir -p .vercel
-          node -e "require('fs').writeFileSync('.vercel/project.json', JSON.stringify({ projectId: process.env.VERCEL_PROJECT_ID, orgId: process.env.VERCEL_ORG_ID }))"
+          ORG="$ORG" PROJ="$PROJ" node -e "require('fs').writeFileSync('.vercel/project.json', JSON.stringify({ projectId: process.env.PROJ, orgId: process.env.ORG }))"
+          echo "Linked org=$ORG project=$PROJ"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Install Vercel CLI
@@ -116,11 +119,14 @@ jobs:
 
       - name: Promote to Production
         id: promote
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
         run: |
+          SCOPE="${VERCEL_ORG_ID:-$SPEU_VERCEL_ORG_ID}"
           vercel promote ${{ needs.staging.outputs.url }} \
             --token=${{ secrets.VERCEL_TOKEN }}
           PROD_URL=$(vercel ls --token=${{ secrets.VERCEL_TOKEN }} \
-            --scope=${{ secrets.VERCEL_ORG_ID }} 2>/dev/null \
+            --scope="$SCOPE" 2>/dev/null \
             | grep "Production" | head -1 | awk '{print $2}' || echo "https://speu.vercel.app")
           echo "prod_url=$PROD_URL" >> $GITHUB_OUTPUT
           echo "Promoted: $PROD_URL"
@@ -149,14 +155,17 @@ jobs:
 
       - name: Determine deployment URL
         id: url
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
         run: |
+          SCOPE="${VERCEL_ORG_ID:-$SPEU_VERCEL_ORG_ID}"
           INPUT_URL="${{ github.event.inputs.deployment_url }}"
           if [ -n "$INPUT_URL" ]; then
             echo "deploy_url=$INPUT_URL" >> $GITHUB_OUTPUT
             echo "Using provided URL: $INPUT_URL"
           else
             LATEST=$(vercel ls --token=${{ secrets.VERCEL_TOKEN }} \
-              --scope=${{ secrets.VERCEL_ORG_ID }} 2>/dev/null \
+              --scope="$SCOPE" 2>/dev/null \
               | grep -E "https://speu-" | head -1 | awk '{print $2}')
             echo "deploy_url=$LATEST" >> $GITHUB_OUTPUT
             echo "Using latest from vercel ls: $LATEST"
@@ -164,11 +173,14 @@ jobs:
 
       - name: Promote to Production
         id: promote
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
         run: |
+          SCOPE="${VERCEL_ORG_ID:-$SPEU_VERCEL_ORG_ID}"
           vercel promote ${{ steps.url.outputs.deploy_url }} \
             --token=${{ secrets.VERCEL_TOKEN }}
           PROD_URL=$(vercel ls --token=${{ secrets.VERCEL_TOKEN }} \
-            --scope=${{ secrets.VERCEL_ORG_ID }} 2>/dev/null \
+            --scope="$SCOPE" 2>/dev/null \
             | grep "Production" | head -1 | awk '{print $2}' || echo "https://speu.vercel.app")
           echo "prod_url=$PROD_URL" >> $GITHUB_OUTPUT
           echo "Promoted to production: $PROD_URL"

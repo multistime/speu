@@ -8,6 +8,11 @@ on:
       - 'feature/**'
       - 'fix/**'
 
+# Ідэнтыфікатары праекта (не сакрэтныя, як VERCEL_TOKEN). Сакрэты VERCEL_* перавызначаюць пры неабходнасці.
+env:
+  SPEU_VERCEL_ORG_ID: team_GwG38eWYSvJL97bK46B27Gzg
+  SPEU_VERCEL_PROJECT_ID: prj_saDxiOFBgbM0xXzfeDIYB7YYo1w6
+
 jobs:
   deploy-staging:
     name: Deploy to Staging
@@ -25,17 +30,16 @@ jobs:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
         run: |
-          if [ -z "$VERCEL_PROJECT_ID" ] || [ -z "$VERCEL_ORG_ID" ]; then
-            echo "::error::У рэпазіторыі павінны быць сакрэты VERCEL_PROJECT_ID і VERCEL_ORG_ID (гл. AGENTS.md). Без іх vercel pull у CI не знаходзіць праект."
-            exit 1
-          fi
+          ORG="${VERCEL_ORG_ID:-$SPEU_VERCEL_ORG_ID}"
+          PROJ="${VERCEL_PROJECT_ID:-$SPEU_VERCEL_PROJECT_ID}"
           mkdir -p .vercel
-          node -e "require('fs').writeFileSync('.vercel/project.json', JSON.stringify({ projectId: process.env.VERCEL_PROJECT_ID, orgId: process.env.VERCEL_ORG_ID }))"
+          ORG="$ORG" PROJ="$PROJ" node -e "require('fs').writeFileSync('.vercel/project.json', JSON.stringify({ projectId: process.env.PROJ, orgId: process.env.ORG }))"
+          echo "Linked org=$ORG project=$PROJ"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Install Vercel CLI

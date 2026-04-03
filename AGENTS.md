@@ -33,7 +33,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ### GitHub Actions — сакрэты
 
-У рэпазіторыі павінны быць: `VERCEL_TOKEN`, `VERCEL_ORG_ID` (`team_*`), **`VERCEL_PROJECT_ID`** (`prj_*` з лакальнага `.vercel/project.json` → `projectId`). Без `VERCEL_PROJECT_ID` у CI няма `.vercel/project.json` (каталог у `.gitignore`), і `vercel pull` часта падае. Environments: `staging`, `production` (для адабрэння promote пры неабходнасці).
+Абавязковы сакрэт: **`VERCEL_TOKEN`**. `VERCEL_ORG_ID` / `VERCEL_PROJECT_ID` — апцыянальна: у workflow зашыты значэнні Speu (`team_*` / `prj_*`), сакрэты перавызначаюць іх пры пераносе праекта. Environments: `staging`, `production` (для адабрэння promote пры неабходнасці).
 
 ### Калі агент робіць дэплой з машыны карыстальніка (Vercel CLI)
 

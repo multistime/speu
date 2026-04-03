@@ -1,5 +1,8 @@
 name: Promote to Production
 
+env:
+  SPEU_VERCEL_ORG_ID: team_GwG38eWYSvJL97bK46B27Gzg
+
 on:
   workflow_dispatch:
     inputs:
@@ -36,7 +39,10 @@ jobs:
 
       - name: Determine deployment URL
         id: url
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
         run: |
+          SCOPE="${VERCEL_ORG_ID:-$SPEU_VERCEL_ORG_ID}"
           INPUT_URL="${{ github.event.inputs.deployment_url }}"
           if [ -n "$INPUT_URL" ]; then
             echo "deploy_url=$INPUT_URL" >> $GITHUB_OUTPUT
@@ -44,7 +50,7 @@ jobs:
           else
             # Get latest preview deployment URL from Vercel
             LATEST=$(vercel ls --token=${{ secrets.VERCEL_TOKEN }} \
-              --scope=${{ secrets.VERCEL_ORG_ID }} 2>/dev/null \
+              --scope="$SCOPE" 2>/dev/null \
               | grep -E "https://speu-" | head -1 | awk '{print $2}')
             echo "deploy_url=$LATEST" >> $GITHUB_OUTPUT
             echo "Using latest deployment: $LATEST"
@@ -52,13 +58,16 @@ jobs:
 
       - name: Promote to Production
         id: promote
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
         run: |
+          SCOPE="${VERCEL_ORG_ID:-$SPEU_VERCEL_ORG_ID}"
           vercel promote ${{ steps.url.outputs.deploy_url }} \
             --token=${{ secrets.VERCEL_TOKEN }}
 
           # Get the production URL
           PROD_URL=$(vercel ls --token=${{ secrets.VERCEL_TOKEN }} \
-            --scope=${{ secrets.VERCEL_ORG_ID }} 2>/dev/null \
+            --scope="$SCOPE" 2>/dev/null \
             | grep "Production" | head -1 | awk '{print $2}' || echo "https://speu.vercel.app")
           echo "prod_url=$PROD_URL" >> $GITHUB_OUTPUT
           echo "Promoted to production: $PROD_URL"
