@@ -111,7 +111,7 @@ export function SpeuHeroShuffle({ tracks, playableCount }: SpeuHeroShuffleProps)
 
   const discInner = (
     <>
-      <div className="pointer-events-none absolute inset-0 rounded-full shadow-[inset_0_0_28px_rgba(0,0,0,0.22)]">
+      <div className="pointer-events-none absolute inset-0 rounded-full">
         <svg
           className="absolute inset-0 size-full text-primary"
           viewBox="0 0 100 100"
