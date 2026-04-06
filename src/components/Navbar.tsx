@@ -27,8 +27,9 @@ export function Navbar({ visibleHrefs }: NavbarProps) {
   const visibleSet = new Set(visibleHrefs);
   const filteredNav = navLinks.filter((l) => visibleSet.has(l.href));
   const showCabinet = visibleSet.has("/cabinet");
-  const [scrolled, setScrolled]   = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const barActive = scrolled || mobileOpen;
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const pathname = usePathname();
@@ -89,13 +90,13 @@ export function Navbar({ visibleHrefs }: NavbarProps) {
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
       className={cn(
-        "fixed top-0 inset-x-0 z-50 transition-all duration-500",
-        scrolled
-          ? "glass border-b border-border py-3"
+        "fixed top-0 left-0 right-0 z-50 w-full min-w-0 transition-all duration-500",
+        barActive
+          ? "bg-[var(--glass-bg)] backdrop-blur-lg backdrop-saturate-150 border-0 border-b border-border py-3"
           : "py-5 bg-transparent"
       )}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
 
         {/* Logo */}
         <Link href="/" className="group flex items-center gap-2.5">
@@ -182,9 +183,9 @@ export function Navbar({ visibleHrefs }: NavbarProps) {
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.3, ease: "easeInOut" }}
-            className="md:hidden overflow-hidden glass border-t border-border"
+            className="md:hidden w-full overflow-hidden border-0"
           >
-            <div className="px-4 py-4 flex flex-col gap-1">
+            <div className="w-full px-4 sm:px-6 lg:px-8 py-4 flex flex-col gap-1 max-w-7xl mx-auto">
               {filteredNav.map(({ href, label, icon: Icon }) => {
                 const isActive = pathname.startsWith(href);
                 return (
