@@ -17,7 +17,7 @@ export async function GET() {
     .schema("speu")
     .from("artists")
     .select(
-      "id, slug, name, name_en, genres, tagline, bio, location, year_started, initials, social_links, visual_json"
+      "id, slug, name, name_en, genres, tagline, bio, location, year_started, initials, photo_url, social_links, visual_json"
     )
     .eq("status", "published")
     .order("sort_order", { ascending: true });

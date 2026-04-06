@@ -6,6 +6,7 @@ import { Trash2, Pencil, Plus, Upload, Music, Disc, Users, X, Check } from "luci
 import { createClient } from "@/lib/supabase/client";
 import { AdminFormModal } from "@/components/admin/AdminFormModal";
 import { AdminArtistsPanel } from "@/components/admin/AdminArtistsPanel";
+import { AdminImageSourceField } from "@/components/admin/AdminImageSourceField";
 
 type Artist = { id: string; name: string; slug: string };
 type Album = {
@@ -559,15 +560,13 @@ function AdminLabelPageInner() {
                 />
               </div>
 
-              <div>
-                <label className={labelCls}>URL вокладкі</label>
-                <input
-                  className={inputCls}
-                  placeholder="https://..."
-                  value={songForm.coverUrl}
-                  onChange={(e) => setSongForm({ ...songForm, coverUrl: e.target.value })}
-                />
-              </div>
+              <AdminImageSourceField
+                label="Вокладка трэка"
+                value={songForm.coverUrl}
+                onChange={(url) => setSongForm({ ...songForm, coverUrl: url })}
+                storageFolder="tracks"
+                previewShape="square"
+              />
 
               <div>
                 <label className={labelCls}>Нумар трэка</label>
@@ -668,9 +667,18 @@ function AdminLabelPageInner() {
               <div className="space-y-2">
                 {songs.map((song) => (
                   <div key={song.id} className="rounded-lg border border-border p-3 flex items-center gap-3">
-                    <div className="w-8 h-8 rounded bg-muted flex items-center justify-center shrink-0">
-                      <Music className="w-4 h-4 text-muted-foreground" />
-                    </div>
+                    {song.cover_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={song.cover_url}
+                        alt=""
+                        className="w-8 h-8 rounded object-cover shrink-0 border border-border"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded bg-muted flex items-center justify-center shrink-0">
+                        <Music className="w-4 h-4 text-muted-foreground" />
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{song.title}</p>
                       <p className="text-xs text-muted-foreground truncate">
@@ -785,15 +793,13 @@ function AdminLabelPageInner() {
                 />
               </div>
 
-              <div>
-                <label className={labelCls}>URL вокладкі</label>
-                <input
-                  className={inputCls}
-                  placeholder="https://..."
-                  value={albumForm.coverUrl}
-                  onChange={(e) => setAlbumForm({ ...albumForm, coverUrl: e.target.value })}
-                />
-              </div>
+              <AdminImageSourceField
+                label="Вокладка альбома"
+                value={albumForm.coverUrl}
+                onChange={(url) => setAlbumForm({ ...albumForm, coverUrl: url })}
+                storageFolder="albums"
+                previewShape="square"
+              />
 
               <div className="md:col-span-2">
                 <label className={labelCls}>Апісанне</label>

@@ -36,13 +36,36 @@ export function SpeuArtistCardCompact({
               style={{ background: accent }}
             />
 
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span
-                className="font-display text-5xl font-semibold select-none opacity-20 group-hover:opacity-28 transition-opacity duration-300"
-                style={{ color: accent }}
-              >
-                {artist.initial}
-              </span>
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              {artist.photoUrl ? (
+                <>
+                  <div
+                    className="absolute inset-0 opacity-90"
+                    style={{
+                      background: `radial-gradient(ellipse at center, transparent 0%, ${gradientTo}99 100%)`,
+                    }}
+                  />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={artist.photoUrl}
+                    alt={artist.name}
+                    className="relative z-[1] w-28 h-28 rounded-full object-cover shadow-xl"
+                    style={{
+                      borderWidth: 2,
+                      borderStyle: "solid",
+                      borderColor: `rgba(${accentRgb}, 0.45)`,
+                      boxShadow: `0 10px 32px rgba(0,0,0,0.3), 0 0 0 1px rgba(${accentRgb}, 0.2)`,
+                    }}
+                  />
+                </>
+              ) : (
+                <span
+                  className="font-display text-5xl font-semibold select-none opacity-20 group-hover:opacity-28 transition-opacity duration-300"
+                  style={{ color: accent }}
+                >
+                  {artist.initial}
+                </span>
+              )}
             </div>
 
             <div className="absolute inset-0 flex items-center justify-center">

@@ -31,6 +31,8 @@ interface Artist {
   initial: string;
   year: string;
   location: string;
+  /** Прамая спасылка на фота; калі ёсць — паказваем круглы аватар замест літары */
+  photoUrl?: string | null;
   socials: { instagram?: string; youtube?: string; spotify?: string; telegram?: string };
   pattern: ArtistPatternId;
 }
@@ -187,6 +189,7 @@ type PublicArtistApiRow = {
   location: string | null;
   year_started: number | null;
   initials: string | null;
+  photo_url?: string | null;
   social_links: { instagram?: string; youtube?: string; spotify?: string; telegram?: string } | null;
   visual_json: {
     gradientFrom?: string;
@@ -215,6 +218,7 @@ function mapPublicArtistRow(item: PublicArtistApiRow): Artist {
     accent: item.visual_json?.accent ?? "#7DBF9E",
     accentRgb: item.visual_json?.accentRgb ?? "125, 191, 158",
     initial: item.initials ?? item.name.charAt(0),
+    photoUrl: item.photo_url?.trim() || null,
     year: item.year_started ? String(item.year_started) : "2024",
     location: item.location ?? "Беларусь",
     socials: item.social_links ?? {},
@@ -286,13 +290,36 @@ function ArtistCard({ artist, onClick, index }: { artist: Artist; onClick: (a: A
             style={{ background: artist.accent }}
           />
 
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span
-              className="font-display text-8xl font-semibold select-none opacity-20 group-hover:opacity-30 transition-opacity duration-300"
-              style={{ color: artist.accent }}
-            >
-              {artist.initial}
-            </span>
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            {artist.photoUrl ? (
+              <>
+                <div
+                  className="absolute inset-0 opacity-90"
+                  style={{
+                    background: `radial-gradient(ellipse at center, transparent 0%, ${artist.gradientTo}99 100%)`,
+                  }}
+                />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={artist.photoUrl}
+                  alt={artist.name}
+                  className="relative z-[1] w-[9.5rem] h-[9.5rem] rounded-full object-cover shadow-2xl"
+                  style={{
+                    borderWidth: 2,
+                    borderStyle: "solid",
+                    borderColor: `rgba(${artist.accentRgb}, 0.5)`,
+                    boxShadow: `0 16px 48px rgba(0,0,0,0.35), 0 0 0 1px rgba(${artist.accentRgb}, 0.2)`,
+                  }}
+                />
+              </>
+            ) : (
+              <span
+                className="font-display text-8xl font-semibold select-none opacity-20 group-hover:opacity-30 transition-opacity duration-300"
+                style={{ color: artist.accent }}
+              >
+                {artist.initial}
+              </span>
+            )}
           </div>
 
           {/* Play hint on hover */}
@@ -533,6 +560,17 @@ function ArtistModal({ artist, onClose }: { artist: Artist; onClose: () => void 
               className="absolute -top-10 -left-10 w-40 h-40 rounded-full blur-3xl opacity-20"
               style={{ background: artist.accent }}
             />
+
+            {artist.photoUrl && (
+              <div className="absolute top-4 left-4 z-[2] pointer-events-none">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={artist.photoUrl}
+                  alt={artist.name}
+                  className="w-20 h-20 rounded-full object-cover shadow-lg border-2 border-white/25"
+                />
+              </div>
+            )}
 
             <div className="absolute inset-0 flex items-end p-5">
               <div>

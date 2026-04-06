@@ -43,6 +43,16 @@ export function SpeuArtistPageView({ data }: { data: SpeuArtistPageData }) {
                   className="absolute bottom-0 right-0 w-48 h-48 rounded-full blur-3xl opacity-40"
                   style={{ background: accent }}
                 />
+                {data.photoUrl && (
+                  <div className="absolute top-4 left-4 z-[2] pointer-events-none">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={data.photoUrl}
+                      alt={data.name}
+                      className="w-24 h-24 sm:w-28 sm:h-28 rounded-full object-cover shadow-lg border-2 border-white/20"
+                    />
+                  </div>
+                )}
                 <div className="absolute inset-0 flex items-end p-5">
                   <div>
                     <div className="flex flex-wrap gap-1 mb-2">

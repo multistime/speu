@@ -171,7 +171,7 @@ export async function fetchSpeuHubArtists(limit = 20): Promise<SpeuHubArtistCard
   const { data, error } = await supabase
     .schema("speu")
     .from("artists")
-    .select("slug, name, name_en, genres, tagline, location, year_started, initials, visual_json")
+    .select("slug, name, name_en, genres, tagline, location, year_started, initials, photo_url, visual_json")
     .eq("status", "published")
     .order("sort_order", { ascending: true })
     .limit(limit);
@@ -189,6 +189,7 @@ export async function fetchSpeuHubArtists(limit = 20): Promise<SpeuHubArtistCard
       location: a.location ?? "Беларусь",
       year: a.year_started ? String(a.year_started) : "—",
       initial: a.initials?.trim() || a.name.charAt(0),
+      photoUrl: a.photo_url?.trim() || null,
       theme,
     };
   });
@@ -200,7 +201,7 @@ export async function fetchSpeuArtistBySlug(slug: string): Promise<SpeuArtistPag
     .schema("speu")
     .from("artists")
     .select(
-      "id, slug, name, name_en, genres, tagline, bio, location, year_started, initials, social_links, visual_json"
+      "id, slug, name, name_en, genres, tagline, bio, location, year_started, initials, photo_url, social_links, visual_json"
     )
     .eq("slug", slug)
     .eq("status", "published")
@@ -250,6 +251,7 @@ export async function fetchSpeuArtistBySlug(slug: string): Promise<SpeuArtistPag
       bio: artist.bio ?? "",
       location: artist.location ?? "Беларусь",
       year: artist.year_started ? String(artist.year_started) : "—",
+      photoUrl: artist.photo_url?.trim() || null,
       socials: (artist.social_links ?? {}) as SpeuArtistPageData["socials"],
       theme,
       albums,
@@ -303,6 +305,7 @@ export async function fetchSpeuArtistBySlug(slug: string): Promise<SpeuArtistPag
     bio: artist.bio ?? "",
     location: artist.location ?? "Беларусь",
     year: artist.year_started ? String(artist.year_started) : "—",
+    photoUrl: artist.photo_url?.trim() || null,
     socials: (artist.social_links ?? {}) as SpeuArtistPageData["socials"],
     theme,
     albums,

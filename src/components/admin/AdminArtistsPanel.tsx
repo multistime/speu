@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Trash2, Pencil, Plus, X } from "lucide-react";
 import { AdminFormModal } from "@/components/admin/AdminFormModal";
+import { AdminImageSourceField } from "@/components/admin/AdminImageSourceField";
 import { ArtistPattern } from "@/components/artists/artist-pattern";
 import {
   ARTIST_COLOR_PRESETS,
@@ -28,6 +29,7 @@ type Artist = {
   sort_order: number;
   social_links?: Record<string, string> | null;
   visual_json?: Record<string, unknown> | null;
+  photo_url?: string | null;
 };
 
 const emptyForm = {
@@ -50,6 +52,7 @@ const emptyForm = {
   youtube: "",
   spotify: "",
   telegram: "",
+  photoUrl: "",
 };
 
 type AdminArtistsPanelProps = {
@@ -117,6 +120,7 @@ export function AdminArtistsPanel({ onCatalogChanged }: AdminArtistsPanelProps) 
       youtube: sl.youtube ?? "",
       spotify: sl.spotify ?? "",
       telegram: sl.telegram ?? "",
+      photoUrl: artist.photo_url ?? "",
     });
     setFormOpen(true);
   };
@@ -155,6 +159,7 @@ export function AdminArtistsPanel({ onCatalogChanged }: AdminArtistsPanelProps) 
         youtube: form.youtube || undefined,
         spotify: form.spotify || undefined,
         telegram: form.telegram || undefined,
+        photoUrl: form.photoUrl.trim() ? form.photoUrl.trim() : null,
       }),
     });
     if (!res.ok) {
@@ -380,6 +385,15 @@ export function AdminArtistsPanel({ onCatalogChanged }: AdminArtistsPanelProps) 
             />
           </div>
 
+          <AdminImageSourceField
+            label="Фота артыста"
+            value={form.photoUrl}
+            onChange={(url) => setForm({ ...form, photoUrl: url })}
+            storageFolder="artists"
+            previewShape="circle"
+            description="На публічнай старонцы /artists паказваецца круглы аватар замест літары ў цэнтры картачкі (калі загружана)."
+          />
+
           <div className="md:col-span-2 border-t border-border pt-4 mt-1">
             <p className="text-xs font-medium text-foreground mb-3">Заглушка карточкі на старонцы «Артысты»</p>
             <div className="grid md:grid-cols-2 gap-4">
@@ -543,6 +557,21 @@ export function AdminArtistsPanel({ onCatalogChanged }: AdminArtistsPanelProps) 
           <div className="space-y-2">
             {items.map((artist) => (
               <div key={artist.id} className="rounded-lg border border-border p-3 flex items-center gap-3">
+                {artist.photo_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={artist.photo_url}
+                    alt=""
+                    className="w-10 h-10 rounded-full object-cover border border-border shrink-0"
+                  />
+                ) : (
+                  <div
+                    className="w-10 h-10 rounded-full border border-border shrink-0 flex items-center justify-center text-xs font-semibold text-muted-foreground bg-muted"
+                    title="Няма фота — паказваецца ініцыял"
+                  >
+                    {artist.name.charAt(0)}
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{artist.name}</p>
                   <p className="text-xs text-muted-foreground">

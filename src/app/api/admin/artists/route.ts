@@ -9,6 +9,7 @@ import {
   isValidHex6,
   resolveArtistVisual,
 } from "@/lib/artists/visual-theme";
+import { isLikelyImageUrl } from "@/lib/admin/image-upload";
 
 const colorPresetEnum = z.enum(ARTIST_COLOR_PRESET_IDS);
 const patternEnum = z.enum(ARTIST_PATTERN_IDS);
@@ -36,8 +37,19 @@ const artistSchema = z
     youtube: z.string().optional(),
     spotify: z.string().optional(),
     telegram: z.string().optional(),
+    photoUrl: z.union([z.string(), z.null()]).optional(),
   })
   .superRefine((data, ctx) => {
+    if (typeof data.photoUrl === "string") {
+      const t = data.photoUrl.trim();
+      if (t && !isLikelyImageUrl(t)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Некарэктны URL фота",
+          path: ["photoUrl"],
+        });
+      }
+    }
     if (data.colorPreset !== "custom") return;
     const checks = [
       [data.customGradientFrom?.trim() ?? "", "customGradientFrom"] as const,
@@ -113,6 +125,14 @@ export async function POST(request: Request) {
     sort_order: parsed.data.sortOrder,
     visual_json,
     social_links: socialParsed.social_links,
+    ...(parsed.data.photoUrl !== undefined
+      ? {
+          photo_url:
+            parsed.data.photoUrl === null
+              ? null
+              : parsed.data.photoUrl.trim() || null,
+        }
+      : {}),
     updated_by: user.id,
   };
 

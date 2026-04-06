@@ -32,6 +32,7 @@ export type SpeuHubArtistCard = {
   location: string;
   year: string;
   initial: string;
+  photoUrl: string | null;
   theme: SpeuArtistTheme;
 };
 
@@ -52,6 +53,7 @@ export type SpeuArtistPageData = {
   bio: string;
   location: string;
   year: string;
+  photoUrl: string | null;
   socials: {
     instagram?: string;
     youtube?: string;
