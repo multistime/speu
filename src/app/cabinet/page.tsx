@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -79,6 +79,23 @@ function OAuthErrorReader({ onError }: { onError: (msg: Msg) => void }) {
       : parseAuthError(errorCode);
     onError({ text, kind: "error" });
   }, [searchParams, onError]);
+
+  return null;
+}
+
+/** ?tab=signup — адкрыць рэгістрацыю (напрыклад з мадалкі лайка). Suspense. */
+function SignupTabFromUrl({
+  onSignupTab,
+}: {
+  onSignupTab: () => void;
+}) {
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get("tab") === "signup") {
+      onSignupTab();
+    }
+  }, [searchParams, onSignupTab]);
 
   return null;
 }
@@ -190,6 +207,11 @@ export default function CabinetPage() {
     window.location.assign("/api/auth/signout");
   };
 
+  const openSignupFromUrl = useCallback(() => {
+    setMode("signup");
+    setMessage(null);
+  }, []);
+
   if (isAuthed === null) {
     return (
       <div className="min-h-screen pt-28 pb-20 px-4 flex items-center justify-center">
@@ -205,6 +227,7 @@ export default function CabinetPage() {
           {/* Read OAuth error from URL */}
           <Suspense>
             <OAuthErrorReader onError={setMessage} />
+            <SignupTabFromUrl onSignupTab={openSignupFromUrl} />
           </Suspense>
 
           <div className="text-center mb-8">

@@ -7,6 +7,7 @@ import { usePlayer } from "@/contexts/PlayerContext";
 import { speuPublicTrackToPlayerTrack } from "@/lib/speu/player-map";
 import type { SpeuTrackPageData } from "@/lib/speu/types";
 import { SpeuTrackRow } from "@/components/speu/SpeuTrackRow";
+import { TrackLikeButton } from "@/components/speu/TrackLikeButton";
 
 export function SpeuTrackPageView({ data }: { data: SpeuTrackPageData }) {
   const { togglePlay } = usePlayer();
@@ -74,7 +75,7 @@ export function SpeuTrackPageView({ data }: { data: SpeuTrackPageData }) {
             </div>
           </div>
 
-          <div className="p-6 flex flex-wrap gap-3">
+          <div className="p-6 flex flex-wrap items-center gap-3">
             <button
               type="button"
               onClick={() => togglePlay(pt)}
@@ -84,6 +85,7 @@ export function SpeuTrackPageView({ data }: { data: SpeuTrackPageData }) {
               <Play className="size-4 fill-current ml-0.5" strokeWidth={0} />
               Прайграць
             </button>
+            <TrackLikeButton trackId={track.id} size="md" accentColor={accent} className="border-border" />
             <Link
               href="/speu"
               className="inline-flex items-center text-sm px-4 py-3 rounded-xl border border-border hover:bg-muted/50 transition-colors"

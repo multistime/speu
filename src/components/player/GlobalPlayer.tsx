@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { Music, Pause, Play, Repeat1, X } from "lucide-react";
+import { TrackLikeButton } from "@/components/speu/TrackLikeButton";
 import { useCallback, useRef, useState } from "react";
 import { usePlayer, type PlayerTrack } from "@/contexts/PlayerContext";
 import { formatPlayerTime } from "@/lib/format-player-time";
@@ -289,6 +290,14 @@ export function GlobalPlayer() {
 
             {/* Controls */}
             <div className="flex items-center gap-2 flex-shrink-0">
+              {track.trackHref?.startsWith("/speu/tracks/") ? (
+                <TrackLikeButton
+                  trackId={track.id}
+                  size="sm"
+                  accentColor={track.accentColor ?? null}
+                  className="border-border/60"
+                />
+              ) : null}
               <button
                 type="button"
                 onClick={toggleRepeatOne}
