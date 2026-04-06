@@ -8,6 +8,7 @@ import { speuPublicTrackToPlayerTrack } from "@/lib/speu/player-map";
 import { SpeuHeroShuffle } from "@/components/speu/SpeuHeroShuffle";
 import { SpeuTrackRow } from "@/components/speu/SpeuTrackRow";
 import { SpeuArtistCardCompact } from "@/components/speu/SpeuArtistCardCompact";
+import { cn } from "@/lib/utils";
 
 type SpeuHubClientProps = {
   playable: SpeuPublicTrack[];
@@ -42,22 +43,17 @@ export function SpeuHubClient({ playable, artists }: SpeuHubClientProps) {
 
         <SpeuHeroShuffle tracks={playerTracks} playableCount={playable.length} />
 
-        {/* Папулярнае (топ-10) */}
-        <section className="mt-6 mb-16">
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6">
-            <div>
-              <h2 className="font-display text-2xl sm:text-3xl font-semibold text-foreground italic">
-                У топе
-              </h2>
-              <p className="text-xs text-muted-foreground mt-1">
-                Парадак: адзнака на радыё ў каталозе, затым нумар сартавання і дата.
-              </p>
-            </div>
+        {/* Лепшае (топ-10) */}
+        <section className="mt-2 mb-16">
+          <div className="flex flex-row items-baseline justify-between gap-4 mb-6">
+            <h2 className="font-display text-2xl sm:text-3xl font-semibold text-foreground italic">
+              Лепшае
+            </h2>
             <Link
               href="/speu/top-100"
-              className="text-sm font-medium text-primary hover:underline shrink-0"
+              className="text-sm font-medium text-primary hover:underline shrink-0 text-right"
             >
-              Увесь топ — 100 трэкаў
+              Папулярнае
             </Link>
           </div>
 
@@ -67,18 +63,25 @@ export function SpeuHubClient({ playable, artists }: SpeuHubClientProps) {
               Трэкі з&apos;явяцца тут пасля публікацыі.
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 gap-8 md:gap-12">
-              <div className="space-y-0.5">
-                {leftCol.map((t, i) => (
-                  <SpeuTrackRow key={t.id} track={t} index={i * 2} showCover />
+            <>
+              <div className="space-y-0.5 md:hidden">
+                {chartPreview.map((t, i) => (
+                  <SpeuTrackRow key={t.id} track={t} index={i} showCover />
                 ))}
               </div>
-              <div className="space-y-0.5">
-                {rightCol.map((t, i) => (
-                  <SpeuTrackRow key={t.id} track={t} index={i * 2 + 1} showCover />
-                ))}
+              <div className="hidden md:grid md:grid-cols-2 gap-8 md:gap-12">
+                <div className="space-y-0.5">
+                  {leftCol.map((t, i) => (
+                    <SpeuTrackRow key={t.id} track={t} index={i * 2} showCover />
+                  ))}
+                </div>
+                <div className="space-y-0.5">
+                  {rightCol.map((t, i) => (
+                    <SpeuTrackRow key={t.id} track={t} index={i * 2 + 1} showCover />
+                  ))}
+                </div>
               </div>
-            </div>
+            </>
           )}
         </section>
 
@@ -92,16 +95,28 @@ export function SpeuHubClient({ playable, artists }: SpeuHubClientProps) {
               href="/artists"
               className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors shrink-0"
             >
-              Каталог артыстаў (поўны)
+              Усе артысты
             </Link>
           </div>
 
           {artists.length === 0 ? (
             <div className="text-center py-16 text-muted-foreground text-sm">Няма артыстаў у базе.</div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
+            <div
+              className={cn(
+                "-mx-4 flex gap-4 overflow-x-auto px-4 pb-2 snap-x snap-mandatory",
+                "[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden",
+                "md:mx-0 md:grid md:grid-cols-3 md:gap-5 md:overflow-visible md:px-0 md:pb-0 md:snap-none",
+                "lg:grid-cols-4"
+              )}
+            >
               {artists.map((a, i) => (
-                <SpeuArtistCardCompact key={a.slug} artist={a} index={i} />
+                <div
+                  key={a.slug}
+                  className="w-[min(18.5rem,calc(100vw-2.5rem))] shrink-0 snap-start md:w-auto md:min-w-0 md:shrink"
+                >
+                  <SpeuArtistCardCompact artist={a} index={i} />
+                </div>
               ))}
             </div>
           )}

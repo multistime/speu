@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Pause, Play } from "lucide-react";
 import { usePlayer } from "@/contexts/PlayerContext";
@@ -8,45 +9,80 @@ import { cn } from "@/lib/utils";
 
 const SPIN_DURATION_SEC = 44;
 
-const GROOVE_VIEW = { cx: 50, cy: 50, maxR: 49.15 };
+const GROOVE_MAX_R = 49.15;
 
-/** Лёгкая неровнасьць кола — як прэсавая пласцінка, а не ідэальны вектар */
-function wavyGroovePath(
-  sizePct: number,
-  waveCount: number,
-  amplitude: number,
-  phase: number,
-  segments = 100
-): string {
-  const baseR = (sizePct / 100) * GROOVE_VIEW.maxR;
-  const { cx, cy } = GROOVE_VIEW;
-  const pts: [number, number][] = [];
-  for (let i = 0; i <= segments; i++) {
-    const t = (i / segments) * Math.PI * 2;
-    const wobble = amplitude * Math.sin(waveCount * t + phase);
-    const r = baseR + wobble;
-    pts.push([cx + r * Math.cos(t), cy + r * Math.sin(t)]);
+/**
+ * Невялікія разрывы ў бороздах (≈2.5–3.5% акружнасьці) — пры кручэньні вока ловіць рух.
+ * Патэрн і зсув розныя для кожнага кола, каб разрывы не «стаялі ў шэраг».
+ */
+function grooveDashPattern(r: number, ringIndex: number): { dasharray: string; dashoffset: number } {
+  const C = 2 * Math.PI * r;
+  const gapCount = 3 + (ringIndex % 2);
+  const totalGap = C * (0.026 + (ringIndex % 3) * 0.002);
+  const gapWeights = Array.from({ length: gapCount }, (_, i) => {
+    const w = 0.55 + (((ringIndex * 7 + i * 11) % 13) / 13) * 0.55;
+    return w;
+  });
+  const gw = gapWeights.reduce((a, b) => a + b, 0);
+  const gaps = gapWeights.map((w) => (w / gw) * totalGap);
+  const dashBudget = C - totalGap;
+  const dashCount = gapCount + 1;
+  const dashWeights = Array.from({ length: dashCount }, (_, i) => {
+    return 0.72 + (((ringIndex * 3 + i * 19) % 17) / 17) * 0.48;
+  });
+  const dw = dashWeights.reduce((a, b) => a + b, 0);
+  const dashes = dashWeights.map((w) => (w / dw) * dashBudget);
+  const parts: number[] = [];
+  for (let i = 0; i < gapCount; i++) {
+    parts.push(dashes[i], gaps[i]);
   }
-  let d = `M ${pts[0][0].toFixed(3)} ${pts[0][1].toFixed(3)}`;
-  for (let i = 1; i < pts.length; i++) {
-    d += ` L ${pts[i][0].toFixed(3)} ${pts[i][1].toFixed(3)}`;
-  }
-  return `${d} Z`;
+  parts.push(dashes[gapCount]);
+  const sum = parts.reduce((a, b) => a + b, 0);
+  const drift = C - sum;
+  parts[parts.length - 1] += drift;
+  const dasharray = parts.map((n) => n.toFixed(2)).join(" ");
+  const dashoffset = ((ringIndex * 41 + 17) % 73) * 0.35 * r;
+  return { dasharray, dashoffset };
 }
 
-const GROOVE_SPECS = [
-  { sizePct: 100, waveCount: 6, amplitude: 0.42, phase: 0.2, opacity: 0.22 },
-  { sizePct: 92, waveCount: 7, amplitude: 0.36, phase: 1.4, opacity: 0.17 },
-  { sizePct: 84, waveCount: 5, amplitude: 0.4, phase: 2.7, opacity: 0.14 },
-  { sizePct: 76, waveCount: 8, amplitude: 0.3, phase: 0.9, opacity: 0.11 },
-  { sizePct: 68, waveCount: 6, amplitude: 0.34, phase: 3.1, opacity: 0.09 },
-  { sizePct: 60, waveCount: 7, amplitude: 0.28, phase: 2.2, opacity: 0.07 },
+const GROOVE_LAYERS = [
+  { sizePct: 100, opacity: 0.42, strokeWidth: 0.92 },
+  { sizePct: 92, opacity: 0.32, strokeWidth: 0.52 },
+  { sizePct: 84, opacity: 0.26, strokeWidth: 0.48 },
+  { sizePct: 76, opacity: 0.21, strokeWidth: 0.45 },
+  { sizePct: 68, opacity: 0.17, strokeWidth: 0.42 },
+  { sizePct: 60, opacity: 0.14, strokeWidth: 0.4 },
 ] as const;
 
-const WAVY_GROOVES = GROOVE_SPECS.map(({ sizePct, waveCount, amplitude, phase, opacity }) => ({
-  d: wavyGroovePath(sizePct, waveCount, amplitude, phase),
-  opacity,
-}));
+const DASHED_GROOVES = GROOVE_LAYERS.map((layer, i) => {
+  const r = (layer.sizePct / 100) * GROOVE_MAX_R;
+  const { dasharray, dashoffset } = grooveDashPattern(r, i);
+  return { ...layer, r, dasharray, dashoffset };
+});
+
+/** key на бацьку скідвае стан — без useEffect; падложка primary хавае «шэры» перад load */
+function SpeuHeroCoverImage({ src, reduceMotion }: { src: string; reduceMotion: boolean }) {
+  const [ready, setReady] = useState(false);
+  return (
+    <div className="absolute inset-0 bg-primary">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt=""
+        loading="eager"
+        decoding="async"
+        fetchPriority="high"
+        onLoad={() => setReady(true)}
+        onError={() => setReady(true)}
+        className={cn(
+          "absolute inset-0 size-full object-cover",
+          !reduceMotion && "transition-opacity duration-300 ease-out",
+          ready ? "opacity-100" : "opacity-0"
+        )}
+      />
+    </div>
+  );
+}
 
 type SpeuHeroShuffleProps = {
   tracks: PlayerTrack[];
@@ -81,25 +117,30 @@ export function SpeuHeroShuffle({ tracks, playableCount }: SpeuHeroShuffleProps)
 
   const discInner = (
     <>
-      <svg
-        className="pointer-events-none absolute inset-0 size-full text-primary"
-        viewBox="0 0 100 100"
-        aria-hidden
-      >
-        {WAVY_GROOVES.map(({ d, opacity }, i) => (
-          <path
-            key={i}
-            d={d}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={0.38}
-            strokeLinejoin="round"
-            strokeLinecap="round"
-            vectorEffect="non-scaling-stroke"
-            style={{ opacity }}
-          />
-        ))}
-      </svg>
+      <div className="pointer-events-none absolute inset-0 rounded-full shadow-[inset_0_0_28px_rgba(0,0,0,0.22)]">
+        <svg
+          className="absolute inset-0 size-full text-primary"
+          viewBox="0 0 100 100"
+          aria-hidden
+        >
+          {DASHED_GROOVES.map(({ r, dasharray, dashoffset, opacity, strokeWidth }, i) => (
+            <circle
+              key={i}
+              cx={50}
+              cy={50}
+              r={r}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={strokeWidth}
+              strokeDasharray={dasharray}
+              strokeDashoffset={dashoffset}
+              strokeLinecap="round"
+              vectorEffect="non-scaling-stroke"
+              style={{ opacity }}
+            />
+          ))}
+        </svg>
+      </div>
 
       <motion.button
         type="button"
@@ -111,7 +152,7 @@ export function SpeuHeroShuffle({ tracks, playableCount }: SpeuHeroShuffleProps)
           "group relative z-10 flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-full shadow-lg sm:size-28",
           "border border-primary/25 disabled:cursor-not-allowed disabled:opacity-40",
           "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary/50",
-          !showCover && !(heroActive && isPlaying) && "bg-primary text-primary-foreground"
+          !showCover && "bg-primary text-primary-foreground"
         )}
         aria-label={
           playableCount === 0
@@ -131,29 +172,28 @@ export function SpeuHeroShuffle({ tracks, playableCount }: SpeuHeroShuffleProps)
               exit={reduceMotion ? undefined : { opacity: 0, scale: 0.96 }}
               transition={labelMotionReduced}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={track.coverUrl} alt="" className="size-full object-cover" />
+              <SpeuHeroCoverImage
+                key={`${track.id}:${track.coverUrl}`}
+                src={track.coverUrl}
+                reduceMotion={!!reduceMotion}
+              />
             </motion.div>
           ) : (
             <motion.div
               key="label-solid"
-              className={cn(
-                "absolute inset-0",
-                !(heroActive && isPlaying) && "bg-primary"
-              )}
-              style={
-                heroActive && isPlaying
-                  ? {
-                      background:
-                        "conic-gradient(from 28deg, var(--primary), color-mix(in srgb, var(--primary) 68%, white) 18%, var(--primary) 38%, color-mix(in srgb, var(--primary) 72%, var(--primary-foreground)) 62%, var(--primary) 82%, color-mix(in srgb, var(--primary) 65%, white))",
-                    }
-                  : undefined
-              }
+              className="absolute inset-0 bg-primary text-primary-foreground"
               initial={reduceMotion ? false : { opacity: 0, scale: 0.94 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={reduceMotion ? undefined : { opacity: 0, scale: 0.98 }}
               transition={labelMotionReduced}
-            />
+            >
+              <span
+                className="pointer-events-none absolute inset-x-1 top-[10%] text-center font-display text-[0.68rem] font-semibold italic leading-none tracking-[0.16em] text-primary-foreground/95 sm:top-[9%] sm:text-[0.78rem]"
+                aria-hidden
+              >
+                Speǔ
+              </span>
+            </motion.div>
           )}
         </AnimatePresence>
 
@@ -204,7 +244,7 @@ export function SpeuHeroShuffle({ tracks, playableCount }: SpeuHeroShuffleProps)
   );
 
   return (
-    <div className="flex flex-col items-center justify-center py-10 sm:py-14">
+    <div className="flex flex-col items-center justify-center pt-10 pb-4 sm:pt-14 sm:pb-6">
       <div className="relative flex items-center justify-center size-44 sm:size-52">
         {spinning && (
           <div
@@ -226,19 +266,11 @@ export function SpeuHeroShuffle({ tracks, playableCount }: SpeuHeroShuffleProps)
         )}
       </div>
 
-      <p className="mt-6 max-w-md px-4 text-center text-sm leading-relaxed text-muted-foreground">
-        {playableCount === 0 ? (
-          <>Пакуль няма апублікаваных трэкаў з аўдыё. Дадайце файлы ў адмінцы — і струмень запоўніцца.</>
-        ) : (
-          <>
-            <span className="font-medium text-foreground">
-              {playableCount} {playableCount === 1 ? "трэк" : playableCount < 5 ? "трэкі" : "трэкаў"}
-            </span>
-            {" · "}
-            выпадковы парадак, бесперапынна. Гэта не радыё-старонка — толькі ваш каталог у браўзеры.
-          </>
-        )}
-      </p>
+      {playableCount === 0 ? (
+        <p className="mt-5 max-w-md px-4 text-center text-sm leading-relaxed text-muted-foreground">
+          Пакуль няма апублікаваных трэкаў з аўдыё. Дадайце файлы ў адмінцы — і струмень запоўніцца.
+        </p>
+      ) : null}
     </div>
   );
 }
