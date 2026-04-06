@@ -1,5 +1,6 @@
 /** Першы сегмент URL → slug у content_pages (публічныя старонкі) */
 export const SITE_ROUTE_SLUGS = [
+  "speu",
   "artists",
   "support",
   "services",

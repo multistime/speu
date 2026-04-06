@@ -12,6 +12,7 @@ type Album = {
   id: string;
   artist_id: string;
   title: string;
+  slug?: string | null;
   cover_url: string | null;
   release_date: string | null;
   description: string | null;
@@ -25,6 +26,7 @@ type Song = {
   artist_ids?: string[];
   album_id: string | null;
   title: string;
+  slug?: string | null;
   audio_url: string | null;
   external_url: string | null;
   cover_url: string | null;
@@ -42,6 +44,7 @@ const emptyAlbumForm = {
   id: "",
   artistId: "",
   title: "",
+  slug: "",
   coverUrl: "",
   releaseDate: "",
   description: "",
@@ -54,6 +57,7 @@ const emptySongForm = {
   artistIds: [] as string[],
   albumId: "",
   title: "",
+  slug: "",
   audioUrl: "",
   externalUrl: "",
   coverUrl: "",
@@ -217,6 +221,7 @@ function AdminLabelPageInner() {
         artistIds: songForm.artistIds,
         albumId: songForm.albumId || null,
         title: songForm.title,
+        slug: songForm.slug.trim() || undefined,
         audioUrl,
         externalUrl: songForm.externalUrl || null,
         coverUrl: songForm.coverUrl || null,
@@ -258,6 +263,7 @@ function AdminLabelPageInner() {
       artistIds: ids,
       albumId: song.album_id ?? "",
       title: song.title,
+      slug: song.slug ?? "",
       audioUrl: song.audio_url ?? "",
       externalUrl: song.external_url ?? "",
       coverUrl: song.cover_url ?? "",
@@ -288,6 +294,7 @@ function AdminLabelPageInner() {
         id: albumForm.id || undefined,
         artistId: albumForm.artistId,
         title: albumForm.title,
+        slug: albumForm.slug.trim() || undefined,
         coverUrl: albumForm.coverUrl || null,
         releaseDate: albumForm.releaseDate || null,
         description: albumForm.description || null,
@@ -323,6 +330,7 @@ function AdminLabelPageInner() {
       id: album.id,
       artistId: album.artist_id,
       title: album.title,
+      slug: album.slug ?? "",
       coverUrl: album.cover_url ?? "",
       releaseDate: album.release_date ?? "",
       description: album.description ?? "",
@@ -481,6 +489,20 @@ function AdminLabelPageInner() {
                   value={songForm.title}
                   onChange={(e) => setSongForm({ ...songForm, title: e.target.value })}
                 />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className={labelCls}>Slug у URL (неабавязкова)</label>
+                <input
+                  className={inputCls}
+                  placeholder="Аўта з назвы, калі пуста"
+                  value={songForm.slug}
+                  onChange={(e) => setSongForm({ ...songForm, slug: e.target.value })}
+                  spellCheck={false}
+                />
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Лацінка, лічбы, злучок. Кірыліца будзе транслітэравана. Пры зайнятасці дадасца суфікс (-2, -3…).
+                </p>
               </div>
 
               {/* Audio file upload */}
@@ -737,6 +759,20 @@ function AdminLabelPageInner() {
                   value={albumForm.title}
                   onChange={(e) => setAlbumForm({ ...albumForm, title: e.target.value })}
                 />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className={labelCls}>Slug у URL (неабавязкова)</label>
+                <input
+                  className={inputCls}
+                  placeholder="Аўта з назвы, калі пуста"
+                  value={albumForm.slug}
+                  onChange={(e) => setAlbumForm({ ...albumForm, slug: e.target.value })}
+                  spellCheck={false}
+                />
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Лацінка, лічбы, злучок. Кірыліца будзе транслітэравана. Пры зайнятасці дадасца суфікс.
+                </p>
               </div>
 
               <div>

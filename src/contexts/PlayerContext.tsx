@@ -8,6 +8,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { shuffleArray } from "@/lib/speu/shuffle";
 
 export type PlayerTrack = {
   id: string;
@@ -17,12 +18,18 @@ export type PlayerTrack = {
   coverUrl?: string | null;
   accentColor?: string | null;
   accentRgb?: string | null;
+  /** Спасылка на старонку трэка ў хабе «Спеў» */
+  trackHref?: string | null;
+  /** Першасны артыст (slug) для спасылкі ў глабальным плэеры */
+  artistSlug?: string | null;
 };
 
 type PlayerContextValue = {
   track: PlayerTrack | null;
   isPlaying: boolean;
   repeatOne: boolean;
+  /** Non-stop чарга: перамешаны плэйліст цыклічна прайграецца пасля канца трэка */
+  nonStopActive: boolean;
   /** Прайграванне, с */
   currentTime: number;
   /** Вядомая даўжыньня трэка, с; 0 калі яшчэ невядома / бясконцысьць */
@@ -35,6 +42,8 @@ type PlayerContextValue = {
   seekRatio: (ratio: number) => void;
   stop: () => void;
   isTrackActive: (id: string) => boolean;
+  /** Усе апублікаваныя трэкі з аўдыё — перамешваюцца і гуляюць бесперапынна */
+  startNonStopShuffle: (tracks: PlayerTrack[]) => void;
 };
 
 const PlayerContext = createContext<PlayerContextValue | null>(null);
@@ -48,13 +57,39 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const [track, setTrack] = useState<PlayerTrack | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [repeatOne, setRepeatOne] = useState(false);
+  const [nonStopActive, setNonStopActive] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const trackRef = useRef<PlayerTrack | null>(null);
   const repeatOneRef = useRef(false);
-  repeatOneRef.current = repeatOne;
+
+  const nonStopRef = useRef(false);
+  const poolRef = useRef<PlayerTrack[]>([]);
+  const queueRef = useRef<PlayerTrack[]>([]);
+  const queueIndexRef = useRef(0);
+
+  const playTrackInternalRef = useRef<(next: PlayerTrack) => void>(() => {});
+
+  const playTrackInternal = useCallback((next: PlayerTrack) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    trackRef.current = next;
+    setTrack(next);
+    setCurrentTime(0);
+    setDuration(0);
+    audio.src = next.audioUrl;
+    void audio.play();
+  }, []);
+
+  useEffect(() => {
+    repeatOneRef.current = repeatOne;
+  }, [repeatOne]);
+
+  useEffect(() => {
+    playTrackInternalRef.current = playTrackInternal;
+  }, [playTrackInternal]);
 
   useEffect(() => {
     const audio = new Audio();
@@ -67,6 +102,19 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         audio.currentTime = 0;
         void audio.play();
         return;
+      }
+      if (nonStopRef.current && poolRef.current.length > 0) {
+        let idx = queueIndexRef.current + 1;
+        if (idx >= queueRef.current.length) {
+          queueRef.current = shuffleArray(poolRef.current);
+          idx = 0;
+        }
+        queueIndexRef.current = idx;
+        const next = queueRef.current[idx];
+        if (next) {
+          playTrackInternalRef.current(next);
+          return;
+        }
       }
       setIsPlaying(false);
     };
@@ -105,9 +153,24 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  const startNonStopShuffle = useCallback((tracks: PlayerTrack[]) => {
+    const playable = tracks.filter((t) => t.audioUrl?.trim());
+    if (playable.length === 0) return;
+    poolRef.current = playable;
+    queueRef.current = shuffleArray(playable);
+    queueIndexRef.current = 0;
+    nonStopRef.current = true;
+    setNonStopActive(true);
+    const first = queueRef.current[0];
+    if (first) playTrackInternalRef.current(first);
+  }, []);
+
   const togglePlay = useCallback((newTrack: PlayerTrack) => {
     const audio = audioRef.current;
     if (!audio) return;
+
+    nonStopRef.current = false;
+    setNonStopActive(false);
 
     if (trackRef.current?.id === newTrack.id) {
       if (!audio.paused) {
@@ -116,12 +179,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         void audio.play();
       }
     } else {
-      trackRef.current = newTrack;
-      setTrack(newTrack);
-      setCurrentTime(0);
-      setDuration(0);
-      audio.src = newTrack.audioUrl;
-      void audio.play();
+      playTrackInternalRef.current(newTrack);
     }
   }, []);
 
@@ -129,18 +187,15 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     setRepeatOne((v) => !v);
   }, []);
 
-  const seekRatio = useCallback(
-    (ratio: number) => {
-      const audio = audioRef.current;
-      if (!audio?.src) return;
-      const d = finiteDuration(audio.duration);
-      if (d <= 0) return;
-      const t = Math.min(Math.max(0, ratio), 1) * d;
-      audio.currentTime = t;
-      setCurrentTime(t);
-    },
-    []
-  );
+  const seekRatio = useCallback((ratio: number) => {
+    const audio = audioRef.current;
+    if (!audio?.src) return;
+    const d = finiteDuration(audio.duration);
+    if (d <= 0) return;
+    const t = Math.min(Math.max(0, ratio), 1) * d;
+    audio.currentTime = t;
+    setCurrentTime(t);
+  }, []);
 
   const stop = useCallback(() => {
     const audio = audioRef.current;
@@ -148,6 +203,11 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     audio.pause();
     audio.src = "";
     trackRef.current = null;
+    nonStopRef.current = false;
+    poolRef.current = [];
+    queueRef.current = [];
+    queueIndexRef.current = 0;
+    setNonStopActive(false);
     setTrack(null);
     setIsPlaying(false);
     setCurrentTime(0);
@@ -167,6 +227,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         track,
         isPlaying,
         repeatOne,
+        nonStopActive,
         currentTime,
         duration,
         canSeek,
@@ -175,6 +236,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         seekRatio,
         stop,
         isTrackActive,
+        startNonStopShuffle,
       }}
     >
       {children}

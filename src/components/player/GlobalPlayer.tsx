@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { Music, Pause, Play, Repeat1, X } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
@@ -230,11 +231,31 @@ export function GlobalPlayer() {
             {/* Track info + time (для мінімалізму — толькі на sm+) */}
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-foreground leading-tight truncate">
-                {track.title}
+                {track.trackHref ? (
+                  <Link
+                    href={track.trackHref}
+                    className="hover:underline underline-offset-2"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {track.title}
+                  </Link>
+                ) : (
+                  track.title
+                )}
               </p>
               <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground tabular-nums">
                 {track.artistName ? (
-                  <span className="min-w-0 flex-1 truncate">{track.artistName}</span>
+                  track.artistSlug ? (
+                    <Link
+                      href={`/speu/artists/${track.artistSlug}`}
+                      className="min-w-0 flex-1 truncate hover:text-foreground transition-colors"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {track.artistName}
+                    </Link>
+                  ) : (
+                    <span className="min-w-0 flex-1 truncate">{track.artistName}</span>
+                  )
                 ) : (
                   <span className="flex-1" />
                 )}

@@ -3,6 +3,16 @@ import { ADMIN_UI_ROLE_CODES } from "@/lib/admin/user-roles";
 
 const uiRoleEnum = z.enum(ADMIN_UI_ROLE_CODES);
 
+const optionalAdminSlug = z.preprocess(
+  (v) => {
+    if (v === null || v === undefined) return undefined;
+    if (typeof v !== "string") return undefined;
+    const t = v.trim();
+    return t === "" ? undefined : t;
+  },
+  z.string().min(1).max(200).optional()
+);
+
 /** POST/PATCH body for `/api/admin/songs` */
 export const adminSongPayloadSchema = z.object({
   id: z.string().uuid().optional(),
@@ -10,6 +20,8 @@ export const adminSongPayloadSchema = z.object({
   artistIds: z.array(z.string().uuid()).min(1),
   albumId: z.string().uuid().optional().nullable(),
   title: z.string().min(1),
+  /** Slug у URL; пуста — аўта з назвы. Унікальнасць на баку сервера. */
+  slug: optionalAdminSlug.optional(),
   audioUrl: z.string().optional().nullable(),
   externalUrl: z.string().optional().nullable(),
   coverUrl: z.string().optional().nullable(),

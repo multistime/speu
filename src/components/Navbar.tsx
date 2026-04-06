@@ -4,13 +4,14 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Music2, Sparkles, Headphones, Heart, Users, Radio } from "lucide-react";
+import { Menu, X, Music2, Sparkles, Headphones, Heart, Users, Radio, Disc3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { createClient } from "@/lib/supabase/client";
 import { getSpeuProfile } from "@/lib/supabase/speu";
 
 const navLinks = [
+  { href: "/speu",      label: "Спеў",      icon: Disc3 },
   { href: "/generator", label: "Генератар", icon: Sparkles },
   { href: "/artists",   label: "Артысты",   icon: Users },
   { href: "/radio",     label: "Радыё Мара", icon: Radio },

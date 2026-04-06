@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Music2, Sparkles, Headphones, Heart, Users, Radio } from "lucide-react";
+import { Music2, Sparkles, Headphones, Heart, Users, Radio, Disc3 } from "lucide-react";
 
 /* ── Custom brand SVG icons ──────────────────────────────────────────── */
 
@@ -76,6 +76,7 @@ const SOCIAL_LINKS = [
 ] as const;
 
 const FOOTER_LINKS = [
+  { href: "/speu",      label: "Спеў",       icon: Disc3 },
   { href: "/generator", label: "Генератар",  icon: Sparkles },
   { href: "/artists",   label: "Артысты",    icon: Users },
   { href: "/radio",     label: "Радыё Мара", icon: Radio },

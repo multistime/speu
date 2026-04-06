@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAdminApi } from "@/lib/auth/admin";
 import { writeAdminAuditLog } from "@/lib/supabase/admin-repos/audit";
+import { allocateUniqueSlug } from "@/lib/speu/slug-db.server";
 
 const emptyToNull = (v: unknown) => {
   if (v == null) return null;
@@ -9,10 +10,22 @@ const emptyToNull = (v: unknown) => {
   return v;
 };
 
+const optionalAlbumSlug = z.preprocess(
+  (v) => {
+    if (v === null || v === undefined) return undefined;
+    if (typeof v !== "string") return undefined;
+    const t = v.trim();
+    return t === "" ? undefined : t;
+  },
+  z.string().min(1).max(200).optional()
+);
+
 const albumSchema = z.object({
   id: z.string().uuid().optional(),
   artistId: z.string().uuid(),
   title: z.string().min(1),
+  /** Пуста — аўта з назвы. */
+  slug: optionalAlbumSlug.optional(),
   coverUrl: z.preprocess(emptyToNull, z.string().nullable().optional()),
   releaseDate: z.preprocess((v) => {
     const n = emptyToNull(v);
@@ -75,9 +88,18 @@ export async function POST(request: Request) {
   const parsed = albumSchema.safeParse(payload);
   if (!parsed.success) return NextResponse.json({ error: "invalid_payload", details: parsed.error.flatten() }, { status: 400 });
 
+  const slug = await allocateUniqueSlug(
+    adminDb,
+    "albums",
+    parsed.data.title,
+    parsed.data.id,
+    parsed.data.slug ?? null
+  );
+
   const row: Record<string, unknown> = {
     artist_id: parsed.data.artistId,
     title: parsed.data.title,
+    slug,
     cover_url: parsed.data.coverUrl ?? null,
     release_date: parsed.data.releaseDate ?? null,
     description: parsed.data.description ?? null,

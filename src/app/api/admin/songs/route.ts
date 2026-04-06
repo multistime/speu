@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { adminSongPayloadSchema } from "@/lib/admin/api-schemas";
 import { requireAdminApi } from "@/lib/auth/admin";
 import { writeAdminAuditLog } from "@/lib/supabase/admin-repos/audit";
+import { allocateUniqueSlug } from "@/lib/speu/slug-db.server";
 
 export async function GET() {
   const { adminDb, user } = await requireAdminApi();
@@ -44,7 +45,7 @@ export async function GET() {
       ? adminDb.schema("speu").from("artists").select("id, name, slug").in("id", allArtistIds)
       : { data: [], error: null },
     albumIds.length > 0
-      ? adminDb.schema("speu").from("albums").select("id, title").in("id", albumIds as string[])
+      ? adminDb.schema("speu").from("albums").select("id, title, slug").in("id", albumIds as string[])
       : { data: [], error: null },
   ]);
 
@@ -110,10 +111,19 @@ export async function POST(request: Request) {
     }
   }
 
+  const slug = await allocateUniqueSlug(
+    adminDb,
+    "artist_tracks",
+    parsed.data.title,
+    parsed.data.id,
+    parsed.data.slug ?? null
+  );
+
   const row: Record<string, unknown> = {
     artist_id: primaryArtistId,
     album_id: albumId ?? null,
     title: parsed.data.title,
+    slug,
     audio_url: parsed.data.audioUrl ?? null,
     external_url: parsed.data.externalUrl ?? null,
     cover_url: parsed.data.coverUrl ?? null,
