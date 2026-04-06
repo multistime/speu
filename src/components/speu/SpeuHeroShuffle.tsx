@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type SyntheticEvent } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Pause, Play } from "lucide-react";
 import { usePlayer } from "@/contexts/PlayerContext";
@@ -12,57 +12,52 @@ const SPIN_DURATION_SEC = 44;
 const GROOVE_MAX_R = 49.15;
 
 /**
- * Невялікія разрывы ў бороздах (≈2.5–3.5% акружнасьці) — пры кручэньні вока ловіць рух.
- * Патэрн і зсув розныя для кожнага кола, каб разрывы не «стаялі ў шэраг».
+ * Ідэальныя акружнасьці (як раней у div-border), з 2–3 кароткімі разрывамі на кожную —
+ * як гадавыя кольцы дрэва, з лёгкім «пульсам» пры кручэньні.
  */
-function grooveDashPattern(r: number, ringIndex: number): { dasharray: string; dashoffset: number } {
+function treeRingGapDash(r: number, ringIndex: number): { dasharray: string; dashoffset: number } {
   const C = 2 * Math.PI * r;
-  const gapCount = 3 + (ringIndex % 2);
-  const totalGap = C * (0.026 + (ringIndex % 3) * 0.002);
-  const gapWeights = Array.from({ length: gapCount }, (_, i) => {
-    const w = 0.55 + (((ringIndex * 7 + i * 11) % 13) / 13) * 0.55;
-    return w;
-  });
-  const gw = gapWeights.reduce((a, b) => a + b, 0);
-  const gaps = gapWeights.map((w) => (w / gw) * totalGap);
-  const dashBudget = C - totalGap;
-  const dashCount = gapCount + 1;
-  const dashWeights = Array.from({ length: dashCount }, (_, i) => {
-    return 0.72 + (((ringIndex * 3 + i * 19) % 17) / 17) * 0.48;
-  });
-  const dw = dashWeights.reduce((a, b) => a + b, 0);
-  const dashes = dashWeights.map((w) => (w / dw) * dashBudget);
-  const parts: number[] = [];
-  for (let i = 0; i < gapCount; i++) {
-    parts.push(dashes[i], gaps[i]);
-  }
-  parts.push(dashes[gapCount]);
-  const sum = parts.reduce((a, b) => a + b, 0);
-  const drift = C - sum;
-  parts[parts.length - 1] += drift;
-  const dasharray = parts.map((n) => n.toFixed(2)).join(" ");
-  const dashoffset = ((ringIndex * 41 + 17) % 73) * 0.35 * r;
+  const gapCount = 2 + (ringIndex % 2);
+  const gapLen = C * (0.009 + (ringIndex % 5) * 0.00085);
+  const totalGap = gapLen * gapCount;
+  const dashLen = (C - totalGap) / gapCount;
+  const dasharray = Array.from({ length: gapCount }, () => `${dashLen.toFixed(2)} ${gapLen.toFixed(2)}`).join(
+    " "
+  );
+  const dashoffset = ((ringIndex * 29 + 13) % 71) * (C / 95);
   return { dasharray, dashoffset };
 }
 
 const GROOVE_LAYERS = [
-  { sizePct: 100, opacity: 0.42, strokeWidth: 0.92 },
-  { sizePct: 92, opacity: 0.32, strokeWidth: 0.52 },
-  { sizePct: 84, opacity: 0.26, strokeWidth: 0.48 },
-  { sizePct: 76, opacity: 0.21, strokeWidth: 0.45 },
-  { sizePct: 68, opacity: 0.17, strokeWidth: 0.42 },
-  { sizePct: 60, opacity: 0.14, strokeWidth: 0.4 },
+  { sizePct: 100, opacity: 0.44, strokeWidth: 1.02 },
+  { sizePct: 92, opacity: 0.34, strokeWidth: 0.56 },
+  { sizePct: 84, opacity: 0.28, strokeWidth: 0.5 },
+  { sizePct: 76, opacity: 0.23, strokeWidth: 0.47 },
+  { sizePct: 68, opacity: 0.19, strokeWidth: 0.44 },
+  { sizePct: 60, opacity: 0.15, strokeWidth: 0.41 },
 ] as const;
 
-const DASHED_GROOVES = GROOVE_LAYERS.map((layer, i) => {
+const TREE_RING_CIRCLES = GROOVE_LAYERS.map((layer, i) => {
   const r = (layer.sizePct / 100) * GROOVE_MAX_R;
-  const { dasharray, dashoffset } = grooveDashPattern(r, i);
+  const { dasharray, dashoffset } = treeRingGapDash(r, i);
   return { ...layer, r, dasharray, dashoffset };
 });
 
-/** key на бацьку скідвае стан — без useEffect; падложка primary хавае «шэры» перад load */
+/** key на бацьку скідвае стан; зелёная падложка + decode() перад fade — без шэрай успышкі браўзера */
 function SpeuHeroCoverImage({ src, reduceMotion }: { src: string; reduceMotion: boolean }) {
   const [ready, setReady] = useState(false);
+
+  const finish = () => setReady(true);
+
+  const onImgLoad = (e: SyntheticEvent<HTMLImageElement>) => {
+    const el = e.currentTarget;
+    if (typeof el.decode === "function") {
+      void el.decode().then(finish).catch(finish);
+    } else {
+      finish();
+    }
+  };
+
   return (
     <div className="absolute inset-0 bg-primary">
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -70,12 +65,11 @@ function SpeuHeroCoverImage({ src, reduceMotion }: { src: string; reduceMotion: 
         src={src}
         alt=""
         loading="eager"
-        decoding="async"
         fetchPriority="high"
-        onLoad={() => setReady(true)}
-        onError={() => setReady(true)}
+        onLoad={onImgLoad}
+        onError={finish}
         className={cn(
-          "absolute inset-0 size-full object-cover",
+          "absolute inset-0 size-full bg-primary object-cover",
           !reduceMotion && "transition-opacity duration-300 ease-out",
           ready ? "opacity-100" : "opacity-0"
         )}
@@ -123,7 +117,7 @@ export function SpeuHeroShuffle({ tracks, playableCount }: SpeuHeroShuffleProps)
           viewBox="0 0 100 100"
           aria-hidden
         >
-          {DASHED_GROOVES.map(({ r, dasharray, dashoffset, opacity, strokeWidth }, i) => (
+          {TREE_RING_CIRCLES.map(({ r, dasharray, dashoffset, opacity, strokeWidth }, i) => (
             <circle
               key={i}
               cx={50}
@@ -149,10 +143,9 @@ export function SpeuHeroShuffle({ tracks, playableCount }: SpeuHeroShuffleProps)
         whileHover={{ scale: playableCount ? 1.04 : 1 }}
         whileTap={{ scale: playableCount ? 0.97 : 1 }}
         className={cn(
-          "group relative z-10 flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-full shadow-lg sm:size-28",
+          "group relative z-10 flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-primary-foreground shadow-lg sm:size-28",
           "border border-primary/25 disabled:cursor-not-allowed disabled:opacity-40",
-          "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary/50",
-          !showCover && "bg-primary text-primary-foreground"
+          "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary/50"
         )}
         aria-label={
           playableCount === 0
@@ -166,8 +159,8 @@ export function SpeuHeroShuffle({ tracks, playableCount }: SpeuHeroShuffleProps)
           {showCover && track?.coverUrl ? (
             <motion.div
               key={track.id}
-              className="absolute inset-0"
-              initial={reduceMotion ? false : { opacity: 0, scale: 0.92 }}
+              className="absolute inset-0 bg-primary"
+              initial={reduceMotion ? false : { opacity: 1, scale: 0.94 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={reduceMotion ? undefined : { opacity: 0, scale: 0.96 }}
               transition={labelMotionReduced}

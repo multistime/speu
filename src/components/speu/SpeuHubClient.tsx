@@ -37,7 +37,7 @@ export function SpeuHubClient({ playable, artists }: SpeuHubClientProps) {
             Спеў
           </h1>
           <p className="text-muted-foreground max-w-xl mx-auto text-sm leading-relaxed">
-            Каталог лейбла: слухайце ўсе апублікаваныя трэкі, адкрывайце артыстаў, альбомы і асобныя кампазіцыі.
+            Слухайце трэкі, адкрывайце артыстаў, альбомы і асобныя кампазіцыі.
           </p>
         </motion.div>
 
@@ -51,7 +51,7 @@ export function SpeuHubClient({ playable, artists }: SpeuHubClientProps) {
             </h2>
             <Link
               href="/speu/top-100"
-              className="text-sm font-medium text-primary hover:underline shrink-0 text-right"
+              className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors shrink-0 text-right"
             >
               Папулярнае
             </Link>
