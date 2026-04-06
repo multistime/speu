@@ -8,14 +8,45 @@ import { cn } from "@/lib/utils";
 
 const SPIN_DURATION_SEC = 44;
 
-const GROOVE_RINGS: { sizePct: number; borderClass: string }[] = [
-  { sizePct: 100, borderClass: "border-primary/22" },
-  { sizePct: 92, borderClass: "border-primary/17" },
-  { sizePct: 84, borderClass: "border-primary/14" },
-  { sizePct: 76, borderClass: "border-primary/11" },
-  { sizePct: 68, borderClass: "border-primary/9" },
-  { sizePct: 60, borderClass: "border-primary/7" },
-];
+const GROOVE_VIEW = { cx: 50, cy: 50, maxR: 49.15 };
+
+/** Лёгкая неровнасьць кола — як прэсавая пласцінка, а не ідэальны вектар */
+function wavyGroovePath(
+  sizePct: number,
+  waveCount: number,
+  amplitude: number,
+  phase: number,
+  segments = 100
+): string {
+  const baseR = (sizePct / 100) * GROOVE_VIEW.maxR;
+  const { cx, cy } = GROOVE_VIEW;
+  const pts: [number, number][] = [];
+  for (let i = 0; i <= segments; i++) {
+    const t = (i / segments) * Math.PI * 2;
+    const wobble = amplitude * Math.sin(waveCount * t + phase);
+    const r = baseR + wobble;
+    pts.push([cx + r * Math.cos(t), cy + r * Math.sin(t)]);
+  }
+  let d = `M ${pts[0][0].toFixed(3)} ${pts[0][1].toFixed(3)}`;
+  for (let i = 1; i < pts.length; i++) {
+    d += ` L ${pts[i][0].toFixed(3)} ${pts[i][1].toFixed(3)}`;
+  }
+  return `${d} Z`;
+}
+
+const GROOVE_SPECS = [
+  { sizePct: 100, waveCount: 6, amplitude: 0.42, phase: 0.2, opacity: 0.22 },
+  { sizePct: 92, waveCount: 7, amplitude: 0.36, phase: 1.4, opacity: 0.17 },
+  { sizePct: 84, waveCount: 5, amplitude: 0.4, phase: 2.7, opacity: 0.14 },
+  { sizePct: 76, waveCount: 8, amplitude: 0.3, phase: 0.9, opacity: 0.11 },
+  { sizePct: 68, waveCount: 6, amplitude: 0.34, phase: 3.1, opacity: 0.09 },
+  { sizePct: 60, waveCount: 7, amplitude: 0.28, phase: 2.2, opacity: 0.07 },
+] as const;
+
+const WAVY_GROOVES = GROOVE_SPECS.map(({ sizePct, waveCount, amplitude, phase, opacity }) => ({
+  d: wavyGroovePath(sizePct, waveCount, amplitude, phase),
+  opacity,
+}));
 
 type SpeuHeroShuffleProps = {
   tracks: PlayerTrack[];
@@ -50,21 +81,25 @@ export function SpeuHeroShuffle({ tracks, playableCount }: SpeuHeroShuffleProps)
 
   const discInner = (
     <>
-      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-        {GROOVE_RINGS.map(({ sizePct, borderClass }, i) => (
-          <div
+      <svg
+        className="pointer-events-none absolute inset-0 size-full text-primary"
+        viewBox="0 0 100 100"
+        aria-hidden
+      >
+        {WAVY_GROOVES.map(({ d, opacity }, i) => (
+          <path
             key={i}
-            className={cn("absolute rounded-full border", borderClass)}
-            style={{
-              width: `${sizePct}%`,
-              height: `${sizePct}%`,
-              left: "50%",
-              top: "50%",
-              transform: "translate(-50%, -50%)",
-            }}
+            d={d}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={0.38}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            vectorEffect="non-scaling-stroke"
+            style={{ opacity }}
           />
         ))}
-      </div>
+      </svg>
 
       <motion.button
         type="button"
@@ -73,10 +108,10 @@ export function SpeuHeroShuffle({ tracks, playableCount }: SpeuHeroShuffleProps)
         whileHover={{ scale: playableCount ? 1.04 : 1 }}
         whileTap={{ scale: playableCount ? 0.97 : 1 }}
         className={cn(
-          "relative z-10 flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-full shadow-lg sm:size-28",
+          "group relative z-10 flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-full shadow-lg sm:size-28",
           "border border-primary/25 disabled:cursor-not-allowed disabled:opacity-40",
           "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary/50",
-          !showCover && "bg-primary text-primary-foreground"
+          !showCover && !(heroActive && isPlaying) && "bg-primary text-primary-foreground"
         )}
         aria-label={
           playableCount === 0
@@ -102,7 +137,18 @@ export function SpeuHeroShuffle({ tracks, playableCount }: SpeuHeroShuffleProps)
           ) : (
             <motion.div
               key="label-solid"
-              className="absolute inset-0 bg-primary"
+              className={cn(
+                "absolute inset-0",
+                !(heroActive && isPlaying) && "bg-primary"
+              )}
+              style={
+                heroActive && isPlaying
+                  ? {
+                      background:
+                        "conic-gradient(from 28deg, var(--primary), color-mix(in srgb, var(--primary) 68%, white) 18%, var(--primary) 38%, color-mix(in srgb, var(--primary) 72%, var(--primary-foreground)) 62%, var(--primary) 82%, color-mix(in srgb, var(--primary) 65%, white))",
+                    }
+                  : undefined
+              }
               initial={reduceMotion ? false : { opacity: 0, scale: 0.94 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={reduceMotion ? undefined : { opacity: 0, scale: 0.98 }}
@@ -119,14 +165,38 @@ export function SpeuHeroShuffle({ tracks, playableCount }: SpeuHeroShuffleProps)
         )}
 
         <motion.span
-          className="relative z-10 flex items-center justify-center text-primary-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]"
+          className="relative z-10 flex size-10 items-center justify-center sm:size-11"
           animate={spinning ? { rotate: -360 } : { rotate: 0 }}
           transition={spinTransition}
         >
           {heroActive && isPlaying ? (
-            <Pause className="size-10 sm:size-11" fill="currentColor" strokeWidth={0} />
+            <>
+              <span
+                className={cn(
+                  "pointer-events-none absolute rounded-full shadow-md ring-1 ring-black/25",
+                  "size-2 bg-zinc-900 sm:size-2.5",
+                  "opacity-100 transition-opacity duration-200 ease-out",
+                  "group-hover:opacity-0 group-focus-visible:opacity-0"
+                )}
+                aria-hidden
+              />
+              <Pause
+                className={cn(
+                  "size-8 text-primary-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)] sm:size-9",
+                  "opacity-0 transition-opacity duration-200 ease-out",
+                  "group-hover:opacity-100 group-focus-visible:opacity-100"
+                )}
+                fill="currentColor"
+                strokeWidth={0}
+                aria-hidden
+              />
+            </>
           ) : (
-            <Play className="ml-1 size-10 sm:size-11" fill="currentColor" strokeWidth={0} />
+            <Play
+              className="ml-1 size-10 text-primary-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)] sm:size-11"
+              fill="currentColor"
+              strokeWidth={0}
+            />
           )}
         </motion.span>
       </motion.button>
