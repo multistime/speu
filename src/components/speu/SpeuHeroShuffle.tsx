@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type SyntheticEvent } from "react";
+import { useId, useState, type SyntheticEvent } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Pause, Play } from "lucide-react";
 import { usePlayer } from "@/contexts/PlayerContext";
@@ -84,6 +84,7 @@ type SpeuHeroShuffleProps = {
 };
 
 export function SpeuHeroShuffle({ tracks, playableCount }: SpeuHeroShuffleProps) {
+  const labelArcId = useId().replace(/:/g, "");
   const { startNonStopShuffle, nonStopActive, isPlaying, track, togglePlay } = usePlayer();
   const reduceMotion = useReducedMotion();
   const heroActive = nonStopActive && track && tracks.some((t) => t.id === track.id);
@@ -180,12 +181,30 @@ export function SpeuHeroShuffle({ tracks, playableCount }: SpeuHeroShuffleProps)
               exit={reduceMotion ? undefined : { opacity: 0, scale: 0.98 }}
               transition={labelMotionReduced}
             >
-              <span
-                className="pointer-events-none absolute inset-x-1 top-[10%] text-center font-display text-[0.68rem] font-semibold italic leading-none tracking-[0.16em] text-primary-foreground/95 sm:top-[9%] sm:text-[0.78rem]"
+              <svg
+                className="pointer-events-none absolute inset-0 size-full"
+                viewBox="0 0 100 100"
                 aria-hidden
               >
-                Speǔ
-              </span>
+                <defs>
+                  <path
+                    id={labelArcId}
+                    d="M 20 51 A 30 30 0 0 0 80 51"
+                    fill="none"
+                  />
+                </defs>
+                <text
+                  className="font-display font-semibold italic"
+                  fill="currentColor"
+                  fillOpacity={0.95}
+                  fontSize={11}
+                  letterSpacing="0.16em"
+                >
+                  <textPath href={`#${labelArcId}`} startOffset="50%" textAnchor="middle">
+                    Speǔ
+                  </textPath>
+                </text>
+              </svg>
             </motion.div>
           )}
         </AnimatePresence>
