@@ -29,6 +29,8 @@ export type ReleaseSubmissionTrackRow = {
   title: string;
   audio_url: string | null;
   audio_storage_path: string | null;
+  /** Даўжыня аўдыё ў с, з файла пры загрузцы ў кабінеце */
+  duration_sec: number | null;
   notes: string | null;
   lyrics: string | null;
   /** Set after moderator approval — catalog `artist_tracks.id` (unpublished draft). */

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Music } from "lucide-react";
 import { SpeuTrackRow } from "@/components/speu/SpeuTrackRow";
 import { fetchSpeuUserLikedTracks } from "@/lib/speu/catalog.server";
+import { speuPublicTrackToPlayerTrack } from "@/lib/speu/player-map";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function SpeuLikedPage() {
@@ -11,6 +12,7 @@ export default async function SpeuLikedPage() {
   } = await supabase.auth.getUser();
 
   const liked = user ? await fetchSpeuUserLikedTracks(null) : [];
+  const likedPlaylist = liked.map(speuPublicTrackToPlayerTrack);
 
   return (
     <div className="min-h-screen pt-20 pb-24 px-4 sm:px-6 lg:px-8">
@@ -41,7 +43,7 @@ export default async function SpeuLikedPage() {
         ) : (
           <div className="space-y-0.5 rounded-xl border border-border/60 bg-card/30 p-2 sm:p-3">
             {liked.map((t, i) => (
-              <SpeuTrackRow key={t.id} track={t} index={i} showCover />
+              <SpeuTrackRow key={t.id} track={t} index={i} showCover playlist={likedPlaylist} />
             ))}
           </div>
         )}

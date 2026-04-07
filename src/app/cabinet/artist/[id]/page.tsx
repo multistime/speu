@@ -14,6 +14,8 @@ import {
   type ReleaseSubmissionRow,
   type ReleaseSubmissionTrackRow,
 } from "@/lib/speu/release-submissions";
+import { getAudioDurationSecFromFile } from "@/lib/speu/audio-duration";
+import { formatTrackDuration } from "@/components/speu/speu-format-duration";
 import { cn } from "@/lib/utils";
 
 export default function ArtistSubmissionPage() {
@@ -75,7 +77,7 @@ export default function ArtistSubmissionPage() {
       .schema("speu")
       .from("release_submission_tracks")
       .select(
-        "id, submission_id, sort_order, title, audio_url, audio_storage_path, notes, lyrics, artist_track_id, created_at, updated_at",
+        "id, submission_id, sort_order, title, audio_url, audio_storage_path, duration_sec, notes, lyrics, artist_track_id, created_at, updated_at",
       )
       .eq("submission_id", id)
       .order("sort_order", { ascending: true });
@@ -108,12 +110,31 @@ export default function ArtistSubmissionPage() {
     setSaving(true);
     setError(null);
     try {
+      let trackRows = tracks;
+      const fillRes = await fetch(
+        `/api/artist/release-submissions/${submission.id}/fill-track-durations`,
+        { method: "POST" },
+      );
+      if (fillRes.ok) {
+        const payload = (await fillRes.json()) as {
+          resolved?: { id: string; duration_sec: number }[];
+        };
+        const resolved = payload.resolved ?? [];
+        if (resolved.length > 0) {
+          trackRows = tracks.map((t) => {
+            const r = resolved.find((x) => x.id === t.id);
+            return r ? { ...t, duration_sec: r.duration_sec } : t;
+          });
+          setTracks(trackRows);
+        }
+      }
+
       await persistSubmission({
         title: title.trim() || "Без назвы",
         release_kind: releaseKind,
         artist_note: artistNote.trim() || null,
       });
-      for (const t of tracks) {
+      for (const t of trackRows) {
         const { error: e } = await supabase
           .schema("speu")
           .from("release_submission_tracks")
@@ -123,6 +144,7 @@ export default function ArtistSubmissionPage() {
             lyrics: t.lyrics?.trim() || null,
             audio_url: t.audio_url,
             audio_storage_path: t.audio_storage_path,
+            duration_sec: t.duration_sec ?? null,
           })
           .eq("id", t.id);
         if (e) throw new Error(e.message);
@@ -142,6 +164,7 @@ export default function ArtistSubmissionPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     setError(null);
+    const durationSec = await getAudioDurationSecFromFile(file);
     const ext = file.name.split(".").pop()?.toLowerCase() || "mp3";
     const path = `submission-drafts/${user.id}/${submission.id}/${crypto.randomUUID()}.${ext}`;
     const { error: upErr } = await supabase.storage.from("speu-audio").upload(path, file, {
@@ -156,7 +179,12 @@ export default function ArtistSubmissionPage() {
     setTracks((prev) =>
       prev.map((x) =>
         x.id === track.id
-          ? { ...x, audio_url: pub.publicUrl, audio_storage_path: path }
+          ? {
+              ...x,
+              audio_url: pub.publicUrl,
+              audio_storage_path: path,
+              duration_sec: durationSec,
+            }
           : x,
       ),
     );
@@ -194,7 +222,7 @@ export default function ArtistSubmissionPage() {
       .from("release_submission_tracks")
       .insert({ submission_id: submission.id, sort_order: nextOrder, title: "" })
       .select(
-        "id, submission_id, sort_order, title, audio_url, audio_storage_path, notes, lyrics, artist_track_id, created_at, updated_at",
+        "id, submission_id, sort_order, title, audio_url, audio_storage_path, duration_sec, notes, lyrics, artist_track_id, created_at, updated_at",
       )
       .single();
     if (insErr || !data) {
@@ -440,7 +468,14 @@ export default function ArtistSubmissionPage() {
                 <div>
                   <label className="block text-xs text-muted-foreground mb-1">Аўдыё</label>
                   {t.audio_url ? (
-                    <audio src={t.audio_url} controls className="w-full h-9 mt-1" />
+                    <div className="space-y-1">
+                      <audio src={t.audio_url} controls className="w-full h-9 mt-1" />
+                      {t.duration_sec != null && t.duration_sec > 0 ? (
+                        <p className="text-xs text-muted-foreground font-mono tabular-nums">
+                          Даўжыня: {formatTrackDuration(t.duration_sec)}
+                        </p>
+                      ) : null}
+                    </div>
                   ) : (
                     <p className="text-xs text-muted-foreground">Файл не загружаны</p>
                   )}

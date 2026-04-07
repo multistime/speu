@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useMemo } from "react";
 import { Music } from "lucide-react";
 import type { SpeuHubArtistCard, SpeuPublicTrack } from "@/lib/speu/types";
 import { speuPublicTrackToPlayerTrack } from "@/lib/speu/player-map";
@@ -19,7 +20,15 @@ type SpeuHubClientProps = {
 
 export function SpeuHubClient({ playable, artists, likedPreview }: SpeuHubClientProps) {
   const playerTracks = playable.map(speuPublicTrackToPlayerTrack);
-  const chartPreview = playable.slice(0, 10);
+  const chartPreview = useMemo(() => playable.slice(0, 10), [playable]);
+  const chartPlaylist = useMemo(
+    () => chartPreview.map(speuPublicTrackToPlayerTrack),
+    [chartPreview]
+  );
+  const likedPlaylist = useMemo(
+    () => likedPreview.map(speuPublicTrackToPlayerTrack),
+    [likedPreview]
+  );
   const leftCol = chartPreview.filter((_, i) => i % 2 === 0);
   const rightCol = chartPreview.filter((_, i) => i % 2 === 1);
 
@@ -68,18 +77,36 @@ export function SpeuHubClient({ playable, artists, likedPreview }: SpeuHubClient
             <>
               <div className="space-y-0.5 md:hidden">
                 {chartPreview.map((t, i) => (
-                  <SpeuTrackRow key={t.id} track={t} index={i} showCover />
+                  <SpeuTrackRow
+                    key={t.id}
+                    track={t}
+                    index={i}
+                    showCover
+                    playlist={chartPlaylist}
+                  />
                 ))}
               </div>
               <div className="hidden md:grid md:grid-cols-2 gap-8 md:gap-12">
                 <div className="space-y-0.5">
                   {leftCol.map((t, i) => (
-                    <SpeuTrackRow key={t.id} track={t} index={i * 2} showCover />
+                    <SpeuTrackRow
+                      key={t.id}
+                      track={t}
+                      index={i * 2}
+                      showCover
+                      playlist={chartPlaylist}
+                    />
                   ))}
                 </div>
                 <div className="space-y-0.5">
                   {rightCol.map((t, i) => (
-                    <SpeuTrackRow key={t.id} track={t} index={i * 2 + 1} showCover />
+                    <SpeuTrackRow
+                      key={t.id}
+                      track={t}
+                      index={i * 2 + 1}
+                      showCover
+                      playlist={chartPlaylist}
+                    />
                   ))}
                 </div>
               </div>
@@ -103,7 +130,13 @@ export function SpeuHubClient({ playable, artists, likedPreview }: SpeuHubClient
             </div>
             <div className="space-y-0.5 md:hidden">
               {likedPreview.map((t, i) => (
-                <SpeuTrackRow key={t.id} track={t} index={i} showCover />
+                <SpeuTrackRow
+                  key={t.id}
+                  track={t}
+                  index={i}
+                  showCover
+                  playlist={likedPlaylist}
+                />
               ))}
             </div>
             <div className="hidden md:grid md:grid-cols-2 gap-8 md:gap-12">
@@ -111,14 +144,26 @@ export function SpeuHubClient({ playable, artists, likedPreview }: SpeuHubClient
                 {likedPreview
                   .filter((_, i) => i % 2 === 0)
                   .map((t, i) => (
-                    <SpeuTrackRow key={t.id} track={t} index={i * 2} showCover />
+                    <SpeuTrackRow
+                      key={t.id}
+                      track={t}
+                      index={i * 2}
+                      showCover
+                      playlist={likedPlaylist}
+                    />
                   ))}
               </div>
               <div className="space-y-0.5">
                 {likedPreview
                   .filter((_, i) => i % 2 === 1)
                   .map((t, i) => (
-                    <SpeuTrackRow key={t.id} track={t} index={i * 2 + 1} showCover />
+                    <SpeuTrackRow
+                      key={t.id}
+                      track={t}
+                      index={i * 2 + 1}
+                      showCover
+                      playlist={likedPlaylist}
+                    />
                   ))}
               </div>
             </div>

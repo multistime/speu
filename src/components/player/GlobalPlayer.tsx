@@ -222,7 +222,7 @@ export function GlobalPlayer() {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 100, opacity: 0 }}
           transition={{ type: "spring", damping: 28, stiffness: 280 }}
-          className="group/player fixed bottom-0 inset-x-0 z-50 overflow-visible bg-background/95 backdrop-blur-md border-t border-border/40"
+          className="group/player fixed bottom-0 inset-x-0 z-50 overflow-visible bg-background/95 backdrop-blur-md border-t border-border/40 pt-3"
           style={
             track.accentRgb
               ? { boxShadow: `0 -4px 40px rgba(${track.accentRgb}, 0.08)` }
@@ -231,8 +231,8 @@ export function GlobalPlayer() {
         >
           <GlobalPlayerProgress track={track} />
 
-          <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 sm:py-3 grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,min-content)] gap-y-2.5 gap-x-3 sm:gap-x-4 items-center">
-            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 order-1 sm:order-none">
+          <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 sm:py-3 flex flex-row items-center gap-2 sm:gap-4 min-h-[3.25rem]">
+            <div className="flex min-w-0 flex-1 items-center gap-2.5 sm:gap-3">
               <div
                 className="w-10 h-10 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden"
                 style={{
@@ -292,7 +292,7 @@ export function GlobalPlayer() {
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center justify-center gap-0.5 sm:gap-1 order-2 sm:order-none px-1">
+            <div className="flex shrink-0 items-center justify-center gap-0.5 sm:gap-1 px-0.5 sm:px-1">
               <button
                 type="button"
                 onClick={toggleShuffle}
@@ -353,15 +353,6 @@ export function GlobalPlayer() {
                 <SkipForward className="w-4 h-4" strokeWidth={2} />
               </button>
 
-              {track.trackHref?.startsWith("/speu/tracks/") ? (
-                <TrackLikeButton
-                  trackId={track.id}
-                  size="sm"
-                  accentColor={track.accentColor ?? null}
-                  className="border-border/60 w-9 h-9 rounded-full flex items-center justify-center !p-0 hover:bg-muted/50"
-                />
-              ) : null}
-
               <button
                 type="button"
                 onClick={cycleRepeatMode}
@@ -380,59 +371,58 @@ export function GlobalPlayer() {
                   <Repeat className="w-4 h-4" strokeWidth={2} />
                 )}
               </button>
+
+              <span className="inline-flex size-9 shrink-0 items-center justify-center">
+                {track.trackHref?.startsWith("/speu/tracks/") ? (
+                  <TrackLikeButton
+                    trackId={track.id}
+                    size="sm"
+                    accentColor={track.accentColor ?? null}
+                    className="border-border/60 size-9 rounded-full flex items-center justify-center !p-0 hover:bg-muted/50"
+                  />
+                ) : null}
+              </span>
             </div>
 
-            <div className="flex flex-row flex-wrap items-center justify-center gap-x-4 gap-y-2 sm:justify-end order-3 sm:order-none sm:col-start-3">
-              {(isPlaying || canSeek) && (
-                <div
-                  className={cn(
-                    "flex items-end gap-2 shrink-0 order-first sm:order-none",
-                    "sm:pl-4 sm:ml-1 sm:border-l sm:border-border/50",
-                    "sm:mr-3"
-                  )}
-                >
-                  {isPlaying && (
-                    <span
-                      className="inline-flex items-end gap-0.5 h-4 shrink-0"
-                      aria-hidden
-                    >
-                      {[1, 2, 3].map((i) => (
-                        <motion.span
-                          key={i}
-                          className="w-0.5 rounded-full"
-                          style={{ background: track.accentColor ?? "var(--primary)" }}
-                          animate={{ height: ["35%", "100%", "45%", "85%", "35%"] }}
-                          transition={{
-                            duration: 0.75,
-                            repeat: Infinity,
-                            delay: i * 0.12,
-                            ease: "easeInOut",
-                          }}
-                        />
-                      ))}
-                    </span>
-                  )}
-                  {canSeek ? (
-                    <span
-                      className="font-mono text-[10px] sm:text-[11px] tracking-tight text-muted-foreground/90 tabular-nums whitespace-nowrap pb-0.5 sm:pb-0"
-                      aria-live="polite"
-                    >
-                      {formatPlayerTime(currentTime)} / {formatPlayerTime(duration)}
-                    </span>
-                  ) : null}
-                </div>
-              )}
+            <div className="flex min-w-0 flex-1 items-center justify-end gap-2 sm:gap-3">
+              <span
+                className="font-mono text-[10px] sm:text-[11px] tracking-tight text-muted-foreground/90 tabular-nums whitespace-nowrap shrink-0 min-w-[7.25rem] text-right sm:min-w-[7.75rem]"
+                aria-live="polite"
+              >
+                {formatPlayerTime(currentTime)} /{" "}
+                {duration > 0 ? formatPlayerTime(duration) : "—:—"}
+              </span>
 
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={stop}
-                  aria-label="Спыніць"
-                  className="w-9 h-9 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 flex items-center justify-center transition-colors shrink-0"
+              {isPlaying ? (
+                <span
+                  className="inline-flex h-4 shrink-0 items-end gap-0.5"
+                  aria-hidden
                 >
-                  <X className="w-3.5 h-3.5" strokeWidth={2} />
-                </button>
-              </div>
+                  {[1, 2, 3].map((i) => (
+                    <motion.span
+                      key={i}
+                      className="w-0.5 rounded-full"
+                      style={{ background: track.accentColor ?? "var(--primary)" }}
+                      animate={{ height: ["35%", "100%", "45%", "85%", "35%"] }}
+                      transition={{
+                        duration: 0.75,
+                        repeat: Infinity,
+                        delay: i * 0.12,
+                        ease: "easeInOut",
+                      }}
+                    />
+                  ))}
+                </span>
+              ) : null}
+
+              <button
+                type="button"
+                onClick={stop}
+                aria-label="Спыніць"
+                className="w-9 h-9 shrink-0 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 flex items-center justify-center transition-colors"
+              >
+                <X className="w-3.5 h-3.5" strokeWidth={2} />
+              </button>
             </div>
           </div>
         </motion.div>

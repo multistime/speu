@@ -4,6 +4,7 @@ import { Suspense, useCallback, useEffect, useState, type ReactNode } from "reac
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Trash2 } from "lucide-react";
+import { formatTrackDuration } from "@/components/speu/speu-format-duration";
 import {
   RELEASE_KIND_LABELS,
   RELEASE_STATUS_LABELS,
@@ -61,6 +62,7 @@ type ReleaseSubmissionAdminItem = {
     title: string;
     sort_order: number;
     audio_url: string | null;
+    duration_sec: number | null;
     notes: string | null;
     artist_track_id: string | null;
   }>;
@@ -371,6 +373,11 @@ function LabelSubmissionsPanel() {
                           >
                             аўдыё
                           </a>
+                        ) : null}
+                        {t.duration_sec != null && t.duration_sec > 0 ? (
+                          <span className="ml-2 text-xs font-mono text-muted-foreground tabular-nums">
+                            {formatTrackDuration(t.duration_sec)}
+                          </span>
                         ) : null}
                         {t.artist_track_id ? (
                           <span className="ml-2 text-xs text-muted-foreground">

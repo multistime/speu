@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { adminSongPayloadSchema } from "@/lib/admin/api-schemas";
 import { requireAdminApi } from "@/lib/auth/admin";
 import { writeAdminAuditLog } from "@/lib/supabase/admin-repos/audit";
+import { resolveDurationSecFromAudioUrl } from "@/lib/speu/audio-duration-from-url.server";
 import { allocateUniqueSlug } from "@/lib/speu/slug-db.server";
 
 export async function GET() {
@@ -119,6 +120,13 @@ export async function POST(request: Request) {
     parsed.data.slug ?? null
   );
 
+  let durationSec = parsed.data.durationSec ?? null;
+  const audioUrlTrim = (parsed.data.audioUrl ?? "").trim() || null;
+  if (durationSec == null && audioUrlTrim) {
+    const resolved = await resolveDurationSecFromAudioUrl(audioUrlTrim);
+    if (resolved != null) durationSec = resolved;
+  }
+
   const row: Record<string, unknown> = {
     artist_id: primaryArtistId,
     album_id: albumId ?? null,
@@ -127,7 +135,7 @@ export async function POST(request: Request) {
     audio_url: parsed.data.audioUrl ?? null,
     external_url: parsed.data.externalUrl ?? null,
     cover_url: parsed.data.coverUrl ?? null,
-    duration_sec: parsed.data.durationSec ?? null,
+    duration_sec: durationSec,
     track_number: parsed.data.trackNumber ?? null,
     sort_order: parsed.data.sortOrder,
     is_published: parsed.data.isPublished,

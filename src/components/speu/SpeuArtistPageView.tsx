@@ -8,6 +8,7 @@ import { ArtistPattern } from "@/components/artists/artist-pattern";
 import { SpeuInlineNavLink } from "@/components/speu/SpeuInlineNavLink";
 import type { SpeuArtistAlbum, SpeuArtistPageData } from "@/lib/speu/types";
 import { SpeuTrackRow } from "@/components/speu/SpeuTrackRow";
+import { speuPublicTrackToPlayerTrack } from "@/lib/speu/player-map";
 import {
   SpeuInstagramIcon,
   SpeuSpotifyIcon,
@@ -291,6 +292,11 @@ export function SpeuArtistPageView({ data }: { data: SpeuArtistPageData }) {
 
   const previewTracks = data.tracks.slice(0, previewLimit);
 
+  const artistPlaylist = useMemo(
+    () => data.tracks.map(speuPublicTrackToPlayerTrack),
+    [data.tracks]
+  );
+
   return (
     <>
       {/* Мабільны: адна калонка ў стылі старонкі альбома */}
@@ -307,7 +313,9 @@ export function SpeuArtistPageView({ data }: { data: SpeuArtistPageData }) {
                 Няма апублікаваных трэкаў з гэтым артыстам.
               </div>
             ) : (
-              data.tracks.map((t, i) => <SpeuTrackRow key={t.id} track={t} index={i} showCover />)
+              data.tracks.map((t, i) => (
+                <SpeuTrackRow key={t.id} track={t} index={i} showCover playlist={artistPlaylist} />
+              ))
             )}
           </div>
 
@@ -344,7 +352,13 @@ export function SpeuArtistPageView({ data }: { data: SpeuArtistPageData }) {
                   ) : (
                     <div className="space-y-0.5">
                       {previewTracks.map((t, i) => (
-                        <SpeuTrackRow key={t.id} track={t} index={i} showCover />
+                        <SpeuTrackRow
+                          key={t.id}
+                          track={t}
+                          index={i}
+                          showCover
+                          playlist={artistPlaylist}
+                        />
                       ))}
                     </div>
                   )}

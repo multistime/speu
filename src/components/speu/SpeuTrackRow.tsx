@@ -48,7 +48,7 @@ function SpeuTrackRowMobileMenu({ track }: { track: SpeuPublicTrack }) {
 
   return (
     <div
-      className="md:hidden shrink-0"
+      className="relative z-[2] shrink-0 md:hidden"
       onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
@@ -132,11 +132,25 @@ export function SpeuTrackRow({
       togglePlay(playerTrack);
     }
   };
-  const playKeyDown = (e: React.KeyboardEvent) => {
+
+  const mobilePlayKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       playActivate();
     }
+  };
+
+  const desktopPlayHit = (e: React.MouseEvent | React.KeyboardEvent) => {
+    if (typeof window === "undefined" || !window.matchMedia("(min-width: 768px)").matches) {
+      return;
+    }
+    if ("key" in e) {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      e.preventDefault();
+    } else {
+      e.stopPropagation();
+    }
+    playActivate();
   };
 
   return (
@@ -148,120 +162,147 @@ export function SpeuTrackRow({
       )}
       style={active ? { background: `rgba(${accentRgb}, 0.08)` } : undefined}
     >
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={playActivate}
-        onKeyDown={playKeyDown}
-        className={cn(
-          "flex flex-1 min-w-0 items-center gap-2 sm:gap-2.5 md:gap-3 cursor-pointer rounded-md outline-none",
-          "focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-        )}
-      >
-        <span className="shrink-0 min-w-[2.25rem] sm:min-w-[2.5rem] md:min-w-[3rem] pr-1 sm:pr-2 text-right font-mono tabular-nums text-xs text-muted-foreground/40">
-          {index + 1}
-        </span>
+      <div className="relative z-[1] flex min-w-0 flex-1 items-center gap-2 sm:gap-2.5 md:gap-3">
+        <button
+          type="button"
+          aria-label={playing ? "Паўза" : "Прайграць"}
+          onClick={playActivate}
+          onKeyDown={mobilePlayKeyDown}
+          className={cn(
+            "absolute inset-0 z-0 rounded-lg border-0 bg-transparent p-0 outline-none",
+            "focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+            "md:hidden"
+          )}
+        />
 
-        {showCover && (
-          <div
-            className="size-10 rounded-md overflow-hidden shrink-0 border border-border/60 bg-muted"
-            style={
-              !track.coverUrl
-                ? {
-                    background: `linear-gradient(160deg, ${track.accentColor}33 0%, transparent 100%)`,
-                  }
-                : undefined
-            }
-          >
-            {track.coverUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={track.coverUrl} alt="" className="size-full object-cover" />
-            ) : (
-              <div className="size-full flex items-center justify-center">
-                <Music className="size-4 opacity-40" style={{ color: accentColor }} strokeWidth={1.5} />
-              </div>
+        <div className="relative z-[1] flex min-w-0 flex-1 items-center gap-2 sm:gap-2.5 md:gap-3 max-md:pointer-events-none md:pointer-events-auto">
+          <span className="shrink-0 min-w-[2.25rem] pr-1 text-right font-mono tabular-nums text-xs text-muted-foreground/40 sm:min-w-[2.5rem] sm:pr-2 md:hidden">
+            {index + 1}
+          </span>
+          <span
+            role="button"
+            tabIndex={0}
+            onClick={desktopPlayHit}
+            onKeyDown={desktopPlayHit}
+            className={cn(
+              "hidden min-w-[2.25rem] shrink-0 cursor-pointer rounded-md pr-1 text-right font-mono tabular-nums text-xs text-muted-foreground/40 outline-none sm:min-w-[2.5rem] md:min-w-[3rem] sm:pr-2 md:inline-flex md:items-center md:justify-end",
+              "focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             )}
-          </div>
-        )}
+          >
+            {index + 1}
+          </span>
 
-        <div className="shrink-0 w-4 flex items-center justify-center relative">
-          {playing ? (
-            <Pause
-              className="h-3.5 w-3.5"
-              style={{ color: accentColor }}
-              fill="currentColor"
-              strokeWidth={0}
-            />
-          ) : (
-            <>
-              <Music
-                className="h-3 w-3 text-muted-foreground/40 group-hover/track:opacity-0 transition-opacity"
-                strokeWidth={1.5}
-              />
-              <Play
-                className="h-3.5 w-3.5 absolute opacity-0 group-hover/track:opacity-100 transition-opacity"
+          {showCover && (
+            <div
+              role="presentation"
+              onClick={desktopPlayHit}
+              className="size-10 shrink-0 cursor-default overflow-hidden rounded-md border border-border/60 bg-muted md:cursor-pointer"
+              style={
+                !track.coverUrl
+                  ? {
+                      background: `linear-gradient(160deg, ${track.accentColor}33 0%, transparent 100%)`,
+                    }
+                  : undefined
+              }
+            >
+              {track.coverUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={track.coverUrl} alt="" className="size-full object-cover" />
+              ) : (
+                <div className="flex size-full items-center justify-center">
+                  <Music className="size-4 opacity-40" style={{ color: accentColor }} strokeWidth={1.5} />
+                </div>
+              )}
+            </div>
+          )}
+
+          <div
+            role="presentation"
+            onClick={desktopPlayHit}
+            className="relative flex w-4 shrink-0 cursor-default items-center justify-center md:cursor-pointer"
+          >
+            {playing ? (
+              <Pause
+                className="h-3.5 w-3.5"
                 style={{ color: accentColor }}
                 fill="currentColor"
                 strokeWidth={0}
               />
-            </>
+            ) : (
+              <>
+                <Music
+                  className="h-3 w-3 text-muted-foreground/40 transition-opacity group-hover/track:opacity-0"
+                  strokeWidth={1.5}
+                />
+                <Play
+                  className="absolute h-3.5 w-3.5 opacity-0 transition-opacity group-hover/track:opacity-100"
+                  style={{ color: accentColor }}
+                  fill="currentColor"
+                  strokeWidth={0}
+                />
+              </>
+            )}
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <Link
+              href={`/speu/tracks/${track.slug}`}
+              className={cn(
+                "hidden w-full min-w-0 max-w-full truncate text-sm hover:underline md:block",
+                active ? "font-medium" : "text-foreground/80"
+              )}
+              style={active ? { color: accentColor } : undefined}
+            >
+              {track.title}
+            </Link>
+            <span
+              className={cn(
+                "block w-full min-w-0 max-w-full truncate text-sm md:hidden",
+                active ? "font-medium" : "text-foreground/80"
+              )}
+              style={active ? { color: accentColor } : undefined}
+            >
+              {track.title}
+            </span>
+            <div className="mt-0.5 flex flex-wrap items-center text-xs text-muted-foreground">
+              {track.artists.map((a, i) => (
+                <span key={a.id} className="inline-flex min-w-0 items-center">
+                  {i > 0 ? <span className="text-muted-foreground/40">,&nbsp;</span> : null}
+                  <Link
+                    href={`/speu/artists/${a.slug}`}
+                    className="hidden max-w-[10rem] truncate transition-colors hover:text-foreground md:inline lg:max-w-none"
+                  >
+                    {a.name}
+                  </Link>
+                  <span className="max-w-[10rem] truncate md:hidden">{a.name}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <span
+            role="presentation"
+            onClick={desktopPlayHit}
+            className="w-10 shrink-0 cursor-default text-right font-mono text-[11px] tabular-nums text-muted-foreground/70 md:cursor-pointer"
+          >
+            {formatTrackDuration(track.durationSec)}
+          </span>
+
+          {playing && <TrackPlayingEqualizer color={accentColor} />}
+
+          {!playing && (
+            <span
+              role="presentation"
+              onClick={desktopPlayHit}
+              className="hidden shrink-0 cursor-default sm:block md:cursor-pointer"
+            >
+              <Play className="h-3 w-3 opacity-0 transition-opacity group-hover/track:opacity-60" style={{ color: accentColor }} strokeWidth={2} />
+            </span>
           )}
         </div>
-
-        <div className="flex-1 min-w-0">
-          <Link
-            href={`/speu/tracks/${track.slug}`}
-            className={cn(
-              "hidden md:block w-full min-w-0 max-w-full truncate text-sm hover:underline",
-              active ? "font-medium" : "text-foreground/80"
-            )}
-            style={active ? { color: accentColor } : undefined}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {track.title}
-          </Link>
-          <span
-            className={cn(
-              "md:hidden block w-full min-w-0 max-w-full truncate text-sm",
-              active ? "font-medium" : "text-foreground/80"
-            )}
-            style={active ? { color: accentColor } : undefined}
-          >
-            {track.title}
-          </span>
-          <div className="flex flex-wrap items-center text-xs text-muted-foreground mt-0.5">
-            {track.artists.map((a, i) => (
-              <span key={a.id} className="inline-flex min-w-0 items-center">
-                {i > 0 ? <span className="text-muted-foreground/40">,&nbsp;</span> : null}
-                <Link
-                  href={`/speu/artists/${a.slug}`}
-                  className="hidden md:inline truncate max-w-[10rem] lg:max-w-none transition-colors hover:text-foreground"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {a.name}
-                </Link>
-                <span className="md:hidden truncate max-w-[10rem]">{a.name}</span>
-              </span>
-            ))}
-          </div>
-        </div>
-
-        <span className="text-[11px] font-mono text-muted-foreground/70 shrink-0 tabular-nums w-10 text-right">
-          {formatTrackDuration(track.durationSec)}
-        </span>
-
-        {playing && <TrackPlayingEqualizer color={accentColor} />}
-
-        {!playing && (
-          <Play
-            className="h-3 w-3 opacity-0 group-hover/track:opacity-60 transition-opacity shrink-0 sm:block hidden"
-            style={{ color: accentColor }}
-            strokeWidth={2}
-          />
-        )}
       </div>
 
-      <TrackLikeButton trackId={track.id} accentColor={accentColor} />
+      <TrackLikeButton trackId={track.id} accentColor={accentColor} className="relative z-[2] shrink-0" />
       <SpeuTrackRowMobileMenu track={track} />
     </div>
   );

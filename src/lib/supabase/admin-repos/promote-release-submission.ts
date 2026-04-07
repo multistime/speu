@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { resolveDurationSecFromAudioUrl } from "@/lib/speu/audio-duration-from-url.server";
 import { allocateUniqueSlug } from "@/lib/speu/slug-db.server";
 import { writeAdminAuditLog } from "@/lib/supabase/admin-repos/audit";
 
@@ -9,6 +10,7 @@ type SubmissionTrackRow = {
   title: string;
   sort_order: number;
   audio_url: string | null;
+  duration_sec: number | null;
   lyrics: string | null;
   artist_track_id: string | null;
 };
@@ -46,6 +48,7 @@ export async function promoteApprovedReleaseSubmission(
         title,
         sort_order,
         audio_url,
+        duration_sec,
         lyrics,
         artist_track_id
       )
@@ -72,6 +75,23 @@ export async function promoteApprovedReleaseSubmission(
     const titleRaw = st.title?.trim() || row.title?.trim() || "Без назвы";
     const slug = await allocateUniqueSlug(adminDb, "artist_tracks", titleRaw);
 
+    let durationSec: number | null =
+      st.duration_sec != null && Number.isFinite(st.duration_sec) && st.duration_sec > 0
+        ? Math.round(st.duration_sec)
+        : null;
+    const audioUrl = st.audio_url?.trim() || null;
+    if (durationSec == null && audioUrl) {
+      const resolved = await resolveDurationSecFromAudioUrl(audioUrl);
+      if (resolved != null) {
+        durationSec = resolved;
+        await adminDb
+          .schema("speu")
+          .from("release_submission_tracks")
+          .update({ duration_sec: resolved })
+          .eq("id", st.id);
+      }
+    }
+
     const { data: inserted, error: insErr } = await adminDb
       .schema("speu")
       .from("artist_tracks")
@@ -80,10 +100,10 @@ export async function promoteApprovedReleaseSubmission(
         album_id: null,
         title: titleRaw,
         slug,
-        audio_url: st.audio_url?.trim() || null,
+        audio_url: audioUrl,
         external_url: null,
         cover_url: row.cover_url?.trim() || null,
-        duration_sec: null,
+        duration_sec: durationSec,
         track_number: null,
         sort_order: st.sort_order,
         is_published: false,

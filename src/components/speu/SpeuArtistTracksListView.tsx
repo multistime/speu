@@ -4,6 +4,7 @@ import { Music } from "lucide-react";
 import { useMemo } from "react";
 import { SpeuTrackRow } from "@/components/speu/SpeuTrackRow";
 import type { SpeuArtistPageData } from "@/lib/speu/types";
+import { speuPublicTrackToPlayerTrack } from "@/lib/speu/player-map";
 
 export function SpeuArtistTracksListView({
   data,
@@ -15,6 +16,11 @@ export function SpeuArtistTracksListView({
   const tracks = useMemo(() => {
     return singlesOnly ? data.tracks.filter((t) => !t.album) : data.tracks;
   }, [data.tracks, singlesOnly]);
+
+  const artistPlaylist = useMemo(
+    () => tracks.map(speuPublicTrackToPlayerTrack),
+    [tracks]
+  );
 
   const title = singlesOnly ? "Сінглы" : "Усе трэкі";
   const subtitle = singlesOnly
@@ -38,7 +44,7 @@ export function SpeuArtistTracksListView({
         ) : (
           <div className="space-y-0.5 rounded-xl border border-border/60 bg-card/30 p-2 sm:p-3">
             {tracks.map((t, i) => (
-              <SpeuTrackRow key={t.id} track={t} index={i} showCover />
+              <SpeuTrackRow key={t.id} track={t} index={i} showCover playlist={artistPlaylist} />
             ))}
           </div>
         )}

@@ -38,7 +38,7 @@ export async function GET() {
       created_at,
       updated_at,
       artists ( id, name, slug ),
-      release_submission_tracks ( id, title, sort_order, audio_url, notes, lyrics, artist_track_id )
+      release_submission_tracks ( id, title, sort_order, audio_url, duration_sec, notes, lyrics, artist_track_id )
     `,
     )
     .order("updated_at", { ascending: false });
@@ -54,6 +54,7 @@ export async function GET() {
     title: string;
     sort_order: number;
     audio_url: string | null;
+    duration_sec: number | null;
     notes: string | null;
     lyrics: string | null;
     artist_track_id: string | null;

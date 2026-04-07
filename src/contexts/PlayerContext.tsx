@@ -100,10 +100,13 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const skipNextRef = useRef<() => void>(() => {});
   const skipPreviousRef = useRef<() => void>(() => {});
   const lastPositionUiMsRef = useRef(0);
+  /** Прапускаем адзін «pause» пры змене src, каб UI не мігаў паміж трэкамі ў чарзе */
+  const ignoreNextPauseRef = useRef(false);
 
   const playTrackInternal = useCallback((next: PlayerTrack) => {
     const audio = audioRef.current;
     if (!audio) return;
+    ignoreNextPauseRef.current = true;
     trackRef.current = next;
     setTrack(next);
     setCurrentTime(0);
@@ -161,11 +164,13 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     audioRef.current = audio;
 
     const onPlay = () => {
+      ignoreNextPauseRef.current = false;
       setIsPlaying(true);
       setMediaSessionPlaybackState("playing");
       updateMediaSessionPositionState(audio);
     };
     const onPause = () => {
+      if (ignoreNextPauseRef.current) return;
       setIsPlaying(false);
       setMediaSessionPlaybackState(audio.src?.trim() ? "paused" : "none");
     };
@@ -222,12 +227,17 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       updateMediaSessionPositionState(audio);
     };
 
+    const onError = () => {
+      ignoreNextPauseRef.current = false;
+    };
+
     audio.addEventListener("play", onPlay);
     audio.addEventListener("pause", onPause);
     audio.addEventListener("ended", onEnded);
     audio.addEventListener("timeupdate", onTimeUpdate);
     audio.addEventListener("durationchange", onDurationChange);
     audio.addEventListener("loadedmetadata", onLoadedMetadata);
+    audio.addEventListener("error", onError);
 
     return () => {
       audio.removeEventListener("play", onPlay);
@@ -236,6 +246,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       audio.removeEventListener("timeupdate", onTimeUpdate);
       audio.removeEventListener("durationchange", onDurationChange);
       audio.removeEventListener("loadedmetadata", onLoadedMetadata);
+      audio.removeEventListener("error", onError);
       audio.pause();
       audio.src = "";
       setTrackMediaMetadata(null);
@@ -292,6 +303,15 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const audio = audioRef.current;
     if (!audio) return;
 
+    if (trackRef.current?.id === newTrack.id) {
+      if (!audio.paused) {
+        audio.pause();
+      } else {
+        void audio.play();
+      }
+      return;
+    }
+
     nonStopRef.current = false;
     setNonStopActive(false);
     poolRef.current = [];
@@ -304,15 +324,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     repeatOneRef.current = false;
     setRepeatMode("off");
 
-    if (trackRef.current?.id === newTrack.id) {
-      if (!audio.paused) {
-        audio.pause();
-      } else {
-        void audio.play();
-      }
-    } else {
-      playTrackInternalRef.current(newTrack);
-    }
+    playTrackInternalRef.current(newTrack);
   }, []);
 
   const cycleRepeatMode = useCallback(() => {
@@ -346,6 +358,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const stop = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
+    ignoreNextPauseRef.current = false;
     audio.pause();
     audio.src = "";
     trackRef.current = null;
