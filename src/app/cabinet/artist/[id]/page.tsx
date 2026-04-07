@@ -75,7 +75,7 @@ export default function ArtistSubmissionPage() {
       .schema("speu")
       .from("release_submission_tracks")
       .select(
-        "id, submission_id, sort_order, title, audio_url, audio_storage_path, notes, lyrics, created_at, updated_at",
+        "id, submission_id, sort_order, title, audio_url, audio_storage_path, notes, lyrics, artist_track_id, created_at, updated_at",
       )
       .eq("submission_id", id)
       .order("sort_order", { ascending: true });
@@ -194,7 +194,7 @@ export default function ArtistSubmissionPage() {
       .from("release_submission_tracks")
       .insert({ submission_id: submission.id, sort_order: nextOrder, title: "" })
       .select(
-        "id, submission_id, sort_order, title, audio_url, audio_storage_path, notes, lyrics, created_at, updated_at",
+        "id, submission_id, sort_order, title, audio_url, audio_storage_path, notes, lyrics, artist_track_id, created_at, updated_at",
       )
       .single();
     if (insErr || !data) {

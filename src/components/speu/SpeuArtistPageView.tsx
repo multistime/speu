@@ -5,7 +5,6 @@ import { motion } from "framer-motion";
 import { Calendar, MapPin, Music } from "lucide-react";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ArtistPattern } from "@/components/artists/artist-pattern";
-import { SpeuBackButton } from "@/components/speu/SpeuBackButton";
 import { SpeuInlineNavLink } from "@/components/speu/SpeuInlineNavLink";
 import type { SpeuArtistAlbum, SpeuArtistPageData } from "@/lib/speu/types";
 import { SpeuTrackRow } from "@/components/speu/SpeuTrackRow";
@@ -295,12 +294,8 @@ export function SpeuArtistPageView({ data }: { data: SpeuArtistPageData }) {
   return (
     <>
       {/* Мабільны: адна калонка ў стылі старонкі альбома */}
-      <div className="min-h-screen pt-28 pb-24 px-4 sm:px-6 lg:hidden">
+      <div className="min-h-screen pt-20 pb-24 px-4 sm:px-6 lg:hidden">
         <div className="mx-auto max-w-4xl">
-          <p className="mb-6">
-            <SpeuBackButton />
-          </p>
-
           <SpeuArtistProfileCard data={data} className="mb-10" />
 
           <TracksSectionHeader artistSlug={data.slug} showAllLink={data.tracks.length > 0} />
@@ -327,10 +322,8 @@ export function SpeuArtistPageView({ data }: { data: SpeuArtistPageData }) {
       </div>
 
       {/* Дэсктоп: адзін экран — сетка + паласа альбомаў */}
-      <div className="box-border hidden h-svh max-h-svh flex-col overflow-hidden pt-28 pb-4 lg:flex">
+      <div className="box-border hidden h-svh max-h-svh flex-col overflow-hidden pt-20 pb-4 lg:flex">
         <div className="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col px-4 sm:px-6 lg:px-8">
-          <SpeuBackButton className="mb-2 shrink-0" />
-
           <div className="grid min-h-0 flex-1 grid-cols-12 gap-6 overflow-hidden">
             <div className="col-span-4 flex min-h-0 flex-col overflow-hidden">
               <SpeuArtistProfileCard data={data} className="min-h-0 flex-1 overflow-y-auto" />

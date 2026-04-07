@@ -29,14 +29,21 @@ export type PlayerTrack = {
   trackHref?: string | null;
   /** Першасны артыст (slug) для спасылкі ў глабальным плэеры */
   artistSlug?: string | null;
+  /** Альбом для мабільнага меню навігацыі */
+  albumSlug?: string | null;
+  /** Усе артысты (меню «⋯» на мабільным) */
+  navArtists?: { slug: string; name: string }[];
 };
 
 type PlayerContextValue = {
   track: PlayerTrack | null;
   isPlaying: boolean;
   repeatOne: boolean;
+  repeatAll: boolean;
+  shuffleEnabled: boolean;
   /** Non-stop чарга: перамешаны плэйліст цыклічна прайграецца пасля канца трэка */
   nonStopActive: boolean;
+  queueSize: number;
   /** Прайграванне, с */
   currentTime: number;
   /** Вядомая даўжыньня трэка, с; 0 калі яшчэ невядома / бясконцысьць */
@@ -45,12 +52,17 @@ type PlayerContextValue = {
   canSeek: boolean;
   togglePlay: (track: PlayerTrack) => void;
   toggleRepeatOne: () => void;
+  toggleRepeatAll: () => void;
+  toggleShuffle: () => void;
+  skipNext: () => void;
+  skipPrevious: () => void;
   /** Пазіцыя 0…1 */
   seekRatio: (ratio: number) => void;
   stop: () => void;
   isTrackActive: (id: string) => boolean;
   /** Усе апублікаваныя трэкі з аўдыё — перамешваюцца і гуляюць бесперапынна */
   startNonStopShuffle: (tracks: PlayerTrack[]) => void;
+  playPlaylistAt: (tracks: PlayerTrack[], startIndex: number) => void;
 };
 
 const PlayerContext = createContext<PlayerContextValue | null>(null);
@@ -64,13 +76,18 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const [track, setTrack] = useState<PlayerTrack | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [repeatOne, setRepeatOne] = useState(false);
+  const [repeatAll, setRepeatAll] = useState(false);
+  const [shuffleEnabled, setShuffleEnabled] = useState(false);
   const [nonStopActive, setNonStopActive] = useState(false);
+  const [queueSize, setQueueSize] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const trackRef = useRef<PlayerTrack | null>(null);
   const repeatOneRef = useRef(false);
+  const repeatAllRef = useRef(false);
+  const shuffleEnabledRef = useRef(false);
 
   const nonStopRef = useRef(false);
   const poolRef = useRef<PlayerTrack[]>([]);
@@ -79,6 +96,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const playTrackInternalRef = useRef<(next: PlayerTrack) => void>(() => {});
   const stopRef = useRef<() => void>(() => {});
+  const seekRatioRef = useRef<(ratio: number) => void>(() => {});
+  const skipNextRef = useRef<() => void>(() => {});
+  const skipPreviousRef = useRef<() => void>(() => {});
   const lastPositionUiMsRef = useRef(0);
 
   const playTrackInternal = useCallback((next: PlayerTrack) => {
@@ -99,6 +119,14 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   }, [repeatOne]);
 
   useEffect(() => {
+    repeatAllRef.current = repeatAll;
+  }, [repeatAll]);
+
+  useEffect(() => {
+    shuffleEnabledRef.current = shuffleEnabled;
+  }, [shuffleEnabled]);
+
+  useEffect(() => {
     playTrackInternalRef.current = playTrackInternal;
   }, [playTrackInternal]);
 
@@ -107,10 +135,14 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const play = () => void audioRef.current?.play();
     const pause = () => audioRef.current?.pause();
     const stopFromOs = () => stopRef.current();
+    const next = () => skipNextRef.current();
+    const prev = () => skipPreviousRef.current();
     try {
       navigator.mediaSession.setActionHandler("play", play);
       navigator.mediaSession.setActionHandler("pause", pause);
       navigator.mediaSession.setActionHandler("stop", stopFromOs);
+      navigator.mediaSession.setActionHandler("previoustrack", prev);
+      navigator.mediaSession.setActionHandler("nexttrack", next);
     } catch {
       /* duplicate registration etc. */
     }
@@ -119,6 +151,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         navigator.mediaSession.setActionHandler("play", null);
         navigator.mediaSession.setActionHandler("pause", null);
         navigator.mediaSession.setActionHandler("stop", null);
+        navigator.mediaSession.setActionHandler("previoustrack", null);
+        navigator.mediaSession.setActionHandler("nexttrack", null);
       } catch {
         /* ignore */
       }
@@ -145,15 +179,24 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       if (nonStopRef.current && poolRef.current.length > 0) {
+        const len = queueRef.current.length;
         let idx = queueIndexRef.current + 1;
-        if (idx >= queueRef.current.length) {
-          queueRef.current = shuffleArray(poolRef.current);
-          idx = 0;
+        if (idx >= len) {
+          if (!repeatAllRef.current) {
+            setIsPlaying(false);
+            return;
+          }
+          if (shuffleEnabledRef.current) {
+            queueRef.current = shuffleArray(poolRef.current);
+            idx = 0;
+          } else {
+            idx = 0;
+          }
         }
         queueIndexRef.current = idx;
-        const next = queueRef.current[idx];
-        if (next) {
-          playTrackInternalRef.current(next);
+        const nextTr = queueRef.current[idx];
+        if (nextTr) {
+          playTrackInternalRef.current(nextTr);
           return;
         }
       }
@@ -212,7 +255,37 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     queueIndexRef.current = 0;
     nonStopRef.current = true;
     setNonStopActive(true);
+    setQueueSize(playable.length);
+    shuffleEnabledRef.current = true;
+    setShuffleEnabled(true);
+    repeatAllRef.current = true;
+    setRepeatAll(true);
     const first = queueRef.current[0];
+    if (first) playTrackInternalRef.current(first);
+  }, []);
+
+  const playPlaylistAt = useCallback((raw: PlayerTrack[], startIndex: number) => {
+    const pool = raw.filter((t) => t.audioUrl?.trim());
+    if (pool.length === 0) return;
+    const target = raw[startIndex];
+    if (!target?.audioUrl?.trim()) return;
+
+    poolRef.current = pool;
+    queueRef.current = [...pool];
+    const qIdx = Math.max(
+      0,
+      queueRef.current.findIndex((t) => t.id === target.id)
+    );
+    queueIndexRef.current = qIdx;
+    nonStopRef.current = true;
+    setNonStopActive(true);
+    setQueueSize(pool.length);
+    shuffleEnabledRef.current = false;
+    setShuffleEnabled(false);
+    repeatAllRef.current = false;
+    setRepeatAll(false);
+
+    const first = queueRef.current[qIdx];
     if (first) playTrackInternalRef.current(first);
   }, []);
 
@@ -222,6 +295,14 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
     nonStopRef.current = false;
     setNonStopActive(false);
+    poolRef.current = [];
+    queueRef.current = [];
+    queueIndexRef.current = 0;
+    setQueueSize(0);
+    shuffleEnabledRef.current = false;
+    setShuffleEnabled(false);
+    repeatAllRef.current = false;
+    setRepeatAll(false);
 
     if (trackRef.current?.id === newTrack.id) {
       if (!audio.paused) {
@@ -250,6 +331,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     updateMediaSessionPositionState(audio);
   }, []);
 
+  useLayoutEffect(() => {
+    seekRatioRef.current = seekRatio;
+  }, [seekRatio]);
+
   const stop = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -261,6 +346,11 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     queueRef.current = [];
     queueIndexRef.current = 0;
     setNonStopActive(false);
+    setQueueSize(0);
+    shuffleEnabledRef.current = false;
+    setShuffleEnabled(false);
+    repeatAllRef.current = false;
+    setRepeatAll(false);
     setTrack(null);
     setIsPlaying(false);
     setCurrentTime(0);
@@ -270,9 +360,84 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     setMediaSessionPlaybackState("none");
   }, []);
 
+  const skipNext = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio || !nonStopRef.current || poolRef.current.length === 0) return;
+    let idx = queueIndexRef.current + 1;
+    if (idx >= queueRef.current.length) {
+      if (!repeatAllRef.current) {
+        audio.pause();
+        return;
+      }
+      if (shuffleEnabledRef.current) {
+        queueRef.current = shuffleArray(poolRef.current);
+        idx = 0;
+      } else {
+        idx = 0;
+      }
+    }
+    queueIndexRef.current = idx;
+    const nextTr = queueRef.current[idx];
+    if (nextTr) playTrackInternalRef.current(nextTr);
+  }, []);
+
+  const skipPrevious = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (!nonStopRef.current || poolRef.current.length === 0) {
+      seekRatioRef.current(0);
+      return;
+    }
+    if (audio.currentTime > 3) {
+      seekRatioRef.current(0);
+      return;
+    }
+    let idx = queueIndexRef.current - 1;
+    if (idx < 0) {
+      if (!repeatAllRef.current) {
+        seekRatioRef.current(0);
+        return;
+      }
+      idx = queueRef.current.length - 1;
+    }
+    queueIndexRef.current = idx;
+    const prevTr = queueRef.current[idx];
+    if (prevTr) playTrackInternalRef.current(prevTr);
+  }, []);
+
+  const toggleRepeatAll = useCallback(() => {
+    setRepeatAll((v) => {
+      const next = !v;
+      repeatAllRef.current = next;
+      return next;
+    });
+  }, []);
+
+  const toggleShuffle = useCallback(() => {
+    if (!nonStopRef.current || poolRef.current.length < 2) return;
+    const current = trackRef.current;
+    if (!current) return;
+    const next = !shuffleEnabledRef.current;
+    shuffleEnabledRef.current = next;
+    setShuffleEnabled(next);
+    queueRef.current = next ? shuffleArray(poolRef.current) : [...poolRef.current];
+    queueIndexRef.current = Math.max(
+      0,
+      queueRef.current.findIndex((t) => t.id === current.id)
+    );
+  }, []);
+
   useLayoutEffect(() => {
     stopRef.current = stop;
   }, [stop]);
+
+  useLayoutEffect(() => {
+    skipNextRef.current = skipNext;
+  }, [skipNext]);
+
+  useLayoutEffect(() => {
+    skipPreviousRef.current = skipPrevious;
+  }, [skipPrevious]);
 
   const isTrackActive = useCallback(
     (id: string) => trackRef.current?.id === id,
@@ -287,16 +452,24 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         track,
         isPlaying,
         repeatOne,
+        repeatAll,
+        shuffleEnabled,
         nonStopActive,
+        queueSize,
         currentTime,
         duration,
         canSeek,
         togglePlay,
         toggleRepeatOne,
+        toggleRepeatAll,
+        toggleShuffle,
+        skipNext,
+        skipPrevious,
         seekRatio,
         stop,
         isTrackActive,
         startNonStopShuffle,
+        playPlaylistAt,
       }}
     >
       {children}

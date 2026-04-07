@@ -62,6 +62,7 @@ type ReleaseSubmissionAdminItem = {
     sort_order: number;
     audio_url: string | null;
     notes: string | null;
+    artist_track_id: string | null;
   }>;
 };
 
@@ -259,11 +260,21 @@ function LabelSubmissionsPanel() {
   }, [load]);
 
   const changeStatus = async (id: string, status: ReleaseSubmissionStatus) => {
-    await fetch("/api/admin/release-submissions", {
+    const res = await fetch("/api/admin/release-submissions", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, status }),
     });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      const msg =
+        typeof data.details === "string"
+          ? data.details
+          : data.error === "promote_failed"
+            ? "Не ўдалося стварыць песні ў каталозе. Статус заяўкі вярнуты."
+            : "Не ўдалося захаваць статус";
+      alert(msg);
+    }
     await load();
   };
 
@@ -360,6 +371,14 @@ function LabelSubmissionsPanel() {
                           >
                             аўдыё
                           </a>
+                        ) : null}
+                        {t.artist_track_id ? (
+                          <span className="ml-2 text-xs text-muted-foreground">
+                            →{" "}
+                            <Link href="/admin/label" className="text-primary hover:underline">
+                              у каталозе (чарнік)
+                            </Link>
+                          </span>
                         ) : null}
                       </li>
                     ))}

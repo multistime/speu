@@ -2,7 +2,17 @@
 
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { Music, Pause, Play, Repeat1, X } from "lucide-react";
+import {
+  Music,
+  Pause,
+  Play,
+  Repeat,
+  Repeat1,
+  Shuffle,
+  SkipBack,
+  SkipForward,
+  X,
+} from "lucide-react";
 import { TrackLikeButton } from "@/components/speu/TrackLikeButton";
 import { useCallback, useRef, useState } from "react";
 import { usePlayer, type PlayerTrack } from "@/contexts/PlayerContext";
@@ -20,8 +30,7 @@ function GlobalPlayerProgress({ track }: { track: PlayerTrack }) {
 
   const livePct =
     canSeek && duration > 0 ? Math.min(1, Math.max(0, currentTime / duration)) : 0;
-  const progress =
-    dragRatio !== null ? dragRatio : livePct;
+  const progress = dragRatio !== null ? dragRatio : livePct;
   const pct = Math.min(100, Math.max(0, progress * 100));
 
   const applyRatio = useCallback(
@@ -109,7 +118,6 @@ function GlobalPlayerProgress({ track }: { track: PlayerTrack }) {
       onPointerCancel={onPointerUp}
       onKeyDown={onKeyDown}
       className={cn(
-        /* Зона націску ніжэй за візуал, лінія — строга top-0 (першы піксель панэлі) */
         "absolute inset-x-0 top-0 z-30 h-3 cursor-pointer touch-none select-none",
         "focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary/45 focus-visible:outline-offset-2 focus-visible:rounded-sm",
         !canSeek && "cursor-not-allowed"
@@ -169,18 +177,33 @@ function GlobalPlayerProgress({ track }: { track: PlayerTrack }) {
   );
 }
 
+const ctrlBtn =
+  "w-9 h-9 rounded-full border flex items-center justify-center transition-colors shrink-0 disabled:opacity-35 disabled:pointer-events-none";
+
 export function GlobalPlayer() {
   const {
     track,
     isPlaying,
     repeatOne,
+    repeatAll,
+    shuffleEnabled,
+    nonStopActive,
+    queueSize,
     currentTime,
     duration,
     canSeek,
     togglePlay,
     toggleRepeatOne,
+    toggleRepeatAll,
+    toggleShuffle,
+    skipNext,
+    skipPrevious,
     stop,
   } = usePlayer();
+
+  const queueNav = nonStopActive && queueSize > 0;
+  const canShuffle = queueNav && queueSize > 1;
+  const canSkipNext = queueNav;
 
   return (
     <AnimatePresence>
@@ -191,7 +214,7 @@ export function GlobalPlayer() {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 100, opacity: 0 }}
           transition={{ type: "spring", damping: 28, stiffness: 280 }}
-          className="group/player fixed bottom-0 inset-x-0 z-50 overflow-visible bg-background/95 backdrop-blur-md"
+          className="group/player fixed bottom-0 inset-x-0 z-50 overflow-visible bg-background/95 backdrop-blur-md border-t border-border/40"
           style={
             track.accentRgb
               ? { boxShadow: `0 -4px 40px rgba(${track.accentRgb}, 0.08)` }
@@ -200,96 +223,194 @@ export function GlobalPlayer() {
         >
           <GlobalPlayerProgress track={track} />
 
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3">
-            {/* Icon / cover */}
-            <div
-              className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden"
-              style={{
-                background: track.accentColor
-                  ? `rgba(${track.accentRgb ?? "125,191,158"}, 0.15)`
-                  : "var(--muted)",
-                border: track.accentColor
-                  ? `1px solid rgba(${track.accentRgb ?? "125,191,158"}, 0.25)`
-                  : "1px solid var(--border)",
-              }}
-            >
-              {track.coverUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={track.coverUrl}
-                  alt={track.title}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <Music
-                  className="w-4 h-4"
-                  style={{ color: track.accentColor ?? "var(--primary)" }}
-                  strokeWidth={1.5}
-                />
-              )}
-            </div>
-
-            {/* Track info + time (для мінімалізму — толькі на sm+) */}
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground leading-tight truncate">
-                {track.trackHref ? (
-                  <Link
-                    href={track.trackHref}
-                    className="hover:underline underline-offset-2"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {track.title}
-                  </Link>
+          <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 sm:py-3 grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-y-2.5 gap-x-3 sm:gap-x-4 items-center">
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 order-1 sm:order-none">
+              <div
+                className="w-10 h-10 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden"
+                style={{
+                  background: track.accentColor
+                    ? `rgba(${track.accentRgb ?? "125,191,158"}, 0.15)`
+                    : "var(--muted)",
+                  border: track.accentColor
+                    ? `1px solid rgba(${track.accentRgb ?? "125,191,158"}, 0.25)`
+                    : "1px solid var(--border)",
+                }}
+              >
+                {track.coverUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={track.coverUrl}
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
                 ) : (
-                  track.title
+                  <Music
+                    className="w-4 h-4"
+                    style={{ color: track.accentColor ?? "var(--primary)" }}
+                    strokeWidth={1.5}
+                  />
                 )}
-              </p>
-              <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground tabular-nums">
-                {track.artistName ? (
-                  track.artistSlug ? (
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-foreground leading-tight truncate">
+                  {track.trackHref ? (
                     <Link
-                      href={`/speu/artists/${track.artistSlug}`}
-                      className="min-w-0 flex-1 truncate hover:text-foreground transition-colors"
+                      href={track.trackHref}
+                      className="hover:underline underline-offset-2"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      {track.artistName}
+                      {track.title}
                     </Link>
                   ) : (
-                    <span className="min-w-0 flex-1 truncate">{track.artistName}</span>
-                  )
-                ) : (
-                  <span className="flex-1" />
-                )}
-                {canSeek && (
-                  <span className="flex-shrink-0 font-mono text-[10px] tracking-tight text-muted-foreground/90 hidden sm:inline">
-                    {formatPlayerTime(currentTime)} / {formatPlayerTime(duration)}
-                  </span>
-                )}
+                    track.title
+                  )}
+                </p>
+                <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground tabular-nums">
+                  {track.artistName ? (
+                    track.artistSlug ? (
+                      <Link
+                        href={`/speu/artists/${track.artistSlug}`}
+                        className="min-w-0 flex-1 truncate hover:text-foreground transition-colors"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {track.artistName}
+                      </Link>
+                    ) : (
+                      <span className="min-w-0 flex-1 truncate">{track.artistName}</span>
+                    )
+                  ) : (
+                    <span className="flex-1" />
+                  )}
+                  {isPlaying && (
+                    <span className="hidden sm:inline-flex items-end gap-0.5 h-3.5 shrink-0">
+                      {[1, 2, 3].map((i) => (
+                        <motion.span
+                          key={i}
+                          className="w-0.5 rounded-full"
+                          style={{ background: track.accentColor ?? "var(--primary)" }}
+                          animate={{ height: ["35%", "100%", "45%", "85%", "35%"] }}
+                          transition={{
+                            duration: 0.75,
+                            repeat: Infinity,
+                            delay: i * 0.12,
+                            ease: "easeInOut",
+                          }}
+                        />
+                      ))}
+                    </span>
+                  )}
+                  {canSeek && (
+                    <span className="flex-shrink-0 font-mono text-[10px] tracking-tight text-muted-foreground/90 hidden sm:inline">
+                      {formatPlayerTime(currentTime)} / {formatPlayerTime(duration)}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Equalizer animation when playing */}
-            {isPlaying && (
-              <div className="hidden sm:flex items-end gap-0.5 h-4 flex-shrink-0">
-                {[1, 2, 3, 4].map((i) => (
-                  <motion.div
-                    key={i}
-                    className="w-0.5 rounded-full"
-                    style={{ background: track.accentColor ?? "var(--primary)" }}
-                    animate={{ height: ["30%", "100%", "50%", "80%", "30%"] }}
-                    transition={{
-                      duration: 0.8,
-                      repeat: Infinity,
-                      delay: i * 0.15,
-                      ease: "easeInOut",
-                    }}
-                  />
-                ))}
-              </div>
-            )}
+            <div className="flex flex-wrap items-center justify-center gap-0.5 sm:gap-1 order-2 sm:order-none px-1">
+              <button
+                type="button"
+                onClick={toggleShuffle}
+                disabled={!canShuffle}
+                aria-label={
+                  shuffleEnabled ? "Выпадковы парадак уключаны" : "Уключыць выпадковы парадак"
+                }
+                aria-pressed={shuffleEnabled}
+                className={cn(
+                  ctrlBtn,
+                  shuffleEnabled
+                    ? "border-primary/50 text-primary bg-primary/12"
+                    : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
+                )}
+              >
+                <Shuffle className="w-4 h-4" strokeWidth={2} />
+              </button>
 
-            {/* Controls */}
-            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                type="button"
+                onClick={skipPrevious}
+                aria-label="Папярэдні трэк"
+                className={cn(
+                  ctrlBtn,
+                  "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
+                )}
+              >
+                <SkipBack className="w-4 h-4" strokeWidth={2} />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => togglePlay(track)}
+                aria-label={isPlaying ? "Паўза" : "Прайграць"}
+                className="w-11 h-11 mx-0.5 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-105 shadow-sm"
+                style={{
+                  background: track.accentColor ?? "var(--primary)",
+                  color: "white",
+                }}
+              >
+                {isPlaying ? (
+                  <Pause className="w-[18px] h-[18px]" fill="currentColor" strokeWidth={0} />
+                ) : (
+                  <Play className="w-[18px] h-[18px] ml-0.5" fill="currentColor" strokeWidth={0} />
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={skipNext}
+                disabled={!canSkipNext}
+                aria-label="Наступны трэк"
+                className={cn(
+                  ctrlBtn,
+                  "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
+                )}
+              >
+                <SkipForward className="w-4 h-4" strokeWidth={2} />
+              </button>
+
+              <button
+                type="button"
+                onClick={toggleRepeatAll}
+                disabled={!queueNav}
+                aria-label={
+                  repeatAll
+                    ? "Адключыць паўтор плэйліста"
+                    : "Паўтараць увесь плэйліст"
+                }
+                aria-pressed={repeatAll}
+                className={cn(
+                  ctrlBtn,
+                  repeatAll
+                    ? "border-primary/50 text-primary bg-primary/12"
+                    : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
+                )}
+              >
+                <Repeat className="w-4 h-4" strokeWidth={2} />
+              </button>
+
+              <button
+                type="button"
+                onClick={toggleRepeatOne}
+                aria-label={
+                  repeatOne
+                    ? "Адключыць паўтор трэка"
+                    : "Паўтараць адзін трэк"
+                }
+                aria-pressed={repeatOne}
+                className={cn(
+                  ctrlBtn,
+                  repeatOne
+                    ? "border-primary/50 text-primary bg-primary/12"
+                    : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
+                )}
+              >
+                <Repeat1 className="w-4 h-4" strokeWidth={2} />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 order-3 sm:order-none">
               {track.trackHref?.startsWith("/speu/tracks/") ? (
                 <TrackLikeButton
                   trackId={track.id}
@@ -300,44 +421,9 @@ export function GlobalPlayer() {
               ) : null}
               <button
                 type="button"
-                onClick={toggleRepeatOne}
-                aria-label={
-                  repeatOne
-                    ? "Адключыць паўтор трэка"
-                    : "Уключыць паўтор аднаго трэка"
-                }
-                aria-pressed={repeatOne}
-                className={`w-9 h-9 rounded-full border flex items-center justify-center transition-colors ${
-                  repeatOne
-                    ? "border-primary/50 text-primary bg-primary/12"
-                    : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
-                }`}
-              >
-                <Repeat1 className="w-4 h-4" strokeWidth={2} />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => togglePlay(track)}
-                aria-label={isPlaying ? "Паўза" : "Прайграць"}
-                className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-105"
-                style={{
-                  background: track.accentColor ?? "var(--primary)",
-                  color: "white",
-                }}
-              >
-                {isPlaying ? (
-                  <Pause className="w-4 h-4" fill="currentColor" strokeWidth={0} />
-                ) : (
-                  <Play className="w-4 h-4 ml-0.5" fill="currentColor" strokeWidth={0} />
-                )}
-              </button>
-
-              <button
-                type="button"
                 onClick={stop}
                 aria-label="Спыніць"
-                className="w-8 h-8 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 flex items-center justify-center transition-colors"
+                className="w-9 h-9 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 flex items-center justify-center transition-colors shrink-0"
               >
                 <X className="w-3.5 h-3.5" strokeWidth={2} />
               </button>

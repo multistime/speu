@@ -24,7 +24,7 @@ export function SpeuHubClient({ playable, artists, likedPreview }: SpeuHubClient
   const rightCol = chartPreview.filter((_, i) => i % 2 === 1);
 
   return (
-    <div className="min-h-screen pt-28 pb-28 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen pt-20 pb-28 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 24 }}

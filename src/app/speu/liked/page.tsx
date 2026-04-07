@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Music } from "lucide-react";
-import { SpeuBackButton } from "@/components/speu/SpeuBackButton";
 import { SpeuTrackRow } from "@/components/speu/SpeuTrackRow";
 import { fetchSpeuUserLikedTracks } from "@/lib/speu/catalog.server";
 import { createClient } from "@/lib/supabase/server";
@@ -14,7 +13,7 @@ export default async function SpeuLikedPage() {
   const liked = user ? await fetchSpeuUserLikedTracks(null) : [];
 
   return (
-    <div className="min-h-screen pt-28 pb-24 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen pt-20 pb-24 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto">
         <p className="text-xs uppercase tracking-[0.18em] text-primary/70 mb-3 font-medium text-center">
           Спеў
@@ -30,14 +29,10 @@ export default async function SpeuLikedPage() {
             </Link>
           </p>
         ) : (
-          <p className="text-xs text-muted-foreground text-center mb-2 max-w-lg mx-auto">
+          <p className="text-xs text-muted-foreground text-center mb-8 max-w-lg mx-auto">
             Трэкі, якія вы адзначылі сэрцам.
           </p>
         )}
-        <p className="mb-10">
-          <SpeuBackButton />
-        </p>
-
         {!user ? null : liked.length === 0 ? (
           <div className="glass rounded-xl border border-border p-12 text-center text-muted-foreground">
             <Music className="h-10 w-10 mx-auto mb-3 opacity-25" strokeWidth={1} />

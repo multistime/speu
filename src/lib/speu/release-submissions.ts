@@ -31,6 +31,8 @@ export type ReleaseSubmissionTrackRow = {
   audio_storage_path: string | null;
   notes: string | null;
   lyrics: string | null;
+  /** Set after moderator approval — catalog `artist_tracks.id` (unpublished draft). */
+  artist_track_id: string | null;
   created_at: string;
   updated_at: string;
 };

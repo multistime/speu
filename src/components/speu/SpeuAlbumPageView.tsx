@@ -1,10 +1,9 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { SpeuBackButton } from "@/components/speu/SpeuBackButton";
 import { SpeuInlineNavLink } from "@/components/speu/SpeuInlineNavLink";
 import { Music, Play, Shuffle, User } from "lucide-react";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { SpeuAlbumPageData } from "@/lib/speu/types";
 import { SpeuTrackRow } from "@/components/speu/SpeuTrackRow";
 import { usePlayer } from "@/contexts/PlayerContext";
@@ -63,10 +62,15 @@ function AlbumDescription({ text }: { text: string }) {
 }
 
 export function SpeuAlbumPageView({ data }: { data: SpeuAlbumPageData }) {
-  const { startNonStopShuffle, togglePlay } = usePlayer();
+  const { startNonStopShuffle, playPlaylistAt } = usePlayer();
   const { accent, accentRgb, gradientFrom, gradientTo } = data.artist.theme;
   const playable = data.tracks;
   const artistPhoto = data.artist.photoUrl;
+
+  const albumPlaylist = useMemo(
+    () => playable.map(speuPublicTrackToPlayerTrack),
+    [playable]
+  );
 
   const playAlbumShuffle = () => {
     if (playable.length === 0) return;
@@ -74,17 +78,13 @@ export function SpeuAlbumPageView({ data }: { data: SpeuAlbumPageData }) {
   };
 
   const playFirst = () => {
-    const first = playable[0];
-    if (first) togglePlay(speuPublicTrackToPlayerTrack(first));
+    if (albumPlaylist.length === 0) return;
+    playPlaylistAt(albumPlaylist, 0);
   };
 
   return (
-    <div className="min-h-screen pt-28 pb-24 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen pt-20 pb-24 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
-        <p className="mb-6">
-          <SpeuBackButton />
-        </p>
-
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -174,7 +174,9 @@ export function SpeuAlbumPageView({ data }: { data: SpeuAlbumPageData }) {
           {data.tracks.length === 0 ? (
             <p className="text-sm text-muted-foreground py-8 text-center">Альбом пусты.</p>
           ) : (
-            data.tracks.map((t, i) => <SpeuTrackRow key={t.id} track={t} index={i} showCover />)
+            data.tracks.map((t, i) => (
+              <SpeuTrackRow key={t.id} track={t} index={i} showCover playlist={albumPlaylist} />
+            ))
           )}
         </div>
       </div>

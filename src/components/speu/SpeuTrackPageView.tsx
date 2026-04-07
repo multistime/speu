@@ -1,8 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useMemo } from "react";
 import { Disc3, Music, Play } from "lucide-react";
-import { SpeuBackButton } from "@/components/speu/SpeuBackButton";
 import { SpeuInlineNavLink } from "@/components/speu/SpeuInlineNavLink";
 import { formatTrackDuration } from "@/components/speu/speu-format-duration";
 import { SpeuTrackRow } from "@/components/speu/SpeuTrackRow";
@@ -12,18 +12,35 @@ import { speuPublicTrackToPlayerTrack } from "@/lib/speu/player-map";
 import type { SpeuTrackPageData } from "@/lib/speu/types";
 
 export function SpeuTrackPageView({ data }: { data: SpeuTrackPageData }) {
-  const { togglePlay } = usePlayer();
+  const { togglePlay, playPlaylistAt } = usePlayer();
   const { track, sameAlbum } = data;
   const pt = speuPublicTrackToPlayerTrack(track);
   const { accentColor: accent, accentRgb } = track;
 
-  return (
-    <div className="min-h-screen pt-28 pb-24 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
-        <p className="mb-6">
-          <SpeuBackButton />
-        </p>
+  const albumTracksOrdered = useMemo(
+    () => [...sameAlbum, track].sort((a, b) => a.sortOrder - b.sortOrder),
+    [track, sameAlbum]
+  );
+  const albumPlaylist = useMemo(
+    () => albumTracksOrdered.map(speuPublicTrackToPlayerTrack),
+    [albumTracksOrdered]
+  );
+  const trackIndexInAlbum = useMemo(
+    () => albumTracksOrdered.findIndex((t) => t.id === track.id),
+    [albumTracksOrdered, track.id]
+  );
 
+  const playMain = () => {
+    if (albumPlaylist.length > 0 && trackIndexInAlbum >= 0) {
+      playPlaylistAt(albumPlaylist, trackIndexInAlbum);
+      return;
+    }
+    togglePlay(pt);
+  };
+
+  return (
+    <div className="min-h-screen pt-20 pb-24 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -58,7 +75,7 @@ export function SpeuTrackPageView({ data }: { data: SpeuTrackPageData }) {
               <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-end shrink-0">
                 <button
                   type="button"
-                  onClick={() => togglePlay(pt)}
+                  onClick={playMain}
                   className="inline-flex items-center gap-2 text-sm px-4 py-2.5 rounded-xl text-white font-medium"
                   style={{ background: accent }}
                 >
@@ -113,9 +130,12 @@ export function SpeuTrackPageView({ data }: { data: SpeuTrackPageData }) {
               З альбома «{track.album.title}»
             </h2>
             <div className="space-y-0.5 rounded-xl border border-border/60 bg-card/30 p-2 sm:p-3">
-              {sameAlbum.map((t, i) => (
-                <SpeuTrackRow key={t.id} track={t} index={i + 1} showCover />
-              ))}
+              {sameAlbum.map((t) => {
+                const i = albumTracksOrdered.findIndex((x) => x.id === t.id);
+                return (
+                  <SpeuTrackRow key={t.id} track={t} index={i} showCover playlist={albumPlaylist} />
+                );
+              })}
             </div>
           </section>
         )}

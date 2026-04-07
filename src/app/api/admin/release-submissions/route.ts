@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAdminApi } from "@/lib/auth/admin";
 import { writeAdminAuditLog } from "@/lib/supabase/admin-repos/audit";
+import { promoteApprovedReleaseSubmission } from "@/lib/supabase/admin-repos/promote-release-submission";
 
 const releaseStatuses = ["draft", "submitted", "needs_changes", "approved", "rejected"] as const;
 
@@ -37,7 +38,7 @@ export async function GET() {
       created_at,
       updated_at,
       artists ( id, name, slug ),
-      release_submission_tracks ( id, title, sort_order, audio_url, notes )
+      release_submission_tracks ( id, title, sort_order, audio_url, notes, lyrics, artist_track_id )
     `,
     )
     .order("updated_at", { ascending: false });
@@ -54,6 +55,8 @@ export async function GET() {
     sort_order: number;
     audio_url: string | null;
     notes: string | null;
+    lyrics: string | null;
+    artist_track_id: string | null;
   };
   type Row = {
     id: string;
@@ -95,6 +98,18 @@ export async function PATCH(request: Request) {
   if (status !== undefined) patch.status = status;
   if (moderator_message !== undefined) patch.moderator_message = moderator_message;
 
+  const { data: beforeRow, error: beforeErr } = await adminDb
+    .schema("speu")
+    .from("release_submissions")
+    .select("status")
+    .eq("id", id)
+    .maybeSingle();
+  if (beforeErr || !beforeRow) {
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
+
+  const previousStatus = beforeRow.status as string;
+
   const { error } = await adminDb.schema("speu").from("release_submissions").update(patch).eq("id", id);
   if (error) return NextResponse.json({ error: "update_failed" }, { status: 500 });
 
@@ -102,6 +117,33 @@ export async function PATCH(request: Request) {
     status,
     moderator_message,
   });
+
+  const { data: afterRow } = await adminDb
+    .schema("speu")
+    .from("release_submissions")
+    .select("status")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (afterRow?.status === "approved") {
+    const { createdTrackIds, error: promErr } = await promoteApprovedReleaseSubmission(adminDb, user.id, id);
+    if (promErr) {
+      const transitionedToApproved = previousStatus !== "approved";
+      if (transitionedToApproved) {
+        await adminDb
+          .schema("speu")
+          .from("release_submissions")
+          .update({ status: previousStatus })
+          .eq("id", id);
+      }
+      console.error("[admin/release-submissions PATCH promote]", promErr);
+      return NextResponse.json(
+        { error: "promote_failed", details: promErr, promotedTrackIds: createdTrackIds },
+        { status: 500 }
+      );
+    }
+    return NextResponse.json({ ok: true, promotedTrackIds: createdTrackIds });
+  }
 
   return NextResponse.json({ ok: true });
 }

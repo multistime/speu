@@ -13,5 +13,7 @@ export function speuPublicTrackToPlayerTrack(t: SpeuPublicTrack): PlayerTrack {
     accentRgb: t.accentRgb,
     trackHref: `/speu/tracks/${t.slug}`,
     artistSlug: primary?.slug ?? null,
+    albumSlug: t.album?.slug ?? null,
+    navArtists: t.artists.map((a) => ({ slug: a.slug, name: a.name })),
   };
 }

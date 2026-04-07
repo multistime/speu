@@ -107,21 +107,35 @@ type SpeuTrackRowProps = {
   index: number;
   /** Калі true — паказваць мініяцюру вокладкі */
   showCover?: boolean;
+  /** Плэйліст у парадку прайграваньня (чарга ў глабальным плэеры) */
+  playlist?: PlayerTrack[];
   className?: string;
 };
 
-export function SpeuTrackRow({ track, index, showCover = true, className }: SpeuTrackRowProps) {
-  const { togglePlay, isTrackActive, isPlaying } = usePlayer();
+export function SpeuTrackRow({
+  track,
+  index,
+  showCover = true,
+  playlist,
+  className,
+}: SpeuTrackRowProps) {
+  const { togglePlay, playPlaylistAt, isTrackActive, isPlaying } = usePlayer();
   const playerTrack: PlayerTrack = speuPublicTrackToPlayerTrack(track);
   const active = isTrackActive(track.id);
   const playing = active && isPlaying;
   const { accentColor, accentRgb } = track;
 
-  const playActivate = () => togglePlay(playerTrack);
+  const playActivate = () => {
+    if (playlist && playlist.length > 0) {
+      playPlaylistAt(playlist, index);
+    } else {
+      togglePlay(playerTrack);
+    }
+  };
   const playKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
-      togglePlay(playerTrack);
+      playActivate();
     }
   };
 
@@ -140,11 +154,11 @@ export function SpeuTrackRow({ track, index, showCover = true, className }: Speu
         onClick={playActivate}
         onKeyDown={playKeyDown}
         className={cn(
-          "flex flex-1 min-w-0 items-center gap-1 sm:gap-1.5 md:gap-3 cursor-pointer rounded-md outline-none",
+          "flex flex-1 min-w-0 items-center gap-2 sm:gap-2.5 md:gap-3 cursor-pointer rounded-md outline-none",
           "focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         )}
       >
-        <span className="text-xs text-muted-foreground/40 w-3.5 sm:w-4 font-mono shrink-0 tabular-nums text-center">
+        <span className="shrink-0 min-w-[2.25rem] sm:min-w-[2.5rem] md:min-w-[3rem] pr-1 sm:pr-2 text-right font-mono tabular-nums text-xs text-muted-foreground/40">
           {index + 1}
         </span>
 
@@ -198,7 +212,7 @@ export function SpeuTrackRow({ track, index, showCover = true, className }: Speu
           <Link
             href={`/speu/tracks/${track.slug}`}
             className={cn(
-              "block w-full min-w-0 max-w-full truncate text-sm hover:underline",
+              "hidden md:block w-full min-w-0 max-w-full truncate text-sm hover:underline",
               active ? "font-medium" : "text-foreground/80"
             )}
             style={active ? { color: accentColor } : undefined}
@@ -206,17 +220,27 @@ export function SpeuTrackRow({ track, index, showCover = true, className }: Speu
           >
             {track.title}
           </Link>
+          <span
+            className={cn(
+              "md:hidden block w-full min-w-0 max-w-full truncate text-sm",
+              active ? "font-medium" : "text-foreground/80"
+            )}
+            style={active ? { color: accentColor } : undefined}
+          >
+            {track.title}
+          </span>
           <div className="flex flex-wrap items-center text-xs text-muted-foreground mt-0.5">
             {track.artists.map((a, i) => (
               <span key={a.id} className="inline-flex min-w-0 items-center">
                 {i > 0 ? <span className="text-muted-foreground/40">,&nbsp;</span> : null}
                 <Link
                   href={`/speu/artists/${a.slug}`}
-                  className="truncate max-w-[10rem] sm:max-w-none transition-colors hover:text-foreground"
+                  className="hidden md:inline truncate max-w-[10rem] lg:max-w-none transition-colors hover:text-foreground"
                   onClick={(e) => e.stopPropagation()}
                 >
                   {a.name}
                 </Link>
+                <span className="md:hidden truncate max-w-[10rem]">{a.name}</span>
               </span>
             ))}
           </div>
