@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Calendar, ExternalLink, MapPin, Music } from "lucide-react";
+import { Calendar, MapPin, Music } from "lucide-react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ArtistPattern } from "@/components/artists/artist-pattern";
-import type { SpeuArtistPageData } from "@/lib/speu/types";
+import { SpeuBackButton } from "@/components/speu/SpeuBackButton";
+import type { SpeuArtistAlbum, SpeuArtistPageData } from "@/lib/speu/types";
 import { SpeuTrackRow } from "@/components/speu/SpeuTrackRow";
 import {
   SpeuInstagramIcon,
@@ -12,8 +14,100 @@ import {
   SpeuTelegramIcon,
   SpeuYoutubeIcon,
 } from "@/components/speu/speu-social-icons";
+import { cn } from "@/lib/utils";
 
-export function SpeuArtistPageView({ data }: { data: SpeuArtistPageData }) {
+const TRACK_ROW_PX = 54;
+
+function TracksSectionHeader({ artistSlug, showAllLink }: { artistSlug: string; showAllLink: boolean }) {
+  return (
+    <div className="mb-2 flex shrink-0 items-center justify-between gap-3 px-1">
+      <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground/50">Трэкі</h2>
+      {showAllLink && (
+        <Link
+          href={`/speu/artists/${artistSlug}/tracks`}
+          className="shrink-0 text-xs font-medium text-primary hover:underline"
+        >
+          Усе трэкі
+        </Link>
+      )}
+    </div>
+  );
+}
+
+function AlbumsStrip({
+  albums,
+  artistSlug,
+  accent,
+  gradientFrom,
+  gradientTo,
+}: {
+  albums: SpeuArtistAlbum[];
+  artistSlug: string;
+  accent: string;
+  gradientFrom: string;
+  gradientTo: string;
+}) {
+  if (albums.length === 0) {
+    return (
+      <section className="rounded-xl border border-dashed border-border/50 px-4 py-5 text-center text-sm text-muted-foreground">
+        Пакуль без альбомаў у гэтым праглядзе.
+      </section>
+    );
+  }
+
+  return (
+    <section className="min-w-0">
+      <h2 className="text-xs uppercase tracking-widest text-muted-foreground/50 mb-3 font-medium px-1">
+        Альбомы
+      </h2>
+      <div className="flex gap-3 overflow-x-auto pb-2 pt-0.5 scroll-pl-1 scroll-pr-4 [-ms-overflow-style:none] [scrollbar-gutter:stable] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border">
+        {albums.map((al) => {
+          const href = al.isSingles
+            ? `/speu/artists/${artistSlug}/tracks?view=singles`
+            : `/speu/albums/${al.slug}`;
+          return (
+            <Link
+              key={al.id}
+              href={href}
+              className="group w-[7.25rem] shrink-0 rounded-xl border border-border bg-card overflow-hidden transition-all hover:border-primary/30 hover:shadow-md"
+            >
+              <div
+                className="aspect-square relative bg-muted"
+                style={{
+                  background: al.coverUrl
+                    ? undefined
+                    : `linear-gradient(160deg, ${gradientFrom}88 0%, ${gradientTo} 100%)`,
+                }}
+              >
+                {al.coverUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={al.coverUrl} alt="" className="absolute inset-0 size-full object-cover" />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Music className="size-7 opacity-25" style={{ color: accent }} />
+                  </div>
+                )}
+              </div>
+              <div className="p-2">
+                <p className="text-[11px] font-medium text-foreground line-clamp-2 leading-snug group-hover:text-primary transition-colors">
+                  {al.title}
+                </p>
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function SpeuArtistProfileCard({
+  data,
+  className,
+}: {
+  data: SpeuArtistPageData;
+  className?: string;
+}) {
   const { instagram, youtube, spotify, telegram } = data.socials;
   const hasSocials = [instagram, youtube, spotify, telegram].some(
     (u) => typeof u === "string" && u.length > 1
@@ -21,204 +115,287 @@ export function SpeuArtistPageView({ data }: { data: SpeuArtistPageData }) {
   const { gradientFrom, gradientTo, accent, accentRgb, pattern } = data.theme;
 
   return (
-    <div className="min-h-screen pt-28 pb-24 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12">
-          {/* Левая калонка: вокладка / інфа + альбомы */}
-          <div className="lg:col-span-4 space-y-8">
-            <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="rounded-2xl border border-border bg-card overflow-hidden shadow-xl lg:sticky lg:top-28"
-              style={{ boxShadow: `0 0 60px rgba(${accentRgb}, 0.1)` }}
-            >
-              <div
-                className="relative h-52 sm:h-56 overflow-hidden"
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={cn(
+        "flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-xl",
+        className
+      )}
+      style={{ boxShadow: `0 0 60px rgba(${accentRgb}, 0.1)` }}
+    >
+      {data.genres.length > 0 && (
+        <div className="border-b border-border/70 bg-muted/15 px-4 py-2.5">
+          <div className="flex flex-wrap gap-1.5">
+            {data.genres.map((g) => (
+              <span
+                key={g}
+                className="rounded-full border px-2 py-0.5 text-[11px] font-medium backdrop-blur-sm"
                 style={{
-                  background: `linear-gradient(160deg, ${gradientFrom} 0%, ${gradientTo} 100%)`,
+                  background: `rgba(${accentRgb}, 0.12)`,
+                  color: accent,
+                  borderColor: `rgba(${accentRgb}, 0.35)`,
                 }}
               >
-                <ArtistPattern pattern={pattern} accent={accent} />
-                <div
-                  className="absolute bottom-0 right-0 w-48 h-48 rounded-full blur-3xl opacity-40"
-                  style={{ background: accent }}
-                />
-                {data.photoUrl && (
-                  <div className="absolute top-4 left-4 z-[2] pointer-events-none">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={data.photoUrl}
-                      alt={data.name}
-                      className="w-24 h-24 sm:w-28 sm:h-28 rounded-full object-cover shadow-lg border-2 border-white/20"
-                    />
-                  </div>
-                )}
-                <div className="absolute inset-0 flex items-end p-5">
-                  <div>
-                    <div className="flex flex-wrap gap-1 mb-2">
-                      {data.genres.map((g) => (
-                        <span
-                          key={g}
-                          className="text-xs px-2 py-0.5 rounded-full backdrop-blur-sm"
-                          style={{
-                            background: `rgba(${accentRgb}, 0.25)`,
-                            color: accent,
-                            border: `1px solid rgba(${accentRgb}, 0.4)`,
-                          }}
-                        >
-                          {g}
-                        </span>
-                      ))}
-                    </div>
-                    <h1 className="font-display text-3xl font-semibold text-white italic leading-tight">
-                      {data.name}
-                    </h1>
-                    <p className="text-white/60 text-sm mt-0.5">{data.nameEn}</p>
-                  </div>
-                </div>
-              </div>
+                {g}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
-              <div className="p-5 space-y-4">
-                <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
-                  <span className="flex items-center gap-1">
-                    <MapPin className="h-3 w-3" strokeWidth={1.5} />
-                    {data.location}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Calendar className="h-3 w-3" strokeWidth={1.5} />
-                    З {data.year}
-                  </span>
-                </div>
-                <p className="text-sm text-muted-foreground leading-relaxed">{data.bio}</p>
-
-                {hasSocials && (
-                  <div className="flex items-center gap-2 pt-2 border-t border-border flex-wrap">
-                    <span className="text-xs text-muted-foreground/50 mr-1">Сачыць:</span>
-                    {instagram && instagram.length > 1 && (
-                      <a
-                        href={instagram}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-2 rounded-lg text-muted-foreground/50 hover:text-foreground hover:bg-muted transition-all"
-                        aria-label="Instagram"
-                      >
-                        <SpeuInstagramIcon className="h-4 w-4" />
-                      </a>
-                    )}
-                    {youtube && youtube.length > 1 && (
-                      <a
-                        href={youtube}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-2 rounded-lg text-muted-foreground/50 hover:text-foreground hover:bg-muted transition-all"
-                        aria-label="YouTube"
-                      >
-                        <SpeuYoutubeIcon className="h-4 w-4" />
-                      </a>
-                    )}
-                    {spotify && spotify.length > 1 && (
-                      <a
-                        href={spotify}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-2 rounded-lg text-muted-foreground/50 hover:text-foreground hover:bg-muted transition-all"
-                        aria-label="Spotify"
-                      >
-                        <SpeuSpotifyIcon className="h-4 w-4" />
-                      </a>
-                    )}
-                    {telegram && telegram.length > 1 && (
-                      <a
-                        href={telegram}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-2 rounded-lg text-muted-foreground/50 hover:text-foreground hover:bg-muted transition-all"
-                        aria-label="Telegram"
-                      >
-                        <SpeuTelegramIcon className="h-4 w-4" />
-                      </a>
-                    )}
-                  </div>
-                )}
-
-                <Link
-                  href="/artists"
-                  className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border transition-all text-muted-foreground hover:text-foreground"
-                >
-                  <ExternalLink className="h-3 w-3" strokeWidth={1.5} />
-                  Рэферэнс у каталозе
-                </Link>
-              </div>
-            </motion.div>
-
-            {/* Альбомы */}
-            <div>
-              <h2 className="text-xs uppercase tracking-widest text-muted-foreground/50 mb-4 font-medium">
-                Альбомы
-              </h2>
-              {data.albums.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Пакуль без альбомаў у каталозе.</p>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {data.albums.map((al) => (
-                    <Link
-                      key={al.id}
-                      href={`/speu/albums/${al.slug}`}
-                      className="group rounded-xl border border-border overflow-hidden bg-card hover:border-primary/25 transition-all"
-                    >
-                      <div
-                        className="aspect-square relative bg-muted"
-                        style={{
-                          background: al.coverUrl
-                            ? undefined
-                            : `linear-gradient(160deg, ${gradientFrom}88 0%, ${gradientTo} 100%)`,
-                        }}
-                      >
-                        {al.coverUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={al.coverUrl}
-                            alt=""
-                            className="absolute inset-0 size-full object-cover"
-                          />
-                        ) : (
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <Music className="size-8 opacity-25" style={{ color: accent }} />
-                          </div>
-                        )}
-                      </div>
-                      <div className="p-2.5">
-                        <p className="text-xs font-medium text-foreground line-clamp-2 group-hover:text-primary transition-colors">
-                          {al.title}
-                        </p>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              )}
+      <div className="flex min-h-0 flex-1 flex-col gap-4 p-5">
+        <div className="flex gap-4 items-start">
+          <div className="min-w-0 flex-1">
+            <h1 className="font-display text-2xl font-semibold leading-tight text-foreground italic sm:text-3xl">
+              {data.name}
+            </h1>
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-1">
+                <MapPin className="h-3 w-3 shrink-0" strokeWidth={1.5} />
+                {data.location}
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <Calendar className="h-3 w-3 shrink-0" strokeWidth={1.5} />
+                З {data.year}
+              </span>
             </div>
           </div>
 
-          {/* Правая калонка: трэкі */}
-          <div className="lg:col-span-8">
-            <h2 className="text-xs uppercase tracking-widest text-muted-foreground/50 mb-4 font-medium">
-              Усе трэкі
-            </h2>
-            {data.tracks.length === 0 ? (
-              <div className="glass rounded-xl border border-border p-10 text-center text-muted-foreground text-sm">
-                <Music className="h-8 w-8 mx-auto mb-3 opacity-25" />
-                Няма апублікаваных трэкаў з гэтым артыстам.
-              </div>
+          <div
+            className={cn(
+              "relative size-24 shrink-0 overflow-hidden rounded-xl border border-border/60 sm:size-[7.25rem]",
+              !data.photoUrl && "flex items-center justify-center"
+            )}
+            style={
+              !data.photoUrl
+                ? { background: `linear-gradient(160deg, ${gradientFrom} 0%, ${gradientTo} 100%)` }
+                : undefined
+            }
+          >
+            {data.photoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={data.photoUrl} alt="" className="size-full object-cover" />
             ) : (
-              <div className="space-y-0.5 rounded-xl border border-border/60 bg-card/30 p-2 sm:p-3">
-                {data.tracks.map((t, i) => (
-                  <SpeuTrackRow key={t.id} track={t} index={i} showCover />
-                ))}
-              </div>
+              <>
+                <ArtistPattern pattern={pattern} accent={accent} />
+                <Music
+                  className="relative z-[1] size-9 opacity-30 sm:size-10"
+                  style={{ color: accent }}
+                  strokeWidth={1}
+                />
+              </>
             )}
           </div>
         </div>
+
+        {data.bio.trim().length > 0 && (
+          <p className="text-sm leading-relaxed text-muted-foreground">{data.bio}</p>
+        )}
+
+        {hasSocials && (
+          <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
+            <span className="mr-1 text-xs text-muted-foreground/60">Сачыць:</span>
+            {instagram && instagram.length > 1 && (
+              <a
+                href={instagram}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-lg p-2 text-muted-foreground/50 transition-all hover:bg-muted hover:text-foreground"
+                aria-label="Instagram"
+              >
+                <SpeuInstagramIcon className="h-4 w-4" />
+              </a>
+            )}
+            {youtube && youtube.length > 1 && (
+              <a
+                href={youtube}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-lg p-2 text-muted-foreground/50 transition-all hover:bg-muted hover:text-foreground"
+                aria-label="YouTube"
+              >
+                <SpeuYoutubeIcon className="h-4 w-4" />
+              </a>
+            )}
+            {spotify && spotify.length > 1 && (
+              <a
+                href={spotify}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-lg p-2 text-muted-foreground/50 transition-all hover:bg-muted hover:text-foreground"
+                aria-label="Spotify"
+              >
+                <SpeuSpotifyIcon className="h-4 w-4" />
+              </a>
+            )}
+            {telegram && telegram.length > 1 && (
+              <a
+                href={telegram}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-lg p-2 text-muted-foreground/50 transition-all hover:bg-muted hover:text-foreground"
+                aria-label="Telegram"
+              >
+                <SpeuTelegramIcon className="h-4 w-4" />
+              </a>
+            )}
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+export function SpeuArtistPageView({ data }: { data: SpeuArtistPageData }) {
+  const tracksViewportRef = useRef<HTMLDivElement>(null);
+  const [previewLimit, setPreviewLimit] = useState(8);
+  const { accent, gradientFrom, gradientTo } = data.theme;
+
+  const singlesTracks = useMemo(() => data.tracks.filter((t) => !t.album), [data.tracks]);
+  const hasSingles = singlesTracks.length > 0;
+  const singlesCover = useMemo(
+    () => singlesTracks.find((t) => t.coverUrl)?.coverUrl ?? null,
+    [singlesTracks]
+  );
+
+  const albumsForStrip = useMemo(() => {
+    const list: SpeuArtistAlbum[] = [...data.albums];
+    if (hasSingles) {
+      list.push({
+        id: "__speu_singles__",
+        slug: "",
+        title: "Сінглы",
+        coverUrl: singlesCover,
+        releaseDate: null,
+        isSingles: true,
+      });
+    }
+    return list;
+  }, [data.albums, hasSingles, singlesCover]);
+
+  useLayoutEffect(() => {
+    const el = tracksViewportRef.current;
+    if (!el) return;
+    const measure = () => {
+      const h = el.clientHeight;
+      if (h < TRACK_ROW_PX) return;
+      const n = Math.floor(h / TRACK_ROW_PX);
+      setPreviewLimit(Math.min(Math.max(3, n), Math.max(1, data.tracks.length)));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [data.tracks.length]);
+
+  const previewTracks = data.tracks.slice(0, previewLimit);
+
+  const tracksBlock = (opts: { scrollable?: boolean; className?: string }) => (
+    <div
+      className={cn(
+        "flex flex-col overflow-hidden rounded-2xl border border-border/60 bg-card/30",
+        opts.scrollable && "max-h-[min(70vh,28rem)]",
+        opts.className
+      )}
+    >
+      <div className="shrink-0 p-2 pb-0">
+        <TracksSectionHeader artistSlug={data.slug} showAllLink={data.tracks.length > 0} />
+      </div>
+      <div
+        className={cn(
+          "min-h-0 flex-1 space-y-0.5 p-2 pt-1",
+          opts.scrollable && "overflow-y-auto",
+          !opts.scrollable && "overflow-hidden"
+        )}
+      >
+        {data.tracks.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-2 py-10 text-center text-sm text-muted-foreground">
+            <Music className="h-8 w-8 opacity-25" />
+            Няма апублікаваных трэкаў з гэтым артыстам.
+          </div>
+        ) : opts.scrollable ? (
+          data.tracks.map((t, i) => <SpeuTrackRow key={t.id} track={t} index={i} showCover />)
+        ) : (
+          previewTracks.map((t, i) => <SpeuTrackRow key={t.id} track={t} index={i} showCover />)
+        )}
       </div>
     </div>
+  );
+
+  return (
+    <>
+      {/* Мабільны: слайд картачка / трэкі, ніжэй — паласа альбомаў */}
+      <div className="box-border flex min-h-screen flex-col pt-28 pb-28 lg:hidden">
+        <div className="mb-3 shrink-0 px-4 sm:px-6">
+          <SpeuBackButton />
+        </div>
+
+        <div className="flex w-full snap-x snap-mandatory scroll-pb-2 scroll-pt-1 overflow-x-auto overscroll-x-contain scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <section className="box-border min-w-full shrink-0 snap-center px-4 sm:px-6">
+            <SpeuArtistProfileCard data={data} />
+          </section>
+          <section className="box-border min-w-full shrink-0 snap-center px-4 sm:px-6">
+            {tracksBlock({ scrollable: true })}
+          </section>
+        </div>
+
+        <div className="mt-8 min-h-0 flex-1 px-4 sm:px-6">
+          <AlbumsStrip
+            albums={albumsForStrip}
+            artistSlug={data.slug}
+            accent={accent}
+            gradientFrom={gradientFrom}
+            gradientTo={gradientTo}
+          />
+        </div>
+      </div>
+
+      {/* Дэсктоп: адзін экран — сетка + паласа альбомаў */}
+      <div className="box-border hidden h-svh max-h-svh flex-col overflow-hidden pt-28 pb-4 lg:flex">
+        <div className="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col px-4 sm:px-6 lg:px-8">
+          <SpeuBackButton className="mb-2 shrink-0" />
+
+          <div className="grid min-h-0 flex-1 grid-cols-12 gap-6 overflow-hidden">
+            <div className="col-span-4 flex min-h-0 flex-col overflow-hidden">
+              <SpeuArtistProfileCard data={data} className="min-h-0 flex-1 overflow-y-auto" />
+            </div>
+
+            <div className="col-span-8 flex min-h-0 flex-col overflow-hidden">
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                <TracksSectionHeader artistSlug={data.slug} showAllLink={data.tracks.length > 0} />
+                <div
+                  ref={tracksViewportRef}
+                  className="mt-1 min-h-0 flex-1 overflow-hidden rounded-xl border border-border/60 bg-card/30 p-2 sm:p-3"
+                >
+                  {data.tracks.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center gap-2 py-12 text-center text-sm text-muted-foreground">
+                      <Music className="h-8 w-8 opacity-25" />
+                      Няма апублікаваных трэкаў з гэтым артыстам.
+                    </div>
+                  ) : (
+                    <div className="space-y-0.5">
+                      {previewTracks.map((t, i) => (
+                        <SpeuTrackRow key={t.id} track={t} index={i} showCover />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-3 shrink-0 border-t border-border/40 pt-3">
+            <AlbumsStrip
+              albums={albumsForStrip}
+              artistSlug={data.slug}
+              accent={accent}
+              gradientFrom={gradientFrom}
+              gradientTo={gradientTo}
+            />
+          </div>
+        </div>
+      </div>
+    </>
   );
 }

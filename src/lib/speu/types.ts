@@ -42,6 +42,8 @@ export type SpeuArtistAlbum = {
   title: string;
   coverUrl: string | null;
   releaseDate: string | null;
+  /** Віртуальны «альбом» для трэкаў без album_id у UI */
+  isSingles?: boolean;
 };
 
 export type SpeuArtistPageData = {
@@ -72,7 +74,7 @@ export type SpeuAlbumPageData = {
   coverUrl: string | null;
   releaseDate: string | null;
   description: string | null;
-  artist: { slug: string; name: string; theme: SpeuArtistTheme };
+  artist: { slug: string; name: string; photoUrl: string | null; theme: SpeuArtistTheme };
   tracks: SpeuPublicTrack[];
 };
 

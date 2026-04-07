@@ -1,0 +1,52 @@
+"use client";
+
+import { Music } from "lucide-react";
+import { useMemo } from "react";
+import { SpeuBackButton } from "@/components/speu/SpeuBackButton";
+import { SpeuTrackRow } from "@/components/speu/SpeuTrackRow";
+import type { SpeuArtistPageData } from "@/lib/speu/types";
+
+export function SpeuArtistTracksListView({
+  data,
+  singlesOnly,
+}: {
+  data: SpeuArtistPageData;
+  singlesOnly: boolean;
+}) {
+  const tracks = useMemo(() => {
+    return singlesOnly ? data.tracks.filter((t) => !t.album) : data.tracks;
+  }, [data.tracks, singlesOnly]);
+
+  const title = singlesOnly ? "Сінглы" : "Усе трэкі";
+  const subtitle = singlesOnly
+    ? `Трэкі без альбома ў каталозе «Спеў».`
+    : `Усе апублікаваныя трэкі ў каталозе «Спеў».`;
+
+  return (
+    <div className="min-h-screen pt-28 pb-24 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-3xl mx-auto">
+        <p className="mb-6">
+          <SpeuBackButton />
+        </p>
+        <p className="text-xs uppercase tracking-[0.18em] text-primary/70 mb-3 font-medium">{data.name}</p>
+        <h1 className="font-display text-3xl sm:text-4xl font-semibold text-foreground mb-2 italic">{title}</h1>
+        <p className="text-xs text-muted-foreground mb-10 max-w-lg">{subtitle}</p>
+
+        {tracks.length === 0 ? (
+          <div className="glass rounded-xl border border-border p-12 text-center text-muted-foreground">
+            <Music className="h-10 w-10 mx-auto mb-3 opacity-25" strokeWidth={1} />
+            <p className="text-sm">
+              {singlesOnly ? "Няма трэкаў без альбома." : "Няма апублікаваных трэкаў."}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-0.5 rounded-xl border border-border/60 bg-card/30 p-2 sm:p-3">
+            {tracks.map((t, i) => (
+              <SpeuTrackRow key={t.id} track={t} index={i} showCover />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { Music } from "lucide-react";
+import { SpeuBackButton } from "@/components/speu/SpeuBackButton";
 import { SpeuTrackRow } from "@/components/speu/SpeuTrackRow";
 import { fetchSpeuPlayableTracks } from "@/lib/speu/catalog.server";
 
@@ -19,10 +19,8 @@ export default async function SpeuTop100Page() {
         <p className="text-xs text-muted-foreground text-center mb-2 max-w-lg mx-auto">
           Той жа парадак, што ў блоцы «У топе» на галоўнай старонцы хаба (да 100 пазіцый).
         </p>
-        <p className="text-center mb-10">
-          <Link href="/speu" className="text-sm text-primary hover:underline">
-            ← Да хаба «Спеў»
-          </Link>
+        <p className="mb-10">
+          <SpeuBackButton />
         </p>
 
         {list.length === 0 ? (

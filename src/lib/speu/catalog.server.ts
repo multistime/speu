@@ -354,7 +354,7 @@ export async function fetchSpeuAlbumBySlugOrId(param: string): Promise<SpeuAlbum
   const { data: artist } = await supabase
     .schema("speu")
     .from("artists")
-    .select("slug, name, status, visual_json")
+    .select("slug, name, status, photo_url, visual_json")
     .eq("id", album.artist_id)
     .eq("status", "published")
     .maybeSingle();
@@ -401,7 +401,12 @@ export async function fetchSpeuAlbumBySlugOrId(param: string): Promise<SpeuAlbum
     coverUrl: album.cover_url?.trim() || null,
     releaseDate: album.release_date ?? null,
     description: album.description?.trim() || null,
-    artist: { slug: artist.slug, name: artist.name, theme: artistTheme },
+    artist: {
+      slug: artist.slug,
+      name: artist.name,
+      photoUrl: artist.photo_url?.trim() || null,
+      theme: artistTheme,
+    },
     tracks,
   };
 }
