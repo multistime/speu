@@ -24,9 +24,11 @@ run_vercel() {
 usage() {
   cat <<'EOF'
 Использование:
-  scripts/deploy.sh staging          — pull preview, build, deploy --prebuilt, alias на staging-speu.vercel.app
-  scripts/deploy.sh prod [URL]       — promote в production (URL или последний staging из локального деплоя)
+  scripts/deploy.sh staging          — pull preview, deploy (сборка на Vercel), alias на staging-speu.vercel.app
+  scripts/deploy.sh prod [URL]       — promote в production (URL или последний staging)
   scripts/deploy.sh all              — staging, затем promote того же превью
+
+Сборка идёт на серверах Vercel (без локального vercel build), чтобы деплой работал из подпапки монорепо.
 
 Переменные:
   VERCEL_BIN   — переопределить команду CLI (по умолчанию: vercel в PATH или npx vercel@latest)
@@ -52,12 +54,10 @@ extract_preview_url() {
 cmd_staging() {
   echo "==> Vercel pull (preview)…"
   run_vercel pull --yes --environment=preview
-  echo "==> Vercel build…"
-  run_vercel build
   local log
   log="$(mktemp)"
-  echo "==> Vercel deploy --prebuilt…"
-  run_vercel deploy --prebuilt 2>&1 | tee "$log"
+  echo "==> Vercel deploy (облачная сборка)…"
+  run_vercel deploy --yes 2>&1 | tee "$log"
   local url
   url="$(extract_preview_url "$log")"
   rm -f "$log"
