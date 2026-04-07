@@ -4,6 +4,9 @@ export type SpeuProfile = {
   id: string;
   display_name: string | null;
   is_admin: boolean;
+  /** true when speu.artists.user_id = this profile (заяўкі на рэліз у кабінеце артыста) */
+  is_artist?: boolean;
+  artist_id?: string | null;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
