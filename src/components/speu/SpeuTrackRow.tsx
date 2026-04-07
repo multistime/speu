@@ -77,7 +77,10 @@ function SpeuTrackRowMobileMenu({ track }: { track: SpeuPublicTrack }) {
               {track.album ? (
                 <Menu.Item
                   className={itemClass}
-                  onClick={() => router.push(`/speu/albums/${track.album.slug}`)}
+                  onClick={() => {
+                    const album = track.album;
+                    if (album) router.push(`/speu/albums/${album.slug}`);
+                  }}
                 >
                   Альбом
                 </Menu.Item>
