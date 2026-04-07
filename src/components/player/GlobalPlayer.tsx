@@ -184,8 +184,7 @@ export function GlobalPlayer() {
   const {
     track,
     isPlaying,
-    repeatOne,
-    repeatAll,
+    repeatMode,
     shuffleEnabled,
     nonStopActive,
     queueSize,
@@ -193,8 +192,7 @@ export function GlobalPlayer() {
     duration,
     canSeek,
     togglePlay,
-    toggleRepeatOne,
-    toggleRepeatAll,
+    cycleRepeatMode,
     toggleShuffle,
     skipNext,
     skipPrevious,
@@ -204,6 +202,16 @@ export function GlobalPlayer() {
   const queueNav = nonStopActive && queueSize > 0;
   const canShuffle = queueNav && queueSize > 1;
   const canSkipNext = queueNav;
+
+  const repeatLabel = !queueNav
+    ? repeatMode === "off"
+      ? "Паўтор выклучаны. Націсніце — паўтор аднаго трэка"
+      : "Паўтор аднаго трэка. Націсніце — выключыць паўтор"
+    : repeatMode === "off"
+      ? "Паўтор выклучаны. Націсніце — паўтор усяго плэйліста"
+      : repeatMode === "all"
+        ? "Паўтор усяго плэйліста. Націсніце — паўтор аднаго трэка"
+        : "Паўтор аднаго трэка. Націсніце — выключыць паўтор";
 
   return (
     <AnimatePresence>
@@ -223,7 +231,7 @@ export function GlobalPlayer() {
         >
           <GlobalPlayerProgress track={track} />
 
-          <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 sm:py-3 grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-y-2.5 gap-x-3 sm:gap-x-4 items-center">
+          <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 sm:py-3 grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,min-content)] gap-y-2.5 gap-x-3 sm:gap-x-4 items-center">
             <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 order-1 sm:order-none">
               <div
                 className="w-10 h-10 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden"
@@ -266,45 +274,20 @@ export function GlobalPlayer() {
                     track.title
                   )}
                 </p>
-                <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground tabular-nums">
+                <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground tabular-nums min-w-0">
                   {track.artistName ? (
                     track.artistSlug ? (
                       <Link
                         href={`/speu/artists/${track.artistSlug}`}
-                        className="min-w-0 flex-1 truncate hover:text-foreground transition-colors"
+                        className="min-w-0 truncate hover:text-foreground transition-colors"
                         onClick={(e) => e.stopPropagation()}
                       >
                         {track.artistName}
                       </Link>
                     ) : (
-                      <span className="min-w-0 flex-1 truncate">{track.artistName}</span>
+                      <span className="min-w-0 truncate">{track.artistName}</span>
                     )
-                  ) : (
-                    <span className="flex-1" />
-                  )}
-                  {isPlaying && (
-                    <span className="hidden sm:inline-flex items-end gap-0.5 h-3.5 shrink-0">
-                      {[1, 2, 3].map((i) => (
-                        <motion.span
-                          key={i}
-                          className="w-0.5 rounded-full"
-                          style={{ background: track.accentColor ?? "var(--primary)" }}
-                          animate={{ height: ["35%", "100%", "45%", "85%", "35%"] }}
-                          transition={{
-                            duration: 0.75,
-                            repeat: Infinity,
-                            delay: i * 0.12,
-                            ease: "easeInOut",
-                          }}
-                        />
-                      ))}
-                    </span>
-                  )}
-                  {canSeek && (
-                    <span className="flex-shrink-0 font-mono text-[10px] tracking-tight text-muted-foreground/90 hidden sm:inline">
-                      {formatPlayerTime(currentTime)} / {formatPlayerTime(duration)}
-                    </span>
-                  )}
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -370,63 +353,86 @@ export function GlobalPlayer() {
                 <SkipForward className="w-4 h-4" strokeWidth={2} />
               </button>
 
-              <button
-                type="button"
-                onClick={toggleRepeatAll}
-                disabled={!queueNav}
-                aria-label={
-                  repeatAll
-                    ? "Адключыць паўтор плэйліста"
-                    : "Паўтараць увесь плэйліст"
-                }
-                aria-pressed={repeatAll}
-                className={cn(
-                  ctrlBtn,
-                  repeatAll
-                    ? "border-primary/50 text-primary bg-primary/12"
-                    : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
-                )}
-              >
-                <Repeat className="w-4 h-4" strokeWidth={2} />
-              </button>
-
-              <button
-                type="button"
-                onClick={toggleRepeatOne}
-                aria-label={
-                  repeatOne
-                    ? "Адключыць паўтор трэка"
-                    : "Паўтараць адзін трэк"
-                }
-                aria-pressed={repeatOne}
-                className={cn(
-                  ctrlBtn,
-                  repeatOne
-                    ? "border-primary/50 text-primary bg-primary/12"
-                    : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
-                )}
-              >
-                <Repeat1 className="w-4 h-4" strokeWidth={2} />
-              </button>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 order-3 sm:order-none">
               {track.trackHref?.startsWith("/speu/tracks/") ? (
                 <TrackLikeButton
                   trackId={track.id}
                   size="sm"
                   accentColor={track.accentColor ?? null}
-                  className="border-border/60"
+                  className="border-border/60 w-9 h-9 rounded-full flex items-center justify-center !p-0 hover:bg-muted/50"
                 />
               ) : null}
+
               <button
                 type="button"
-                onClick={stop}
-                aria-label="Спыніць"
-                className="w-9 h-9 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 flex items-center justify-center transition-colors shrink-0"
+                onClick={cycleRepeatMode}
+                aria-label={repeatLabel}
+                aria-pressed={repeatMode !== "off"}
+                className={cn(
+                  ctrlBtn,
+                  repeatMode !== "off"
+                    ? "border-primary/50 text-primary bg-primary/12"
+                    : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
+                )}
               >
-                <X className="w-3.5 h-3.5" strokeWidth={2} />
+                {repeatMode === "one" ? (
+                  <Repeat1 className="w-4 h-4" strokeWidth={2} />
+                ) : (
+                  <Repeat className="w-4 h-4" strokeWidth={2} />
+                )}
               </button>
+            </div>
+
+            <div className="flex flex-row flex-wrap items-center justify-center gap-x-4 gap-y-2 sm:justify-end order-3 sm:order-none sm:col-start-3">
+              {(isPlaying || canSeek) && (
+                <div
+                  className={cn(
+                    "flex items-end gap-2 shrink-0 order-first sm:order-none",
+                    "sm:pl-4 sm:ml-1 sm:border-l sm:border-border/50",
+                    "sm:mr-3"
+                  )}
+                >
+                  {isPlaying && (
+                    <span
+                      className="inline-flex items-end gap-0.5 h-4 shrink-0"
+                      aria-hidden
+                    >
+                      {[1, 2, 3].map((i) => (
+                        <motion.span
+                          key={i}
+                          className="w-0.5 rounded-full"
+                          style={{ background: track.accentColor ?? "var(--primary)" }}
+                          animate={{ height: ["35%", "100%", "45%", "85%", "35%"] }}
+                          transition={{
+                            duration: 0.75,
+                            repeat: Infinity,
+                            delay: i * 0.12,
+                            ease: "easeInOut",
+                          }}
+                        />
+                      ))}
+                    </span>
+                  )}
+                  {canSeek ? (
+                    <span
+                      className="font-mono text-[10px] sm:text-[11px] tracking-tight text-muted-foreground/90 tabular-nums whitespace-nowrap pb-0.5 sm:pb-0"
+                      aria-live="polite"
+                    >
+                      {formatPlayerTime(currentTime)} / {formatPlayerTime(duration)}
+                    </span>
+                  ) : null}
+                </div>
+              )}
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={stop}
+                  aria-label="Спыніць"
+                  className="w-9 h-9 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 flex items-center justify-center transition-colors shrink-0"
+                >
+                  <X className="w-3.5 h-3.5" strokeWidth={2} />
+                </button>
+              </div>
             </div>
           </div>
         </motion.div>

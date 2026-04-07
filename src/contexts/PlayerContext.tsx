@@ -35,11 +35,13 @@ export type PlayerTrack = {
   navArtists?: { slug: string; name: string }[];
 };
 
+/** Паўтор: выкл → уся чарга → адзін трэк → выкл (без чаргі: выкл ↔ адзін трэк) */
+export type PlayerRepeatMode = "off" | "all" | "one";
+
 type PlayerContextValue = {
   track: PlayerTrack | null;
   isPlaying: boolean;
-  repeatOne: boolean;
-  repeatAll: boolean;
+  repeatMode: PlayerRepeatMode;
   shuffleEnabled: boolean;
   /** Non-stop чарга: перамешаны плэйліст цыклічна прайграецца пасля канца трэка */
   nonStopActive: boolean;
@@ -51,8 +53,7 @@ type PlayerContextValue = {
   /** Можна перамотваць (ёсьць канечная даўжыньня) */
   canSeek: boolean;
   togglePlay: (track: PlayerTrack) => void;
-  toggleRepeatOne: () => void;
-  toggleRepeatAll: () => void;
+  cycleRepeatMode: () => void;
   toggleShuffle: () => void;
   skipNext: () => void;
   skipPrevious: () => void;
@@ -75,8 +76,7 @@ function finiteDuration(d: number): number {
 export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const [track, setTrack] = useState<PlayerTrack | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [repeatOne, setRepeatOne] = useState(false);
-  const [repeatAll, setRepeatAll] = useState(false);
+  const [repeatMode, setRepeatMode] = useState<PlayerRepeatMode>("off");
   const [shuffleEnabled, setShuffleEnabled] = useState(false);
   const [nonStopActive, setNonStopActive] = useState(false);
   const [queueSize, setQueueSize] = useState(0);
@@ -115,12 +115,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    repeatOneRef.current = repeatOne;
-  }, [repeatOne]);
-
-  useEffect(() => {
-    repeatAllRef.current = repeatAll;
-  }, [repeatAll]);
+    repeatOneRef.current = repeatMode === "one";
+    repeatAllRef.current = repeatMode === "all";
+  }, [repeatMode]);
 
   useEffect(() => {
     shuffleEnabledRef.current = shuffleEnabled;
@@ -259,7 +256,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     shuffleEnabledRef.current = true;
     setShuffleEnabled(true);
     repeatAllRef.current = true;
-    setRepeatAll(true);
+    repeatOneRef.current = false;
+    setRepeatMode("all");
     const first = queueRef.current[0];
     if (first) playTrackInternalRef.current(first);
   }, []);
@@ -283,7 +281,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     shuffleEnabledRef.current = false;
     setShuffleEnabled(false);
     repeatAllRef.current = false;
-    setRepeatAll(false);
+    repeatOneRef.current = false;
+    setRepeatMode("off");
 
     const first = queueRef.current[qIdx];
     if (first) playTrackInternalRef.current(first);
@@ -302,7 +301,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     shuffleEnabledRef.current = false;
     setShuffleEnabled(false);
     repeatAllRef.current = false;
-    setRepeatAll(false);
+    repeatOneRef.current = false;
+    setRepeatMode("off");
 
     if (trackRef.current?.id === newTrack.id) {
       if (!audio.paused) {
@@ -315,8 +315,16 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const toggleRepeatOne = useCallback(() => {
-    setRepeatOne((v) => !v);
+  const cycleRepeatMode = useCallback(() => {
+    setRepeatMode((m) => {
+      const hasQueue = nonStopRef.current && poolRef.current.length > 0;
+      if (!hasQueue) {
+        return m === "off" ? "one" : "off";
+      }
+      if (m === "off") return "all";
+      if (m === "all") return "one";
+      return "off";
+    });
   }, []);
 
   const seekRatio = useCallback((ratio: number) => {
@@ -350,7 +358,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     shuffleEnabledRef.current = false;
     setShuffleEnabled(false);
     repeatAllRef.current = false;
-    setRepeatAll(false);
+    repeatOneRef.current = false;
+    setRepeatMode("off");
     setTrack(null);
     setIsPlaying(false);
     setCurrentTime(0);
@@ -405,14 +414,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     if (prevTr) playTrackInternalRef.current(prevTr);
   }, []);
 
-  const toggleRepeatAll = useCallback(() => {
-    setRepeatAll((v) => {
-      const next = !v;
-      repeatAllRef.current = next;
-      return next;
-    });
-  }, []);
-
   const toggleShuffle = useCallback(() => {
     if (!nonStopRef.current || poolRef.current.length < 2) return;
     const current = trackRef.current;
@@ -451,8 +452,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       value={{
         track,
         isPlaying,
-        repeatOne,
-        repeatAll,
+        repeatMode,
         shuffleEnabled,
         nonStopActive,
         queueSize,
@@ -460,8 +460,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         duration,
         canSeek,
         togglePlay,
-        toggleRepeatOne,
-        toggleRepeatAll,
+        cycleRepeatMode,
         toggleShuffle,
         skipNext,
         skipPrevious,
