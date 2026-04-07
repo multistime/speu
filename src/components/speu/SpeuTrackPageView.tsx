@@ -1,13 +1,15 @@
 "use client";
 
-import Link from "next/link";
 import { motion } from "framer-motion";
 import { Disc3, Music, Play } from "lucide-react";
+import { SpeuBackButton } from "@/components/speu/SpeuBackButton";
+import { SpeuInlineNavLink } from "@/components/speu/SpeuInlineNavLink";
+import { formatTrackDuration } from "@/components/speu/speu-format-duration";
+import { SpeuTrackRow } from "@/components/speu/SpeuTrackRow";
+import { TrackLikeButton } from "@/components/speu/TrackLikeButton";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { speuPublicTrackToPlayerTrack } from "@/lib/speu/player-map";
 import type { SpeuTrackPageData } from "@/lib/speu/types";
-import { SpeuTrackRow } from "@/components/speu/SpeuTrackRow";
-import { TrackLikeButton } from "@/components/speu/TrackLikeButton";
 
 export function SpeuTrackPageView({ data }: { data: SpeuTrackPageData }) {
   const { togglePlay } = usePlayer();
@@ -17,81 +19,91 @@ export function SpeuTrackPageView({ data }: { data: SpeuTrackPageData }) {
 
   return (
     <div className="min-h-screen pt-28 pb-24 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-4xl mx-auto">
+        <p className="mb-6">
+          <SpeuBackButton />
+        </p>
+
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-2xl border border-border overflow-hidden bg-card shadow-xl mb-10"
-          style={{ boxShadow: `0 0 60px rgba(${accentRgb}, 0.12)` }}
+          className="flex flex-col sm:flex-row gap-8 mb-10"
         >
-          <div className="relative h-56 sm:h-64 flex items-end p-6 sm:p-8 overflow-hidden">
+          <div
+            className="w-full sm:w-52 shrink-0 aspect-square rounded-2xl border border-border overflow-hidden shadow-lg mx-auto sm:mx-0"
+            style={{
+              boxShadow: `0 0 50px rgba(${accentRgb}, 0.12)`,
+              background: track.coverUrl
+                ? undefined
+                : `linear-gradient(160deg, ${track.accentColor}66 0%, var(--card) 100%)`,
+            }}
+          >
             {track.coverUrl ? (
-              <>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={track.coverUrl}
-                  alt=""
-                  className="absolute inset-0 size-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-transparent" />
-              </>
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={track.coverUrl} alt="" className="size-full object-cover" />
             ) : (
-              <div
-                className="absolute inset-0 flex items-center justify-center"
-                style={{
-                  background: `linear-gradient(160deg, ${track.accentColor}55 0%, var(--card) 100%)`,
-                }}
-              >
-                <Music className="size-24 opacity-20" style={{ color: accent }} strokeWidth={1} />
+              <div className="size-full flex items-center justify-center">
+                <Music className="size-16 opacity-30" style={{ color: accent }} strokeWidth={1} />
               </div>
             )}
-            <div className="relative z-10 w-full">
-              <p className="text-xs uppercase tracking-widest text-white/70 mb-2 font-medium">
-                Трэк
-              </p>
-              <h1 className="font-display text-3xl sm:text-4xl font-semibold text-white italic mb-3">
-                {track.title}
-              </h1>
-              <div className="flex flex-wrap gap-2 text-sm">
-                {track.artists.map((a) => (
-                  <Link
-                    key={a.id}
-                    href={`/speu/artists/${a.slug}`}
-                    className="text-white/90 hover:text-white underline-offset-2 hover:underline"
-                  >
-                    {a.name}
-                  </Link>
-                ))}
-              </div>
-              {track.album && (
-                <Link
-                  href={`/speu/albums/${track.album.slug}`}
-                  className="inline-flex items-center gap-2 mt-3 text-sm text-white/75 hover:text-white transition-colors"
-                >
-                  <Disc3 className="size-3.5" strokeWidth={1.5} />
-                  {track.album.title}
-                </Link>
-              )}
-            </div>
           </div>
 
-          <div className="p-6 flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={() => togglePlay(pt)}
-              className="inline-flex items-center gap-2 text-sm px-5 py-3 rounded-xl text-white font-medium"
-              style={{ background: accent }}
-            >
-              <Play className="size-4 fill-current ml-0.5" strokeWidth={0} />
-              Прайграць
-            </button>
-            <TrackLikeButton trackId={track.id} size="md" accentColor={accent} className="border-border" />
-            <Link
-              href="/speu"
-              className="inline-flex items-center text-sm px-4 py-3 rounded-xl border border-border hover:bg-muted/50 transition-colors"
-            >
-              Хаб «Спеў»
-            </Link>
+          <div className="flex-1 min-w-0 text-center sm:text-left">
+            <p className="text-xs uppercase tracking-widest text-primary/70 mb-2 font-medium">Трэк</p>
+
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6 mb-3">
+              <h1 className="font-display text-3xl sm:text-4xl font-semibold text-foreground italic min-w-0">
+                {track.title}
+              </h1>
+              <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-end shrink-0">
+                <button
+                  type="button"
+                  onClick={() => togglePlay(pt)}
+                  className="inline-flex items-center gap-2 text-sm px-4 py-2.5 rounded-xl text-white font-medium"
+                  style={{ background: accent }}
+                >
+                  <Play className="size-4 fill-current ml-0.5" strokeWidth={0} />
+                  Прайграць
+                </button>
+                <TrackLikeButton
+                  trackId={track.id}
+                  size="md"
+                  accentColor={accent}
+                  className="rounded-xl border border-border bg-card hover:bg-muted/60"
+                />
+              </div>
+            </div>
+
+            <div className="mb-4 flex flex-col items-center gap-3 sm:items-start">
+              <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-2 sm:justify-start">
+                {track.artists.map((a, i) => (
+                  <span key={a.id} className="inline-flex items-center gap-2">
+                    {i > 0 && (
+                      <span className="select-none text-muted-foreground/35" aria-hidden>
+                        ·
+                      </span>
+                    )}
+                    <SpeuInlineNavLink href={`/speu/artists/${a.slug}`} className="text-sm">
+                      {a.name}
+                    </SpeuInlineNavLink>
+                  </span>
+                ))}
+              </div>
+
+              {track.album && (
+                <SpeuInlineNavLink
+                  href={`/speu/albums/${track.album.slug}`}
+                  className="text-sm"
+                  leading={<Disc3 className="size-3.5 shrink-0 text-muted-foreground/70" strokeWidth={1.5} />}
+                >
+                  {track.album.title}
+                </SpeuInlineNavLink>
+              )}
+
+              {track.durationSec != null && track.durationSec > 0 && (
+                <p className="text-xs font-mono text-muted-foreground">{formatTrackDuration(track.durationSec)}</p>
+              )}
+            </div>
           </div>
         </motion.div>
 

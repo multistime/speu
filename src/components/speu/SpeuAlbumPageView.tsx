@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { motion } from "framer-motion";
 import { SpeuBackButton } from "@/components/speu/SpeuBackButton";
+import { SpeuInlineNavLink } from "@/components/speu/SpeuInlineNavLink";
 import { Music, Play, Shuffle, User } from "lucide-react";
 import { useLayoutEffect, useRef, useState } from "react";
 import type { SpeuAlbumPageData } from "@/lib/speu/types";
@@ -141,23 +141,25 @@ export function SpeuAlbumPageView({ data }: { data: SpeuAlbumPageData }) {
               </div>
             </div>
 
-            <Link
+            <SpeuInlineNavLink
               href={`/speu/artists/${data.artist.slug}`}
-              className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors mb-4"
+              className="mb-4 text-sm"
+              leading={
+                artistPhoto ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={artistPhoto}
+                    alt=""
+                    className="size-7 shrink-0 rounded-full border border-border object-cover"
+                    aria-hidden
+                  />
+                ) : (
+                  <User className="size-3.5 shrink-0 text-muted-foreground/80" strokeWidth={1.5} />
+                )
+              }
             >
-              {artistPhoto ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={artistPhoto}
-                  alt=""
-                  className="size-7 rounded-full object-cover border border-border shrink-0"
-                  aria-hidden
-                />
-              ) : (
-                <User className="size-3.5 shrink-0" strokeWidth={1.5} />
-              )}
               {data.artist.name}
-            </Link>
+            </SpeuInlineNavLink>
             {data.releaseDate && (
               <p className="text-xs text-muted-foreground font-mono mb-4">{data.releaseDate}</p>
             )}

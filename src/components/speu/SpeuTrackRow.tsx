@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { usePlayer, type PlayerTrack } from "@/contexts/PlayerContext";
 import type { SpeuPublicTrack } from "@/lib/speu/types";
 import { speuPublicTrackToPlayerTrack } from "@/lib/speu/player-map";
+import { SpeuMicroNavArrow } from "@/components/speu/SpeuInlineNavLink";
 import { formatTrackDuration } from "@/components/speu/speu-format-duration";
 import { TrackLikeButton } from "@/components/speu/TrackLikeButton";
 
@@ -133,13 +134,14 @@ export function SpeuTrackRow({ track, index, showCover = true, className }: Speu
           <Link
             href={`/speu/tracks/${track.slug}`}
             className={cn(
-              "text-sm block truncate hover:underline",
+              "group/title flex w-full min-w-0 max-w-full items-center gap-0.5 text-sm hover:underline",
               active ? "font-medium" : "text-foreground/80"
             )}
             style={active ? { color: accentColor } : undefined}
             onClick={(e) => e.stopPropagation()}
           >
-            {track.title}
+            <span className="truncate">{track.title}</span>
+            <SpeuMicroNavArrow className="shrink-0 transition-colors group-hover/title:text-foreground/70" />
           </Link>
           <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-muted-foreground mt-0.5">
             {track.artists.map((a, i) => (
@@ -147,10 +149,11 @@ export function SpeuTrackRow({ track, index, showCover = true, className }: Speu
                 {i > 0 && <span className="text-muted-foreground/40">·</span>}
                 <Link
                   href={`/speu/artists/${a.slug}`}
-                  className="hover:text-foreground transition-colors truncate max-w-[10rem] sm:max-w-none"
+                  className="group/sub inline-flex max-w-[10rem] min-w-0 items-center gap-0.5 transition-colors hover:text-foreground sm:max-w-none"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {a.name}
+                  <span className="truncate">{a.name}</span>
+                  <SpeuMicroNavArrow className="shrink-0 transition-colors group-hover/sub:text-foreground/75" />
                 </Link>
               </span>
             ))}
@@ -159,10 +162,11 @@ export function SpeuTrackRow({ track, index, showCover = true, className }: Speu
                 <span className="text-muted-foreground/35">—</span>
                 <Link
                   href={`/speu/albums/${track.album.slug}`}
-                  className="hover:text-foreground transition-colors truncate max-w-[12rem]"
+                  className="group/sub inline-flex max-w-[12rem] min-w-0 items-center gap-0.5 transition-colors hover:text-foreground"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {track.album.title}
+                  <span className="truncate">{track.album.title}</span>
+                  <SpeuMicroNavArrow className="shrink-0 transition-colors group-hover/sub:text-foreground/75" />
                 </Link>
               </>
             )}

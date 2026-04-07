@@ -6,6 +6,7 @@ import { Calendar, MapPin, Music } from "lucide-react";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ArtistPattern } from "@/components/artists/artist-pattern";
 import { SpeuBackButton } from "@/components/speu/SpeuBackButton";
+import { SpeuInlineNavLink } from "@/components/speu/SpeuInlineNavLink";
 import type { SpeuArtistAlbum, SpeuArtistPageData } from "@/lib/speu/types";
 import { SpeuTrackRow } from "@/components/speu/SpeuTrackRow";
 import {
@@ -20,15 +21,15 @@ const TRACK_ROW_PX = 54;
 
 function TracksSectionHeader({ artistSlug, showAllLink }: { artistSlug: string; showAllLink: boolean }) {
   return (
-    <div className="mb-2 flex shrink-0 items-center justify-between gap-3 px-1">
+    <div className="mb-3 flex shrink-0 items-center justify-between gap-3 px-1">
       <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground/50">Трэкі</h2>
       {showAllLink && (
-        <Link
+        <SpeuInlineNavLink
           href={`/speu/artists/${artistSlug}/tracks`}
-          className="shrink-0 text-xs font-medium text-primary hover:underline"
+          className="shrink-0 text-xs font-medium text-primary hover:text-primary"
         >
           Усе трэкі
-        </Link>
+        </SpeuInlineNavLink>
       )}
     </div>
   );
@@ -291,56 +292,30 @@ export function SpeuArtistPageView({ data }: { data: SpeuArtistPageData }) {
 
   const previewTracks = data.tracks.slice(0, previewLimit);
 
-  const tracksBlock = (opts: { scrollable?: boolean; className?: string }) => (
-    <div
-      className={cn(
-        "flex flex-col overflow-hidden rounded-2xl border border-border/60 bg-card/30",
-        opts.scrollable && "max-h-[min(70vh,28rem)]",
-        opts.className
-      )}
-    >
-      <div className="shrink-0 p-2 pb-0">
-        <TracksSectionHeader artistSlug={data.slug} showAllLink={data.tracks.length > 0} />
-      </div>
-      <div
-        className={cn(
-          "min-h-0 flex-1 space-y-0.5 p-2 pt-1",
-          opts.scrollable && "overflow-y-auto",
-          !opts.scrollable && "overflow-hidden"
-        )}
-      >
-        {data.tracks.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-2 py-10 text-center text-sm text-muted-foreground">
-            <Music className="h-8 w-8 opacity-25" />
-            Няма апублікаваных трэкаў з гэтым артыстам.
-          </div>
-        ) : opts.scrollable ? (
-          data.tracks.map((t, i) => <SpeuTrackRow key={t.id} track={t} index={i} showCover />)
-        ) : (
-          previewTracks.map((t, i) => <SpeuTrackRow key={t.id} track={t} index={i} showCover />)
-        )}
-      </div>
-    </div>
-  );
-
   return (
     <>
-      {/* Мабільны: слайд картачка / трэкі, ніжэй — паласа альбомаў */}
-      <div className="box-border flex min-h-screen flex-col pt-28 pb-28 lg:hidden">
-        <div className="mb-3 shrink-0 px-4 sm:px-6">
-          <SpeuBackButton />
-        </div>
+      {/* Мабільны: адна калонка ў стылі старонкі альбома */}
+      <div className="min-h-screen pt-28 pb-24 px-4 sm:px-6 lg:hidden">
+        <div className="mx-auto max-w-4xl">
+          <p className="mb-6">
+            <SpeuBackButton />
+          </p>
 
-        <div className="flex w-full snap-x snap-mandatory scroll-pb-2 scroll-pt-1 overflow-x-auto overscroll-x-contain scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <section className="box-border min-w-full shrink-0 snap-center px-4 sm:px-6">
-            <SpeuArtistProfileCard data={data} />
-          </section>
-          <section className="box-border min-w-full shrink-0 snap-center px-4 sm:px-6">
-            {tracksBlock({ scrollable: true })}
-          </section>
-        </div>
+          <SpeuArtistProfileCard data={data} className="mb-10" />
 
-        <div className="mt-8 min-h-0 flex-1 px-4 sm:px-6">
+          <TracksSectionHeader artistSlug={data.slug} showAllLink={data.tracks.length > 0} />
+
+          <div className="space-y-0.5 rounded-xl border border-border/60 bg-card/30 p-2 sm:p-3 mb-10">
+            {data.tracks.length === 0 ? (
+              <div className="flex flex-col items-center justify-center gap-2 py-10 text-center text-sm text-muted-foreground">
+                <Music className="h-8 w-8 opacity-25" />
+                Няма апублікаваных трэкаў з гэтым артыстам.
+              </div>
+            ) : (
+              data.tracks.map((t, i) => <SpeuTrackRow key={t.id} track={t} index={i} showCover />)
+            )}
+          </div>
+
           <AlbumsStrip
             albums={albumsForStrip}
             artistSlug={data.slug}
@@ -366,7 +341,7 @@ export function SpeuArtistPageView({ data }: { data: SpeuArtistPageData }) {
                 <TracksSectionHeader artistSlug={data.slug} showAllLink={data.tracks.length > 0} />
                 <div
                   ref={tracksViewportRef}
-                  className="mt-1 min-h-0 flex-1 overflow-hidden rounded-xl border border-border/60 bg-card/30 p-2 sm:p-3"
+                  className="min-h-0 flex-1 overflow-hidden rounded-xl border border-border/60 bg-card/30 p-2 sm:p-3"
                 >
                   {data.tracks.length === 0 ? (
                     <div className="flex flex-col items-center justify-center gap-2 py-12 text-center text-sm text-muted-foreground">
