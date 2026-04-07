@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { motion } from "framer-motion";
 import { Music } from "lucide-react";
 import type { SpeuHubArtistCard, SpeuPublicTrack } from "@/lib/speu/types";
@@ -8,14 +7,17 @@ import { speuPublicTrackToPlayerTrack } from "@/lib/speu/player-map";
 import { SpeuHeroShuffle } from "@/components/speu/SpeuHeroShuffle";
 import { SpeuTrackRow } from "@/components/speu/SpeuTrackRow";
 import { SpeuArtistCardCompact } from "@/components/speu/SpeuArtistCardCompact";
+import { SpeuInlineNavLink } from "@/components/speu/SpeuInlineNavLink";
 import { cn } from "@/lib/utils";
 
 type SpeuHubClientProps = {
   playable: SpeuPublicTrack[];
   artists: SpeuHubArtistCard[];
+  /** Залайканыя трэкі (толькі для аўтарызаваных); пуста — секцыя не паказваецца */
+  likedPreview: SpeuPublicTrack[];
 };
 
-export function SpeuHubClient({ playable, artists }: SpeuHubClientProps) {
+export function SpeuHubClient({ playable, artists, likedPreview }: SpeuHubClientProps) {
   const playerTracks = playable.map(speuPublicTrackToPlayerTrack);
   const chartPreview = playable.slice(0, 10);
   const leftCol = chartPreview.filter((_, i) => i % 2 === 0);
@@ -49,12 +51,12 @@ export function SpeuHubClient({ playable, artists }: SpeuHubClientProps) {
             <h2 className="font-display text-2xl sm:text-3xl font-semibold text-foreground italic">
               Лепшае
             </h2>
-            <Link
+            <SpeuInlineNavLink
               href="/speu/top-100"
-              className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors shrink-0 text-right"
+              className="text-sm font-medium shrink-0 justify-end ml-auto"
             >
               Папулярнае
-            </Link>
+            </SpeuInlineNavLink>
           </div>
 
           {chartPreview.length === 0 ? (
@@ -85,18 +87,53 @@ export function SpeuHubClient({ playable, artists }: SpeuHubClientProps) {
           )}
         </section>
 
+        {/* Любімае */}
+        {likedPreview.length > 0 ? (
+          <section className="mt-2 mb-16">
+            <div className="flex flex-row items-baseline justify-between gap-4 mb-6">
+              <h2 className="font-display text-2xl sm:text-3xl font-semibold text-foreground italic">
+                Любімае
+              </h2>
+              <SpeuInlineNavLink
+                href="/speu/liked"
+                className="text-sm font-medium shrink-0 justify-end ml-auto"
+              >
+                Усе
+              </SpeuInlineNavLink>
+            </div>
+            <div className="space-y-0.5 md:hidden">
+              {likedPreview.map((t, i) => (
+                <SpeuTrackRow key={t.id} track={t} index={i} showCover />
+              ))}
+            </div>
+            <div className="hidden md:grid md:grid-cols-2 gap-8 md:gap-12">
+              <div className="space-y-0.5">
+                {likedPreview
+                  .filter((_, i) => i % 2 === 0)
+                  .map((t, i) => (
+                    <SpeuTrackRow key={t.id} track={t} index={i * 2} showCover />
+                  ))}
+              </div>
+              <div className="space-y-0.5">
+                {likedPreview
+                  .filter((_, i) => i % 2 === 1)
+                  .map((t, i) => (
+                    <SpeuTrackRow key={t.id} track={t} index={i * 2 + 1} showCover />
+                  ))}
+              </div>
+            </div>
+          </section>
+        ) : null}
+
         {/* Артысты */}
         <section>
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-8">
+          <div className="flex flex-row items-baseline justify-between gap-4 mb-8">
             <h2 className="font-display text-2xl sm:text-3xl font-semibold text-foreground italic">
               Артысты
             </h2>
-            <Link
-              href="/artists"
-              className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors shrink-0"
-            >
-              Усе артысты
-            </Link>
+            <SpeuInlineNavLink href="/artists" className="text-sm font-medium shrink-0 ml-auto">
+              Усе
+            </SpeuInlineNavLink>
           </div>
 
           {artists.length === 0 ? (

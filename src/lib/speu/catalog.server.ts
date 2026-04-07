@@ -58,6 +58,26 @@ type RawTrackRow = {
   track_artists: RawCreditRow[] | null;
 };
 
+/** Embedded `artist_tracks` select for playable / liked lists (keep in sync with mappers). */
+const SPEU_PLAYABLE_TRACK_EMBED = `
+      id,
+      slug,
+      title,
+      audio_url,
+      external_url,
+      cover_url,
+      duration_sec,
+      album_id,
+      sort_order,
+      play_on_radio,
+      created_at,
+      albums ( id, slug, title, cover_url, is_published ),
+      track_artists (
+        sort_order,
+        artists ( id, slug, name, name_en, status, visual_json )
+      )
+    ` as const;
+
 function normAlbum(a: RawAlbum | RawAlbum[]): RawAlbum {
   if (!a) return null;
   return Array.isArray(a) ? a[0] ?? null : a;
@@ -134,26 +154,7 @@ export async function fetchSpeuPlayableTracks(): Promise<SpeuPublicTrack[]> {
   const { data, error } = await supabase
     .schema("speu")
     .from("artist_tracks")
-    .select(
-      `
-      id,
-      slug,
-      title,
-      audio_url,
-      external_url,
-      cover_url,
-      duration_sec,
-      album_id,
-      sort_order,
-      play_on_radio,
-      created_at,
-      albums ( id, slug, title, cover_url, is_published ),
-      track_artists (
-        sort_order,
-        artists ( id, slug, name, name_en, status, visual_json )
-      )
-    `
-    )
+    .select(SPEU_PLAYABLE_TRACK_EMBED)
     .eq("is_published", true);
 
   if (error || !data) return [];
@@ -164,6 +165,54 @@ export async function fetchSpeuPlayableTracks(): Promise<SpeuPublicTrack[]> {
 
   mapped.sort(chartSort);
   return mapped;
+}
+
+type RawTrackLikeRow = {
+  created_at: string;
+  artist_tracks: RawTrackRow | RawTrackRow[] | null;
+};
+
+/**
+ * User's liked tracks in reverse chronological like order. Empty if not signed in.
+ * @param limit — max rows; omit or `null` for no limit (subject to PostgREST defaults).
+ */
+export async function fetchSpeuUserLikedTracks(limit?: number | null): Promise<SpeuPublicTrack[]> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  let q = supabase
+    .schema("speu")
+    .from("track_likes")
+    .select(
+      `
+      created_at,
+      artist_tracks (
+        ${SPEU_PLAYABLE_TRACK_EMBED}
+      )
+    `
+    )
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
+
+  if (limit != null) {
+    q = q.limit(limit);
+  }
+
+  const { data, error } = await q;
+  if (error || !data?.length) return [];
+
+  const out: SpeuPublicTrack[] = [];
+  for (const row of data as unknown as RawTrackLikeRow[]) {
+    const tr = row.artist_tracks;
+    const raw = Array.isArray(tr) ? tr[0] : tr;
+    if (!raw) continue;
+    const pub = mapRawTrackToPublic(raw);
+    if (pub) out.push(pub);
+  }
+  return out;
 }
 
 export async function fetchSpeuHubArtists(limit = 20): Promise<SpeuHubArtistCard[]> {

@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Music, Pause, Play } from "lucide-react";
+import { Menu } from "@base-ui/react/menu";
+import { MoreHorizontal, Music, Pause, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePlayer, type PlayerTrack } from "@/contexts/PlayerContext";
 import type { SpeuPublicTrack } from "@/lib/speu/types";
 import { speuPublicTrackToPlayerTrack } from "@/lib/speu/player-map";
-import { SpeuMicroNavArrow } from "@/components/speu/SpeuInlineNavLink";
 import { formatTrackDuration } from "@/components/speu/speu-format-duration";
 import { TrackLikeButton } from "@/components/speu/TrackLikeButton";
 
@@ -38,6 +39,66 @@ function TrackPlayingEqualizer({ color }: { color: string }) {
   );
 }
 
+function SpeuTrackRowMobileMenu({ track }: { track: SpeuPublicTrack }) {
+  const router = useRouter();
+  const { accentColor } = track;
+
+  const itemClass =
+    "flex cursor-pointer items-center rounded-md px-3 py-2 text-sm text-foreground outline-none select-none data-highlighted:bg-muted";
+
+  return (
+    <div
+      className="md:hidden shrink-0"
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <Menu.Root modal={false}>
+        <Menu.Trigger
+          type="button"
+          className={cn(
+            "rounded-lg border border-transparent p-1.5 transition-colors shrink-0",
+            "hover:bg-muted/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary/40",
+            "text-muted-foreground hover:text-foreground"
+          )}
+          style={accentColor ? { color: accentColor } : undefined}
+          aria-label="Дадаткова"
+        >
+          <MoreHorizontal className="size-4" strokeWidth={2} />
+        </Menu.Trigger>
+        <Menu.Portal>
+          <Menu.Positioner sideOffset={6} align="end" className="z-50">
+            <Menu.Popup className="min-w-[11rem] z-50 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-md outline-none">
+              <Menu.Item
+                className={itemClass}
+                onClick={() => router.push(`/speu/tracks/${track.slug}`)}
+              >
+                Старонка трэка
+              </Menu.Item>
+              {track.album ? (
+                <Menu.Item
+                  className={itemClass}
+                  onClick={() => router.push(`/speu/albums/${track.album.slug}`)}
+                >
+                  Альбом
+                </Menu.Item>
+              ) : null}
+              {track.artists.map((a) => (
+                <Menu.Item
+                  key={a.id}
+                  className={itemClass}
+                  onClick={() => router.push(`/speu/artists/${a.slug}`)}
+                >
+                  {a.name}
+                </Menu.Item>
+              ))}
+            </Menu.Popup>
+          </Menu.Positioner>
+        </Menu.Portal>
+      </Menu.Root>
+    </div>
+  );
+}
+
 type SpeuTrackRowProps = {
   track: SpeuPublicTrack;
   index: number;
@@ -64,7 +125,7 @@ export function SpeuTrackRow({ track, index, showCover = true, className }: Speu
   return (
     <div
       className={cn(
-        "relative flex items-center gap-1 px-3 py-2 rounded-lg transition-colors group/track",
+        "relative flex items-center gap-0.5 md:gap-1 px-3 py-2 rounded-lg transition-colors group/track",
         "hover:bg-muted",
         className
       )}
@@ -76,11 +137,11 @@ export function SpeuTrackRow({ track, index, showCover = true, className }: Speu
         onClick={playActivate}
         onKeyDown={playKeyDown}
         className={cn(
-          "flex flex-1 min-w-0 items-center gap-3 cursor-pointer rounded-md outline-none",
+          "flex flex-1 min-w-0 items-center gap-1 sm:gap-1.5 md:gap-3 cursor-pointer rounded-md outline-none",
           "focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         )}
       >
-        <span className="text-xs text-muted-foreground/40 w-6 font-mono shrink-0 tabular-nums">
+        <span className="text-xs text-muted-foreground/40 w-3.5 sm:w-4 font-mono shrink-0 tabular-nums text-center">
           {index + 1}
         </span>
 
@@ -134,42 +195,27 @@ export function SpeuTrackRow({ track, index, showCover = true, className }: Speu
           <Link
             href={`/speu/tracks/${track.slug}`}
             className={cn(
-              "group/title flex w-full min-w-0 max-w-full items-center gap-0.5 text-sm hover:underline",
+              "block w-full min-w-0 max-w-full truncate text-sm hover:underline",
               active ? "font-medium" : "text-foreground/80"
             )}
             style={active ? { color: accentColor } : undefined}
             onClick={(e) => e.stopPropagation()}
           >
-            <span className="truncate">{track.title}</span>
-            <SpeuMicroNavArrow className="shrink-0 transition-colors group-hover/title:text-foreground/70" />
+            {track.title}
           </Link>
-          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-muted-foreground mt-0.5">
+          <div className="flex flex-wrap items-center text-xs text-muted-foreground mt-0.5">
             {track.artists.map((a, i) => (
-              <span key={a.id} className="inline-flex items-center gap-1.5">
-                {i > 0 && <span className="text-muted-foreground/40">·</span>}
+              <span key={a.id} className="inline-flex min-w-0 items-center">
+                {i > 0 ? <span className="text-muted-foreground/40">,&nbsp;</span> : null}
                 <Link
                   href={`/speu/artists/${a.slug}`}
-                  className="group/sub inline-flex max-w-[10rem] min-w-0 items-center gap-0.5 transition-colors hover:text-foreground sm:max-w-none"
+                  className="truncate max-w-[10rem] sm:max-w-none transition-colors hover:text-foreground"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <span className="truncate">{a.name}</span>
-                  <SpeuMicroNavArrow className="shrink-0 transition-colors group-hover/sub:text-foreground/75" />
+                  {a.name}
                 </Link>
               </span>
             ))}
-            {track.album && (
-              <>
-                <span className="text-muted-foreground/35">—</span>
-                <Link
-                  href={`/speu/albums/${track.album.slug}`}
-                  className="group/sub inline-flex max-w-[12rem] min-w-0 items-center gap-0.5 transition-colors hover:text-foreground"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <span className="truncate">{track.album.title}</span>
-                  <SpeuMicroNavArrow className="shrink-0 transition-colors group-hover/sub:text-foreground/75" />
-                </Link>
-              </>
-            )}
           </div>
         </div>
 
@@ -189,6 +235,7 @@ export function SpeuTrackRow({ track, index, showCover = true, className }: Speu
       </div>
 
       <TrackLikeButton trackId={track.id} accentColor={accentColor} />
+      <SpeuTrackRowMobileMenu track={track} />
     </div>
   );
 }
