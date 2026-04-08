@@ -21,15 +21,17 @@ type SpeuHubClientProps = {
 };
 
 /**
- * Мабільны: адступ пад падзагалоўкам (без нахлосту на тэкст), моцны ўніз на «Лепшае».
- * sm+: лёгкі нахлост пад загаловак, баланс з блокам ніжэй.
+ * Вертыкаль: два брэйкпойнты (мабільны / sm+), бо розныя задачы:
+ * — мабільны: крыху бліжэй да падзагалоўка, без «прыляпання»;
+ * — sm+: малы зазор пад падзагалоўкам, кольцы не «сліпліся» з тэкстам.
+ * Ніжнія адступы трымаюць наслаенне на «Лепшае».
  */
 function hubHeroOverlapStyle(level: number): CSSProperties {
   const L = Math.min(5, Math.max(1, Math.round(level)));
   const t = (L - 1) / 4;
   return {
-    ["--speu-hero-disc-mt" as string]: `${0.55 + t * 0.4}rem`,
-    ["--speu-hero-disc-mt-sm" as string]: `${-(0.35 + t * 1.05)}rem`,
+    ["--speu-hero-disc-mt" as string]: `${0.38 + t * 0.32}rem`,
+    ["--speu-hero-disc-mt-sm" as string]: `${-(0.08 + t * 0.92)}rem`,
     ["--speu-hero-disc-mb" as string]: `${-(2.4 + t * 3.5)}rem`,
     ["--speu-hero-disc-mb-sm" as string]: `${-(2.1 + t * 3.05)}rem`,
   } as CSSProperties;
@@ -78,7 +80,7 @@ export function SpeuHubClient({
             <h1 className="font-display text-4xl sm:text-5xl font-semibold text-foreground mb-2 sm:mb-3 leading-tight italic [text-shadow:0_0_1px_var(--background),0_1px_2px_var(--background)]">
               Спеў
             </h1>
-            <p className="text-muted-foreground max-w-xl mx-auto text-sm leading-relaxed pb-2 sm:pb-3 [text-shadow:0_1px_0_var(--background)]">
+            <p className="text-muted-foreground max-w-xl mx-auto text-sm leading-relaxed pb-2 sm:pb-3.5 [text-shadow:0_1px_0_var(--background)]">
               Слухайце трэкі, адкрывайце артыстаў, альбомы і асобныя кампазіцыі.
             </p>
           </motion.div>

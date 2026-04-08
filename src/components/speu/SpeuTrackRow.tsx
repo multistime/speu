@@ -179,7 +179,7 @@ export function SpeuTrackRow({
           )}
         />
 
-        <div className="relative z-[1] flex min-w-0 flex-1 items-center gap-1.5 max-md:gap-1 sm:gap-2 md:gap-2.5 max-md:pointer-events-none md:pointer-events-auto">
+        <div className="relative z-[1] flex min-w-0 flex-1 items-center gap-1.5 max-md:gap-1.5 sm:gap-2 md:gap-2.5 max-md:pointer-events-none md:pointer-events-auto">
           {/* Мабільны: вузкая калонка, нумар прыціснуты да вокладкі; дэсктоп: фіксаваная калонка з клікам */}
           <div
             className={cn(
