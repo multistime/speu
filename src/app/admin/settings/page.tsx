@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Save, Settings, RotateCcw, X, Check, Plus, Trash2, Users, Heart } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Save, Settings, RotateCcw, X, Check, Plus, Trash2, Users, Heart, Disc3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Setting = { key: string; value: string; description: string; updated_at: string };
@@ -16,7 +16,11 @@ const RADIO_KEYS = new Set([
   "radio_nowplaying_url",
 ]);
 
-const SECTION_SETTINGS_KEYS = new Set(["artists_show_placeholder", "support_show_placeholder"]);
+const SECTION_SETTINGS_KEYS = new Set([
+  "artists_show_placeholder",
+  "support_show_placeholder",
+  "speu_hub_hero_disc_scale",
+]);
 
 export default function AdminSettingsPage() {
   const [items, setItems] = useState<Setting[]>([]);
@@ -31,6 +35,10 @@ export default function AdminSettingsPage() {
 
   const [showSupportPlaceholder, setShowSupportPlaceholder] = useState(true);
   const [savingSupportPlaceholder, setSavingSupportPlaceholder] = useState(false);
+
+  const [heroDiscScale, setHeroDiscScale] = useState(1);
+  const [savingHeroDisc, setSavingHeroDisc] = useState(false);
+  const lastSavedHeroDiscScale = useRef(1);
 
   // New custom key form
   const [newKey, setNewKey] = useState("");
@@ -48,6 +56,14 @@ export default function AdminSettingsPage() {
 
     const supportPh = data.find((s) => s.key === "support_show_placeholder");
     if (supportPh) setShowSupportPlaceholder(supportPh.value !== "false");
+
+    const discScale = data.find((s) => s.key === "speu_hub_hero_disc_scale");
+    if (discScale) {
+      const n = parseInt(discScale.value ?? "1", 10);
+      const v = Number.isNaN(n) ? 1 : Math.min(5, Math.max(1, n));
+      setHeroDiscScale(v);
+      lastSavedHeroDiscScale.current = v;
+    }
 
     setItems(data.filter((s) => !RADIO_KEYS.has(s.key) && !SECTION_SETTINGS_KEYS.has(s.key)));
     setEdited({});
@@ -116,6 +132,25 @@ export default function AdminSettingsPage() {
       setError(d.error ?? "Памылка захавання");
     }
     setSavingSupportPlaceholder(false);
+  };
+
+  const persistHeroDiscScale = async (next: number) => {
+    const clamped = Math.min(5, Math.max(1, Math.round(next)));
+    setSavingHeroDisc(true);
+    setError(null);
+    const res = await fetch("/api/admin/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify([{ key: "speu_hub_hero_disc_scale", value: String(clamped) }]),
+    });
+    if (!res.ok) {
+      setHeroDiscScale(lastSavedHeroDiscScale.current);
+      const d = await res.json().catch(() => ({}));
+      setError(d.error ?? "Памылка захавання");
+    } else {
+      lastSavedHeroDiscScale.current = clamped;
+    }
+    setSavingHeroDisc(false);
   };
 
   const addKey = async () => {
@@ -236,6 +271,46 @@ export default function AdminSettingsPage() {
                   )}
                 />
               </button>
+            </div>
+          </div>
+
+          {/* Speu hub hero */}
+          <div className="glass rounded-2xl border border-border p-6 space-y-4">
+            <h2 className="text-sm font-semibold flex items-center gap-2">
+              <Disc3 className="w-4 h-4 text-primary" strokeWidth={1.75} />
+              Спеў / струмень
+            </h2>
+
+            <div className="space-y-3 py-1">
+              <div className="flex-1">
+                <p className="text-sm font-medium">Памер пластыны з прайграваннем на /speu</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  1 — мінімум (як было раней). Больш значэнне — буйней пластына і мацней заходзіць пад загаловак і на блок
+                  «Лепшае».
+                </p>
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
+                <input
+                  type="range"
+                  min={1}
+                  max={5}
+                  step={1}
+                  value={heroDiscScale}
+                  disabled={savingHeroDisc}
+                  aria-label="Памер пластыны"
+                  onChange={(e) => setHeroDiscScale(Number(e.target.value))}
+                  onPointerUp={(e) => void persistHeroDiscScale(Number((e.target as HTMLInputElement).value))}
+                  onKeyUp={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      void persistHeroDiscScale(Number((e.target as HTMLInputElement).value));
+                    }
+                  }}
+                  className="w-full max-w-md accent-primary h-2 cursor-pointer disabled:opacity-50"
+                />
+                <span className="text-sm tabular-nums text-muted-foreground shrink-0 w-28">
+                  Узровень {heroDiscScale} з 5
+                </span>
+              </div>
             </div>
           </div>
 

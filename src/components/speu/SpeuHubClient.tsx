@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useMemo } from "react";
+import { useMemo, type CSSProperties } from "react";
 import { Music } from "lucide-react";
 import type { SpeuHubArtistCard, SpeuPublicTrack } from "@/lib/speu/types";
 import { speuPublicTrackToPlayerTrack } from "@/lib/speu/player-map";
@@ -16,9 +16,28 @@ type SpeuHubClientProps = {
   artists: SpeuHubArtistCard[];
   /** Залайканыя трэкі (толькі для аўтарызаваных); пуста — секцыя не паказваецца */
   likedPreview: SpeuPublicTrack[];
+  /** 1–5 з адмінкі: памер пластыны, 1 = мінімум */
+  heroDiscScale?: number;
 };
 
-export function SpeuHubClient({ playable, artists, likedPreview }: SpeuHubClientProps) {
+/** Негатыўныя водступы: пластына заходзіць пад загаловак і на «Лепшае» */
+function hubHeroOverlapStyle(level: number): CSSProperties {
+  const L = Math.min(5, Math.max(1, Math.round(level)));
+  const t = (L - 1) / 4;
+  return {
+    ["--speu-hero-pull-mt" as string]: `${-(1.1 + t * 2.35)}rem`,
+    ["--speu-hero-pull-mt-sm" as string]: `${-(1.5 + t * 3.1)}rem`,
+    ["--speu-hero-pull-mb" as string]: `${-(0.45 + t * 1)}rem`,
+    ["--speu-hero-pull-mb-sm" as string]: `${-(0.65 + t * 1.25)}rem`,
+  } as CSSProperties;
+}
+
+export function SpeuHubClient({
+  playable,
+  artists,
+  likedPreview,
+  heroDiscScale = 1,
+}: SpeuHubClientProps) {
   const playerTracks = playable.map(speuPublicTrackToPlayerTrack);
   const chartPreview = useMemo(() => playable.slice(0, 10), [playable]);
   const chartPlaylist = useMemo(
@@ -32,30 +51,43 @@ export function SpeuHubClient({ playable, artists, likedPreview }: SpeuHubClient
   const leftCol = chartPreview.filter((_, i) => i % 2 === 0);
   const rightCol = chartPreview.filter((_, i) => i % 2 === 1);
 
+  const heroPull = useMemo(() => hubHeroOverlapStyle(heroDiscScale), [heroDiscScale]);
+
   return (
     <div className="min-h-screen pt-20 pb-28 px-3 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="text-center mb-6"
-        >
-          <p className="text-xs uppercase tracking-[0.18em] text-primary/70 mb-4 font-medium">
-            Струмень
-          </p>
-          <h1 className="font-display text-4xl sm:text-5xl font-semibold text-foreground mb-4 leading-tight italic">
-            Спеў
-          </h1>
-          <p className="text-muted-foreground max-w-xl mx-auto text-sm leading-relaxed">
-            Слухайце трэкі, адкрывайце артыстаў, альбомы і асобныя кампазіцыі.
-          </p>
-        </motion.div>
+        <section className="relative mb-3 sm:mb-5">
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            className="relative z-30 text-center px-1 pointer-events-none"
+          >
+            <p className="text-xs uppercase tracking-[0.18em] text-primary/70 mb-2 sm:mb-3 font-medium">
+              Слухай сваё
+            </p>
+            <h1 className="font-display text-4xl sm:text-5xl font-semibold text-foreground mb-2 sm:mb-3 leading-tight italic [text-shadow:0_0_1px_var(--background),0_1px_2px_var(--background)]">
+              Спеў
+            </h1>
+            <p className="text-muted-foreground max-w-xl mx-auto text-sm leading-relaxed pb-1">
+              Слухайце трэкі, адкрывайце артыстаў, альбомы і асобныя кампазіцыі.
+            </p>
+          </motion.div>
 
-        <SpeuHeroShuffle tracks={playerTracks} playableCount={playable.length} />
+          <div
+            className="relative z-10 mt-[var(--speu-hero-pull-mt)] mb-[var(--speu-hero-pull-mb)] sm:mt-[var(--speu-hero-pull-mt-sm)] sm:mb-[var(--speu-hero-pull-mb-sm)]"
+            style={heroPull}
+          >
+            <SpeuHeroShuffle
+              tracks={playerTracks}
+              playableCount={playable.length}
+              scaleLevel={heroDiscScale}
+            />
+          </div>
+        </section>
 
         {/* Лепшае (топ-10) */}
-        <section className="mt-2 mb-16">
+        <section className="relative z-20 mb-16">
           <div className="flex flex-row items-baseline justify-between gap-4 mb-6">
             <h2 className="font-display text-2xl sm:text-3xl font-semibold text-foreground italic">
               Лепшае

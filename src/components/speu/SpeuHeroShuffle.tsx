@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState, type SyntheticEvent } from "react";
+import { useId, useState, type CSSProperties, type SyntheticEvent } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Pause, Play } from "lucide-react";
 import { usePlayer } from "@/contexts/PlayerContext";
@@ -78,12 +78,20 @@ function SpeuHeroCoverImage({ src, reduceMotion }: { src: string; reduceMotion: 
   );
 }
 
+/** 1 = мінімальны памер (як раней), 5 — найбуйнейшы; крокі лінейныя */
+export function speuHubDiscScaleFactor(level: number): number {
+  const L = Math.min(5, Math.max(1, Math.round(level)));
+  return 1 + (L - 1) * 0.1375;
+}
+
 type SpeuHeroShuffleProps = {
   tracks: PlayerTrack[];
   playableCount: number;
+  /** 1–5 з site_settings; па змаўчанні 1 */
+  scaleLevel?: number;
 };
 
-export function SpeuHeroShuffle({ tracks, playableCount }: SpeuHeroShuffleProps) {
+export function SpeuHeroShuffle({ tracks, playableCount, scaleLevel = 1 }: SpeuHeroShuffleProps) {
   const labelArcId = useId().replace(/:/g, "");
   const { startNonStopShuffle, nonStopActive, isPlaying, track, togglePlay } = usePlayer();
   const reduceMotion = useReducedMotion();
@@ -107,6 +115,9 @@ export function SpeuHeroShuffle({ tracks, playableCount }: SpeuHeroShuffleProps)
     }
     startNonStopShuffle(tracks);
   };
+
+  const df = speuHubDiscScaleFactor(scaleLevel);
+  const discVars = { "--speu-disc-f": String(df) } as CSSProperties;
 
   const discClassName = "relative flex size-full items-center justify-center";
 
@@ -144,7 +155,8 @@ export function SpeuHeroShuffle({ tracks, playableCount }: SpeuHeroShuffleProps)
         whileHover={{ scale: playableCount ? 1.04 : 1 }}
         whileTap={{ scale: playableCount ? 0.97 : 1 }}
         className={cn(
-          "group relative z-10 flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-primary-foreground shadow-lg sm:size-28",
+          "group relative z-10 flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-primary-foreground shadow-lg",
+          "h-[calc(6rem*var(--speu-disc-f))] w-[calc(6rem*var(--speu-disc-f))] sm:h-[calc(7rem*var(--speu-disc-f))] sm:w-[calc(7rem*var(--speu-disc-f))]",
           "border border-primary/25 disabled:cursor-not-allowed disabled:opacity-40",
           "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary/50"
         )}
@@ -217,7 +229,7 @@ export function SpeuHeroShuffle({ tracks, playableCount }: SpeuHeroShuffleProps)
         )}
 
         <motion.span
-          className="relative z-10 flex size-10 items-center justify-center sm:size-11"
+          className="relative z-10 flex items-center justify-center h-[calc(2.5rem*var(--speu-disc-f))] w-[calc(2.5rem*var(--speu-disc-f))] sm:h-[calc(2.75rem*var(--speu-disc-f))] sm:w-[calc(2.75rem*var(--speu-disc-f))]"
           animate={spinning ? { rotate: -360 } : { rotate: 0 }}
           transition={spinTransition}
         >
@@ -226,7 +238,7 @@ export function SpeuHeroShuffle({ tracks, playableCount }: SpeuHeroShuffleProps)
               <span
                 className={cn(
                   "pointer-events-none absolute rounded-full shadow-md ring-1 ring-black/25",
-                  "size-2 bg-zinc-900 sm:size-2.5",
+                  "h-[calc(0.5rem*var(--speu-disc-f))] w-[calc(0.5rem*var(--speu-disc-f))] bg-zinc-900 sm:h-[calc(0.625rem*var(--speu-disc-f))] sm:w-[calc(0.625rem*var(--speu-disc-f))]",
                   "opacity-100 transition-opacity duration-200 ease-out",
                   "group-hover:opacity-0 group-focus-visible:opacity-0"
                 )}
@@ -234,7 +246,8 @@ export function SpeuHeroShuffle({ tracks, playableCount }: SpeuHeroShuffleProps)
               />
               <Pause
                 className={cn(
-                  "size-8 text-primary-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)] sm:size-9",
+                  "text-primary-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]",
+                  "h-[calc(2rem*var(--speu-disc-f))] w-[calc(2rem*var(--speu-disc-f))] sm:h-[calc(2.25rem*var(--speu-disc-f))] sm:w-[calc(2.25rem*var(--speu-disc-f))]",
                   "opacity-0 transition-opacity duration-200 ease-out",
                   "group-hover:opacity-100 group-focus-visible:opacity-100"
                 )}
@@ -245,7 +258,7 @@ export function SpeuHeroShuffle({ tracks, playableCount }: SpeuHeroShuffleProps)
             </>
           ) : (
             <Play
-              className="ml-1 size-10 text-primary-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)] sm:size-11"
+              className="ml-[calc(0.125rem*var(--speu-disc-f))] text-primary-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)] h-[calc(2.5rem*var(--speu-disc-f))] w-[calc(2.5rem*var(--speu-disc-f))] sm:h-[calc(2.75rem*var(--speu-disc-f))] sm:w-[calc(2.75rem*var(--speu-disc-f))]"
               fill="currentColor"
               strokeWidth={0}
             />
@@ -256,8 +269,11 @@ export function SpeuHeroShuffle({ tracks, playableCount }: SpeuHeroShuffleProps)
   );
 
   return (
-    <div className="flex flex-col items-center justify-center pt-10 pb-4 sm:pt-14 sm:pb-6">
-      <div className="relative flex items-center justify-center size-44 sm:size-52">
+    <div className="flex flex-col items-center justify-center pb-1 sm:pb-2">
+      <div
+        style={discVars}
+        className="relative mx-auto flex max-h-[min(92vw,calc(11rem*var(--speu-disc-f)))] max-w-[min(92vw,calc(11rem*var(--speu-disc-f)))] items-center justify-center aspect-square sm:max-h-[min(92vw,calc(13rem*var(--speu-disc-f)))] sm:max-w-[min(92vw,calc(13rem*var(--speu-disc-f)))] h-[min(92vw,calc(11rem*var(--speu-disc-f)))] w-[min(92vw,calc(11rem*var(--speu-disc-f)))] sm:h-[min(92vw,calc(13rem*var(--speu-disc-f)))] sm:w-[min(92vw,calc(13rem*var(--speu-disc-f)))]"
+      >
         {spinning && (
           <div
             className="pointer-events-none absolute -inset-[10%] rounded-full bg-primary/[0.07] blur-2xl"

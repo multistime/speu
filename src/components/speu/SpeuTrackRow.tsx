@@ -127,7 +127,11 @@ export function SpeuTrackRow({
 
   const playActivate = () => {
     if (playlist && playlist.length > 0) {
-      playPlaylistAt(playlist, index);
+      if (active) {
+        togglePlay(playerTrack);
+      } else {
+        playPlaylistAt(playlist, index);
+      }
     } else {
       togglePlay(playerTrack);
     }
@@ -175,13 +179,13 @@ export function SpeuTrackRow({
           )}
         />
 
-        <div className="relative z-[1] flex min-w-0 flex-1 items-center gap-2.5 sm:gap-2.5 md:gap-3 max-md:pointer-events-none md:pointer-events-auto">
-          {/* Мабільны: паласа да вокладкі flex-1 + max-w — нумар па цэнтры ў гэтай зоне; дэсктоп: фіксаваная калонка */}
+        <div className="relative z-[1] flex min-w-0 flex-1 items-center gap-2 max-md:gap-2 sm:gap-2.5 md:gap-3 max-md:pointer-events-none md:pointer-events-auto">
+          {/* Мабільны: вузкая калонка, нумар злева ад вокладкі; дэсктоп: фіксаваная калонка з клікам */}
           <div
             className={cn(
               "flex h-10 min-h-10 items-center justify-center",
-              "max-md:min-w-0 max-md:max-w-[min(5.75rem,32vw)] max-md:flex-1",
-              "md:h-10 md:w-12 md:max-w-none md:flex-none md:shrink-0"
+              "max-md:w-9 max-md:flex-none max-md:shrink-0 max-md:justify-start",
+              "md:h-10 md:w-12 md:flex-none md:shrink-0"
             )}
           >
             <span className="font-mono tabular-nums text-xs text-muted-foreground/40 md:hidden">

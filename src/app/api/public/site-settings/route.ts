@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
 // Keys that are safe to expose publicly (must match site_settings RLS policy)
-const PUBLIC_KEY_PREFIXES = ["radio_", "artists_", "support_"];
+const PUBLIC_KEY_PREFIXES = ["radio_", "artists_", "support_", "speu_"];
 
 function isPublicKey(key: string) {
   return PUBLIC_KEY_PREFIXES.some((prefix) => key.startsWith(prefix));
