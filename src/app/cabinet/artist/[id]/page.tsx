@@ -17,8 +17,30 @@ import {
   type ReleaseSubmissionTrackRow,
 } from "@/lib/speu/release-submissions";
 import { getAudioDurationSecFromFile } from "@/lib/speu/audio-duration";
+import { audioUploadContentType, imageUploadContentType } from "@/lib/speu/storage-upload-mime";
 import { formatTrackDuration } from "@/components/speu/speu-format-duration";
 import { cn } from "@/lib/utils";
+
+function storageUploadUserMessage(message: string, kind: "image" | "audio"): string {
+  const m = message.toLowerCase();
+  if (
+    m.includes("too large") ||
+    m.includes("file size") ||
+    m.includes("exceeded") ||
+    m.includes("payload too large") ||
+    m.includes("413")
+  ) {
+    return kind === "image"
+      ? "Выява занадта вялікая. Пасля абнаўлення сховішча дазволена да ~12 МБ; інакш сцісніце PNG/JPEG."
+      : "Файл аўдыё занадта вялікі. Пасля абнаўлення сховішча дазволена да ~150 МБ; можна таксама загрузіць MP3/FLAC меншага памеру.";
+  }
+  if (m.includes("mime") || m.includes("invalid type") || m.includes("not allowed") || m.includes("content type")) {
+    return kind === "image"
+      ? "Сховішча адхіліла тып выявы. Выкарыстоўвайце JPEG, PNG, WebP або GIF; паспрабуйце іншы браўзер, калі type файла пусты."
+      : "Сховішча адхіліла тып аўдыё. Для WAV патрэбна пашырэнне .wav; таксама даступныя MP3 і OGG.";
+  }
+  return message;
+}
 
 export default function ArtistSubmissionPage() {
   const params = useParams();
@@ -197,9 +219,10 @@ export default function ArtistSubmissionPage() {
     const { error: upErr } = await supabase.storage.from("speu-audio").upload(path, file, {
       cacheControl: "3600",
       upsert: false,
+      contentType: audioUploadContentType(file),
     });
     if (upErr) {
-      setError(upErr.message);
+      setError(storageUploadUserMessage(upErr.message, "audio"));
       return;
     }
     const { data: pub } = supabase.storage.from("speu-audio").getPublicUrl(path);
@@ -227,9 +250,10 @@ export default function ArtistSubmissionPage() {
     const { error: upErr } = await supabase.storage.from("speu-images").upload(path, file, {
       cacheControl: "3600",
       upsert: false,
+      contentType: imageUploadContentType(file),
     });
     if (upErr) {
-      setError(upErr.message);
+      setError(storageUploadUserMessage(upErr.message, "image"));
       return;
     }
     const { data: pub } = supabase.storage.from("speu-images").getPublicUrl(path);
@@ -253,9 +277,10 @@ export default function ArtistSubmissionPage() {
     const { error: upErr } = await supabase.storage.from("speu-images").upload(path, file, {
       cacheControl: "3600",
       upsert: false,
+      contentType: imageUploadContentType(file),
     });
     if (upErr) {
-      setError(upErr.message);
+      setError(storageUploadUserMessage(upErr.message, "image"));
       return;
     }
     const { data: pub } = supabase.storage.from("speu-images").getPublicUrl(path);
