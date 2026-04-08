@@ -7,7 +7,7 @@ import { Menu } from "@base-ui/react/menu";
 import { MoreHorizontal, Music, Pause, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePlayer, type PlayerTrack } from "@/contexts/PlayerContext";
-import type { SpeuPublicTrack } from "@/lib/speu/types";
+import type { SpeuChartMovement, SpeuPublicTrack } from "@/lib/speu/types";
 import { speuPublicTrackToPlayerTrack } from "@/lib/speu/player-map";
 import { formatTrackDuration } from "@/components/speu/speu-format-duration";
 import { TrackLikeButton } from "@/components/speu/TrackLikeButton";
@@ -102,9 +102,52 @@ function SpeuTrackRowMobileMenu({ track }: { track: SpeuPublicTrack }) {
   );
 }
 
+function ChartMovementBadge({
+  movement,
+  delta,
+}: {
+  movement: SpeuChartMovement;
+  delta?: number;
+}) {
+  if (movement === "same") return null;
+  const base =
+    "font-mono tabular-nums text-[10px] leading-none max-md:scale-90 max-md:origin-right";
+  if (movement === "new") {
+    return (
+      <span className={cn(base, "text-primary/90")} aria-label="Новы ў чарце">
+        Новы
+      </span>
+    );
+  }
+  if (movement === "reentry") {
+    return (
+      <span className={cn(base, "text-primary/85")} aria-label="Зноў у чарце">
+        Зноў
+      </span>
+    );
+  }
+  if (movement === "up") {
+    return (
+      <span className={cn(base, "text-emerald-600/90")} aria-label={`Падняўся на ${delta ?? 0} пазіцый`}>
+        ↑{delta ?? ""}
+      </span>
+    );
+  }
+  return (
+    <span className={cn(base, "text-muted-foreground")} aria-label={`Апусціўся на ${delta ?? 0} пазіцый`}>
+      ↓{delta ?? ""}
+    </span>
+  );
+}
+
 type SpeuTrackRowProps = {
   track: SpeuPublicTrack;
   index: number;
+  /** Нумар у чарце (калі не зададзены — index + 1) */
+  rank?: number;
+  /** Мітка руху ў snapshot-чарце */
+  chartMovement?: SpeuChartMovement;
+  chartDelta?: number;
   /** Калі true — паказваць мініяцюру вокладкі */
   showCover?: boolean;
   /** Плэйліст у парадку прайграваньня (чарга ў глабальным плэеры) */
@@ -115,6 +158,9 @@ type SpeuTrackRowProps = {
 export function SpeuTrackRow({
   track,
   index,
+  rank: rankProp,
+  chartMovement,
+  chartDelta,
   showCover = true,
   playlist,
   className,
@@ -124,6 +170,7 @@ export function SpeuTrackRow({
   const active = isTrackActive(track.id);
   const playing = active && isPlaying;
   const { accentColor, accentRgb } = track;
+  const displayRank = rankProp ?? index + 1;
 
   const playActivate = () => {
     if (playlist && playlist.length > 0) {
@@ -183,25 +230,33 @@ export function SpeuTrackRow({
           {/* Мабільны: вузкая калонка, нумар прыціснуты да вокладкі; дэсктоп: фіксаваная калонка з клікам */}
           <div
             className={cn(
-              "flex h-10 min-h-10 items-center justify-center",
-              "max-md:w-auto max-md:flex-none max-md:shrink-0 max-md:justify-end max-md:pr-0",
-              "md:h-10 md:w-11 md:flex-none md:shrink-0"
+              "flex h-10 min-h-10 flex-col items-center justify-center gap-0.5",
+              "max-md:w-auto max-md:flex-none max-md:shrink-0 max-md:justify-center max-md:pr-0",
+              "md:h-10 md:w-12 md:flex-none md:shrink-0"
             )}
           >
             <span className="font-mono tabular-nums text-xs text-muted-foreground/40 md:hidden">
-              {index + 1}
+              {displayRank}
             </span>
+            {chartMovement ? (
+              <span className="md:hidden">
+                <ChartMovementBadge movement={chartMovement} delta={chartDelta} />
+              </span>
+            ) : null}
             <span
               role="button"
               tabIndex={0}
               onClick={desktopPlayHit}
               onKeyDown={desktopPlayHit}
               className={cn(
-                "hidden h-full w-full cursor-pointer items-center justify-center rounded-md font-mono tabular-nums text-xs text-muted-foreground/40 outline-none md:flex",
+                "hidden min-h-[1.25rem] w-full cursor-pointer flex-col items-center justify-center gap-0.5 rounded-md outline-none md:flex",
                 "focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               )}
             >
-              {index + 1}
+              <span className="font-mono tabular-nums text-xs text-muted-foreground/40">{displayRank}</span>
+              {chartMovement ? (
+                <ChartMovementBadge movement={chartMovement} delta={chartDelta} />
+              ) : null}
             </span>
           </div>
 

@@ -10,6 +10,8 @@ type TrackLikeButtonProps = {
   /** sm — у радку трэка; md — на старонцы трэка / плэеры */
   size?: "sm" | "md";
   accentColor?: string | null;
+  /** Пасля паспяховага toggle — агульны лік лайкаў з сервера */
+  onLikeCount?: (count: number) => void;
 };
 
 export function TrackLikeButton({
@@ -17,6 +19,7 @@ export function TrackLikeButton({
   className,
   size = "sm",
   accentColor,
+  onLikeCount,
 }: TrackLikeButtonProps) {
   const { isLiked, toggleLike, authReady } = useTrackLikes();
   const liked = isLiked(trackId);
@@ -27,10 +30,11 @@ export function TrackLikeButton({
   return (
     <button
       type="button"
-      onClick={(e) => {
+      onClick={async (e) => {
         e.stopPropagation();
         e.preventDefault();
-        toggleLike(trackId);
+        const c = await toggleLike(trackId);
+        if (c != null) onLikeCount?.(c);
       }}
       onKeyDown={(e) => e.stopPropagation()}
       disabled={!authReady}

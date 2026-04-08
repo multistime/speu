@@ -7,6 +7,8 @@ import type {
   SpeuAlbumPageData,
   SpeuArtistAlbum,
   SpeuArtistPageData,
+  SpeuChartMovement,
+  SpeuChartRow,
   SpeuCreditArtist,
   SpeuHubArtistCard,
   SpeuPublicTrack,
@@ -56,6 +58,7 @@ type RawTrackRow = {
   play_on_radio: boolean | null;
   created_at: string;
   lyrics?: string | null;
+  like_count?: number | null;
   albums: RawAlbum | RawAlbum[];
   track_artists: RawCreditRow[] | null;
 };
@@ -73,6 +76,7 @@ const SPEU_PLAYABLE_TRACK_EMBED = `
       sort_order,
       play_on_radio,
       created_at,
+      like_count,
       albums ( id, slug, title, cover_url, is_published ),
       track_artists (
         sort_order,
@@ -125,7 +129,8 @@ function mapRawTrackToPublic(row: RawTrackRow): SpeuPublicTrack | null {
 
   const artistLine = artists.map((x) => x.name).join(", ");
 
-  return {
+  const lc = row.like_count;
+  const base: SpeuPublicTrack = {
     id: row.id,
     slug: (row.slug?.trim() || row.id) as string,
     title: row.title,
@@ -141,6 +146,12 @@ function mapRawTrackToPublic(row: RawTrackRow): SpeuPublicTrack | null {
     sortOrder: row.sort_order,
     createdAt: row.created_at,
   };
+  return typeof lc === "number" && Number.isFinite(lc) ? { ...base, likeCount: lc } : base;
+}
+
+/** Fallback парадак трэкаў без метрык чарта (радыё, sort_order, дата). */
+export function compareSpeuChartTiebreak(a: SpeuPublicTrack, b: SpeuPublicTrack): number {
+  return chartSort(a, b);
 }
 
 function chartSort(a: SpeuPublicTrack, b: SpeuPublicTrack): number {
@@ -476,6 +487,7 @@ const SPEU_TRACK_PAGE_TRACK_SELECT = `
       play_on_radio,
       created_at,
       lyrics,
+      like_count,
       albums ( id, slug, title, cover_url, is_published ),
       track_artists (
         sort_order,
@@ -536,5 +548,132 @@ export async function fetchSpeuTrackBySlugOrId(param: string): Promise<SpeuTrack
   const lyrics =
     typeof lyricsRaw === "string" && lyricsRaw.trim().length > 0 ? lyricsRaw.trim() : null;
 
-  return { track, sameAlbum, lyrics };
+  const lcRaw = row.like_count;
+  const likeCount = typeof lcRaw === "number" && Number.isFinite(lcRaw) ? Math.max(0, lcRaw) : 0;
+
+  return { track, sameAlbum, lyrics, likeCount };
+}
+
+function movementForRank(rank: number, prev: number | undefined): {
+  movement: SpeuChartMovement;
+  delta?: number;
+} {
+  if (prev == null) return { movement: "new" };
+  if (prev === rank) return { movement: "same" };
+  if (prev > rank) return { movement: "up", delta: prev - rank };
+  return { movement: "down", delta: rank - prev };
+}
+
+/**
+ * Апошні апублікаваны snapshot чарта (да `limit` пазіцый) + міткі руху адносна папярэдняга snapshot.
+ * Калі здымкаў няма — fallback: каталог у парадку compareSpeuChartTiebreak.
+ */
+export async function fetchSpeuChartRows(limit: number): Promise<{
+  rows: SpeuChartRow[];
+  snapshotDate: string | null;
+  usedSnapshot: boolean;
+}> {
+  const supabase = await createClient();
+
+  const { data: dates, error: dErr } = await supabase
+    .schema("speu")
+    .from("chart_snapshots")
+    .select("snapshot_date")
+    .order("snapshot_date", { ascending: false })
+    .limit(2);
+
+  if (dErr) {
+    console.warn("[fetchSpeuChartRows] chart_snapshots:", dErr.message);
+    const playable = await fetchSpeuPlayableTracks();
+    const rows: SpeuChartRow[] = playable.slice(0, limit).map((track, i) => ({
+      track,
+      rank: i + 1,
+      movement: "same" as const,
+      rankPrevious: null,
+    }));
+    return { rows, snapshotDate: null, usedSnapshot: false };
+  }
+
+  if (!dates?.length) {
+    const playable = await fetchSpeuPlayableTracks();
+    const rows: SpeuChartRow[] = playable.slice(0, limit).map((track, i) => ({
+      track,
+      rank: i + 1,
+      movement: "same" as const,
+      rankPrevious: null,
+    }));
+    return { rows, snapshotDate: null, usedSnapshot: false };
+  }
+
+  const latest = dates[0]?.snapshot_date as string;
+  const prevDate = dates[1]?.snapshot_date as string | undefined;
+
+  const { data: snapRows, error: sErr } = await supabase
+    .schema("speu")
+    .from("chart_snapshots")
+    .select("rank, track_id, score")
+    .eq("snapshot_date", latest)
+    .order("rank", { ascending: true })
+    .limit(limit);
+
+  if (sErr || !snapRows?.length) {
+    const playable = await fetchSpeuPlayableTracks();
+    const rows: SpeuChartRow[] = playable.slice(0, limit).map((track, i) => ({
+      track,
+      rank: i + 1,
+      movement: "same" as const,
+      rankPrevious: null,
+    }));
+    return { rows, snapshotDate: null, usedSnapshot: false };
+  }
+
+  const prevRankByTrack = new Map<string, number>();
+  if (prevDate) {
+    const { data: prevRows } = await supabase
+      .schema("speu")
+      .from("chart_snapshots")
+      .select("rank, track_id")
+      .eq("snapshot_date", prevDate);
+
+    for (const pr of prevRows ?? []) {
+      prevRankByTrack.set(pr.track_id as string, pr.rank as number);
+    }
+  }
+
+  const ids = snapRows.map((r) => r.track_id as string);
+  const { data: tracksRaw, error: tErr } = await supabase
+    .schema("speu")
+    .from("artist_tracks")
+    .select(SPEU_PLAYABLE_TRACK_EMBED)
+    .in("id", ids)
+    .eq("is_published", true);
+
+  if (tErr || !tracksRaw?.length) {
+    return { rows: [], snapshotDate: latest, usedSnapshot: true };
+  }
+
+  const byId = new Map<string, SpeuPublicTrack>();
+  for (const raw of tracksRaw as unknown as RawTrackRow[]) {
+    const pub = mapRawTrackToPublic(raw);
+    if (pub) byId.set(pub.id, pub);
+  }
+
+  const rows: SpeuChartRow[] = [];
+  for (const sr of snapRows) {
+    const tid = sr.track_id as string;
+    const track = byId.get(tid);
+    if (!track) continue;
+    const rank = sr.rank as number;
+    const prevR = prevRankByTrack.get(tid);
+    const { movement, delta } = movementForRank(rank, prevR);
+    rows.push({
+      track,
+      rank,
+      movement,
+      rankPrevious: prevR ?? null,
+      delta,
+    });
+  }
+
+  return { rows, snapshotDate: latest, usedSnapshot: true };
 }

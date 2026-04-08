@@ -19,7 +19,8 @@ type TrackLikesContextValue = {
   user: User | null;
   authReady: boolean;
   isLiked: (trackId: string) => boolean;
-  toggleLike: (trackId: string) => void;
+  /** Пасля паспяху — агульны like_count з сервера; null калі адмена / не аўтарызаваны */
+  toggleLike: (trackId: string) => Promise<number | null>;
 };
 
 const TrackLikesContext = createContext<TrackLikesContextValue | null>(null);
@@ -149,53 +150,55 @@ export function TrackLikesProvider({ children }: { children: ReactNode }) {
 
   const isLiked = useCallback((trackId: string) => likedIds.has(trackId), [likedIds]);
 
-  const toggleLike = useCallback(
-    (trackId: string) => {
-      if (!user) {
-        setRegisterOpen(true);
-        return;
+  const toggleLike = useCallback(async (trackId: string): Promise<number | null> => {
+    if (!user) {
+      setRegisterOpen(true);
+      return null;
+    }
+    if (inFlightRef.current.has(trackId)) return null;
+
+    const prev = likedIds.has(trackId);
+    const next = !prev;
+
+    setLikedIds((s) => {
+      const n = new Set(s);
+      if (next) n.add(trackId);
+      else n.delete(trackId);
+      return n;
+    });
+
+    inFlightRef.current.add(trackId);
+
+    try {
+      const res = await fetch("/api/user/track-likes", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ trackId, liked: next }),
+      });
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
       }
-      if (inFlightRef.current.has(trackId)) return;
-
-      const prev = likedIds.has(trackId);
-      const next = !prev;
-
+      const data = (await res.json()) as { likeCount?: unknown };
+      const likeCount =
+        typeof data.likeCount === "number" && Number.isFinite(data.likeCount)
+          ? Math.max(0, data.likeCount)
+          : null;
+      return likeCount;
+    } catch {
       setLikedIds((s) => {
         const n = new Set(s);
-        if (next) n.add(trackId);
+        if (prev) n.add(trackId);
         else n.delete(trackId);
         return n;
       });
-
-      inFlightRef.current.add(trackId);
-
-      void (async () => {
-        try {
-          const res = await fetch("/api/user/track-likes", {
-            method: "POST",
-            credentials: "include",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ trackId, liked: next }),
-          });
-          if (!res.ok) {
-            throw new Error(`HTTP ${res.status}`);
-          }
-        } catch {
-          setLikedIds((s) => {
-            const n = new Set(s);
-            if (prev) n.add(trackId);
-            else n.delete(trackId);
-            return n;
-          });
-          setErrorMsg("Не ўдалося захаваць лайк. Паспрабуйце яшчэ раз.");
-          window.setTimeout(() => setErrorMsg(null), 4000);
-        } finally {
-          inFlightRef.current.delete(trackId);
-        }
-      })();
-    },
-    [user, likedIds],
-  );
+      setErrorMsg("Не ўдалося захаваць лайк. Паспрабуйце яшчэ раз.");
+      window.setTimeout(() => setErrorMsg(null), 4000);
+      return null;
+    } finally {
+      inFlightRef.current.delete(trackId);
+    }
+  }, [user, likedIds]);
 
   const value = useMemo<TrackLikesContextValue>(
     () => ({

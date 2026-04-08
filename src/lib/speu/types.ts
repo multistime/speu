@@ -23,6 +23,19 @@ export type SpeuPublicTrack = {
   playOnRadio: boolean;
   sortOrder: number;
   createdAt: string;
+  /** Агульныя лайкі (калі падгружана з БД) */
+  likeCount?: number;
+};
+
+export type SpeuChartMovement = "new" | "up" | "down" | "same" | "reentry";
+
+export type SpeuChartRow = {
+  track: SpeuPublicTrack;
+  rank: number;
+  movement: SpeuChartMovement;
+  rankPrevious: number | null;
+  /** Для UP/DOWN: |rankPrevious − rank| */
+  delta?: number;
 };
 
 export type SpeuHubArtistCard = {
@@ -85,4 +98,5 @@ export type SpeuTrackPageData = {
   sameAlbum: SpeuPublicTrack[];
   /** Тэкст песні (калі захаваны ў каталозе) */
   lyrics: string | null;
+  likeCount: number;
 };

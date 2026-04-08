@@ -111,6 +111,7 @@ function TrackLyricsPanel({
 export function SpeuTrackPageView({ data }: { data: SpeuTrackPageData }) {
   const { togglePlay, playPlaylistAt } = usePlayer();
   const { track, sameAlbum, lyrics } = data;
+  const [likeCount, setLikeCount] = useState(() => data.likeCount);
   const pt = speuPublicTrackToPlayerTrack(track);
   const { accentColor: accent, accentRgb } = track;
 
@@ -182,12 +183,18 @@ export function SpeuTrackPageView({ data }: { data: SpeuTrackPageData }) {
                 >
                   <Play className="size-[1.35rem] fill-current ml-0.5" strokeWidth={0} />
                 </button>
-                <TrackLikeButton
-                  trackId={track.id}
-                  size="md"
-                  accentColor={accent}
-                  className="size-11 !min-h-11 !min-w-11 !max-h-11 !max-w-11 rounded-xl border border-border bg-card !p-0 hover:bg-muted/60"
-                />
+                <div className="flex flex-col items-center gap-0.5 shrink-0">
+                  <TrackLikeButton
+                    trackId={track.id}
+                    size="md"
+                    accentColor={accent}
+                    onLikeCount={setLikeCount}
+                    className="size-11 !min-h-11 !min-w-11 !max-h-11 !max-w-11 rounded-xl border border-border bg-card !p-0 hover:bg-muted/60"
+                  />
+                  <span className="text-[10px] text-muted-foreground tabular-nums leading-none">
+                    {likeCount}
+                  </span>
+                </div>
                 <SpeuShareButton
                   path={`/speu/tracks/${track.slug}`}
                   title={track.title}

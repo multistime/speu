@@ -1,5 +1,6 @@
 import { SpeuHubClient } from "@/components/speu/SpeuHubClient";
 import {
+  fetchSpeuChartRows,
   fetchSpeuHubArtists,
   fetchSpeuPlayableTracks,
   fetchSpeuUserLikedTracks,
@@ -10,8 +11,9 @@ import { fetchSpeuHubHeroDiscScale } from "@/lib/speu/site-settings.server";
 export const dynamic = "force-dynamic";
 
 export default async function SpeuPage() {
-  const [playable, artists, likedPreview, heroDiscScale] = await Promise.all([
+  const [playable, chartBundle, artists, likedPreview, heroDiscScale] = await Promise.all([
     fetchSpeuPlayableTracks(),
+    fetchSpeuChartRows(10),
     fetchSpeuHubArtists(24),
     fetchSpeuUserLikedTracks(10),
     fetchSpeuHubHeroDiscScale(),
@@ -20,6 +22,7 @@ export default async function SpeuPage() {
   return (
     <SpeuHubClient
       playable={playable}
+      chartRows={chartBundle.rows}
       artists={artists}
       likedPreview={likedPreview}
       heroDiscScale={heroDiscScale}

@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { useMemo, type CSSProperties } from "react";
 import { Music } from "lucide-react";
-import type { SpeuHubArtistCard, SpeuPublicTrack } from "@/lib/speu/types";
+import type { SpeuChartRow, SpeuHubArtistCard, SpeuPublicTrack } from "@/lib/speu/types";
 import { speuPublicTrackToPlayerTrack } from "@/lib/speu/player-map";
 import { SpeuHeroShuffle } from "@/components/speu/SpeuHeroShuffle";
 import { SpeuTrackRow } from "@/components/speu/SpeuTrackRow";
@@ -13,6 +13,8 @@ import { cn } from "@/lib/utils";
 
 type SpeuHubClientProps = {
   playable: SpeuPublicTrack[];
+  /** Чарт з snapshot (топ-10); парадак і міткі з сервера */
+  chartRows: SpeuChartRow[];
   artists: SpeuHubArtistCard[];
   /** Залайканыя трэкі (толькі для аўтарызаваных); пуста — секцыя не паказваецца */
   likedPreview: SpeuPublicTrack[];
@@ -39,14 +41,15 @@ function hubHeroOverlapStyle(level: number): CSSProperties {
 
 export function SpeuHubClient({
   playable,
+  chartRows,
   artists,
   likedPreview,
   heroDiscScale = 1,
 }: SpeuHubClientProps) {
   const playerTracks = playable.map(speuPublicTrackToPlayerTrack);
-  const chartPreview = useMemo(() => playable.slice(0, 10), [playable]);
+  const chartPreview = useMemo(() => chartRows.slice(0, 10), [chartRows]);
   const chartPlaylist = useMemo(
-    () => chartPreview.map(speuPublicTrackToPlayerTrack),
+    () => chartPreview.map((r) => speuPublicTrackToPlayerTrack(r.track)),
     [chartPreview]
   );
   const likedPlaylist = useMemo(
@@ -119,11 +122,14 @@ export function SpeuHubClient({
           ) : (
             <>
               <div className="space-y-0.5 md:hidden">
-                {chartPreview.map((t, i) => (
+                {chartPreview.map((row, i) => (
                   <SpeuTrackRow
-                    key={t.id}
-                    track={t}
+                    key={row.track.id}
+                    track={row.track}
                     index={i}
+                    rank={row.rank}
+                    chartMovement={row.movement}
+                    chartDelta={row.delta}
                     showCover
                     playlist={chartPlaylist}
                   />
@@ -131,22 +137,28 @@ export function SpeuHubClient({
               </div>
               <div className="hidden md:grid md:grid-cols-2 gap-8 md:gap-12">
                 <div className="space-y-0.5">
-                  {leftCol.map((t, i) => (
+                  {leftCol.map((row, i) => (
                     <SpeuTrackRow
-                      key={t.id}
-                      track={t}
+                      key={row.track.id}
+                      track={row.track}
                       index={i * 2}
+                      rank={row.rank}
+                      chartMovement={row.movement}
+                      chartDelta={row.delta}
                       showCover
                       playlist={chartPlaylist}
                     />
                   ))}
                 </div>
                 <div className="space-y-0.5">
-                  {rightCol.map((t, i) => (
+                  {rightCol.map((row, i) => (
                     <SpeuTrackRow
-                      key={t.id}
-                      track={t}
+                      key={row.track.id}
+                      track={row.track}
                       index={i * 2 + 1}
+                      rank={row.rank}
+                      chartMovement={row.movement}
+                      chartDelta={row.delta}
                       showCover
                       playlist={chartPlaylist}
                     />

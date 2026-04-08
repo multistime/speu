@@ -19,5 +19,5 @@ export default async function SpeuTrackPage({ params }: Props) {
   const { slug } = await params;
   const data = await fetchSpeuTrackBySlugOrId(slug);
   if (!data) notFound();
-  return <SpeuTrackPageView data={data} />;
+  return <SpeuTrackPageView key={data.track.id} data={data} />;
 }

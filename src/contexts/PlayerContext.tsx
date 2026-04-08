@@ -15,6 +15,7 @@ import {
   setTrackMediaMetadata,
   updateMediaSessionPositionState,
 } from "@/lib/player-media-session";
+import { submitListenTerminal } from "@/lib/listen-analytics/submit";
 import { shuffleArray } from "@/lib/speu/shuffle";
 
 export type PlayerTrack = {
@@ -103,10 +104,65 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   /** Прапускаем адзін «pause» пры змене src, каб UI не мігаў паміж трэкамі ў чарзе */
   const ignoreNextPauseRef = useRef(false);
 
+  const listenSessionIdRef = useRef<string | null>(null);
+  const listenMaxPosSecRef = useRef(0);
+  const listenDurationSecRef = useRef(0);
+  const listenHadUserSeekRef = useRef(false);
+  const listenHadUserPauseRef = useRef(false);
+  const listenShortGapRef = useRef(0);
+  const finalizeListenSessionRef = useRef<(beacon: boolean) => void>(() => {});
+
+  const finalizeListenSession = useCallback((beacon: boolean) => {
+    const sid = listenSessionIdRef.current;
+    const tr = trackRef.current;
+    const audio = audioRef.current;
+    if (!sid || !tr?.id) return;
+    listenSessionIdRef.current = null;
+    const dFromAudio = finiteDuration(audio?.duration ?? 0);
+    const dSec = dFromAudio > 0 ? dFromAudio : finiteDuration(listenDurationSecRef.current);
+    const durationMs = Math.round(dSec * 1000);
+    if (durationMs < 1000) return;
+    const maxSec = Math.max(
+      listenMaxPosSecRef.current,
+      finiteDuration(audio?.currentTime ?? 0)
+    );
+    let maxPositionMs = Math.round(maxSec * 1000);
+    if (maxPositionMs > durationMs + 2500) maxPositionMs = durationMs + 2500;
+    submitListenTerminal(
+      {
+        listeningSessionId: sid,
+        trackId: tr.id,
+        durationMs,
+        maxPositionMs,
+        hadUserSeek: listenHadUserSeekRef.current,
+        hadUserPause: listenHadUserPauseRef.current,
+        shortGapCount: listenShortGapRef.current,
+      },
+      beacon
+    );
+    listenHadUserSeekRef.current = false;
+    listenHadUserPauseRef.current = false;
+    listenShortGapRef.current = 0;
+    listenMaxPosSecRef.current = 0;
+  }, []);
+
+  useLayoutEffect(() => {
+    finalizeListenSessionRef.current = finalizeListenSession;
+  }, [finalizeListenSession]);
+
   const playTrackInternal = useCallback((next: PlayerTrack) => {
     const audio = audioRef.current;
     if (!audio) return;
+    finalizeListenSessionRef.current(false);
     ignoreNextPauseRef.current = true;
+    listenSessionIdRef.current =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `sess-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    listenMaxPosSecRef.current = 0;
+    listenHadUserSeekRef.current = false;
+    listenHadUserPauseRef.current = false;
+    listenShortGapRef.current = 0;
     trackRef.current = next;
     setTrack(next);
     setCurrentTime(0);
@@ -129,6 +185,17 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     playTrackInternalRef.current = playTrackInternal;
   }, [playTrackInternal]);
+
+  useEffect(() => {
+    listenDurationSecRef.current = finiteDuration(duration);
+  }, [duration]);
+
+  useEffect(() => {
+    const onHide = () => finalizeListenSessionRef.current(true);
+    if (typeof window === "undefined") return;
+    window.addEventListener("pagehide", onHide);
+    return () => window.removeEventListener("pagehide", onHide);
+  }, []);
 
   useEffect(() => {
     if (typeof navigator === "undefined" || !("mediaSession" in navigator)) return;
@@ -176,6 +243,15 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     };
     const onEnded = () => {
       if (repeatOneRef.current && audio.src) {
+        finalizeListenSessionRef.current(false);
+        listenSessionIdRef.current =
+          typeof crypto !== "undefined" && "randomUUID" in crypto
+            ? crypto.randomUUID()
+            : `sess-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        listenMaxPosSecRef.current = 0;
+        listenHadUserSeekRef.current = false;
+        listenHadUserPauseRef.current = false;
+        listenShortGapRef.current = 0;
         audio.currentTime = 0;
         void audio.play();
         return;
@@ -202,13 +278,24 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
           return;
         }
       }
+      finalizeListenSessionRef.current(false);
       setIsPlaying(false);
+    };
+
+    const onWaiting = () => {
+      if (!ignoreNextPauseRef.current) {
+        listenShortGapRef.current = Math.min(5, listenShortGapRef.current + 1);
+      }
     };
 
     const onTimeUpdate = () => {
       setCurrentTime(audio.currentTime);
+      listenMaxPosSecRef.current = Math.max(listenMaxPosSecRef.current, audio.currentTime);
       const d = finiteDuration(audio.duration);
-      if (d > 0) setDuration(d);
+      if (d > 0) {
+        setDuration(d);
+        listenDurationSecRef.current = d;
+      }
       const now = Date.now();
       if (now - lastPositionUiMsRef.current > 900) {
         lastPositionUiMsRef.current = now;
@@ -217,11 +304,15 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     };
 
     const onDurationChange = () => {
-      setDuration(finiteDuration(audio.duration));
+      const d = finiteDuration(audio.duration);
+      setDuration(d);
+      listenDurationSecRef.current = d;
     };
 
     const onLoadedMetadata = () => {
-      setDuration(finiteDuration(audio.duration));
+      const d = finiteDuration(audio.duration);
+      setDuration(d);
+      listenDurationSecRef.current = d;
       setCurrentTime(audio.currentTime);
       lastPositionUiMsRef.current = Date.now();
       updateMediaSessionPositionState(audio);
@@ -237,6 +328,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     audio.addEventListener("timeupdate", onTimeUpdate);
     audio.addEventListener("durationchange", onDurationChange);
     audio.addEventListener("loadedmetadata", onLoadedMetadata);
+    audio.addEventListener("waiting", onWaiting);
     audio.addEventListener("error", onError);
 
     return () => {
@@ -246,6 +338,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       audio.removeEventListener("timeupdate", onTimeUpdate);
       audio.removeEventListener("durationchange", onDurationChange);
       audio.removeEventListener("loadedmetadata", onLoadedMetadata);
+      audio.removeEventListener("waiting", onWaiting);
       audio.removeEventListener("error", onError);
       audio.pause();
       audio.src = "";
@@ -305,6 +398,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
     if (trackRef.current?.id === newTrack.id) {
       if (!audio.paused) {
+        listenHadUserPauseRef.current = true;
         audio.pause();
       } else {
         void audio.play();
@@ -340,6 +434,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const seekRatio = useCallback((ratio: number) => {
+    listenHadUserSeekRef.current = true;
     const audio = audioRef.current;
     if (!audio?.src) return;
     const d = finiteDuration(audio.duration);
@@ -358,6 +453,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const stop = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
+    finalizeListenSessionRef.current(false);
     ignoreNextPauseRef.current = false;
     audio.pause();
     audio.src = "";

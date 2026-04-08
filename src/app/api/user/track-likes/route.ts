@@ -94,7 +94,8 @@ export async function POST(req: Request) {
       .schema("speu")
       .from("track_likes")
       .delete()
-      .eq("track_id", trackId);
+      .eq("track_id", trackId)
+      .eq("user_id", user.id);
 
     if (delErr) {
       console.error("[api/user/track-likes POST delete]", delErr.message);
@@ -102,5 +103,22 @@ export async function POST(req: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true }, { headers: cacheHeaders });
+  const { data: countRow, error: cErr } = await supabase
+    .schema("speu")
+    .from("artist_tracks")
+    .select("like_count")
+    .eq("id", trackId)
+    .maybeSingle();
+
+  if (cErr) {
+    console.error("[api/user/track-likes POST like_count]", cErr.message);
+    return NextResponse.json({ ok: true, likeCount: 0 }, { headers: cacheHeaders });
+  }
+
+  const likeCount =
+    typeof countRow?.like_count === "number" && Number.isFinite(countRow.like_count)
+      ? Math.max(0, countRow.like_count)
+      : 0;
+
+  return NextResponse.json({ ok: true, likeCount }, { headers: cacheHeaders });
 }
