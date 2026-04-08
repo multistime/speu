@@ -173,7 +173,7 @@ export function SpeuTrackPageView({ data }: { data: SpeuTrackPageData }) {
               <h1 className="font-display text-3xl sm:text-4xl font-semibold text-foreground italic min-w-0 flex-1 pr-1 sm:pr-4 leading-tight">
                 {track.title}
               </h1>
-              <div className="flex items-center gap-2 shrink-0 pt-0.5 sm:pt-1">
+              <div className="flex items-start gap-2 shrink-0 pt-0.5 sm:pt-1">
                 <button
                   type="button"
                   onClick={playMain}
@@ -183,11 +183,12 @@ export function SpeuTrackPageView({ data }: { data: SpeuTrackPageData }) {
                 >
                   <Play className="size-[1.35rem] fill-current ml-0.5" strokeWidth={0} />
                 </button>
-                <div className="flex flex-col items-center gap-0.5 shrink-0">
+                <div className="flex flex-col items-center gap-1 shrink-0">
                   <TrackLikeButton
                     trackId={track.id}
                     size="md"
                     accentColor={accent}
+                    likeCount={likeCount}
                     onLikeCount={setLikeCount}
                     className="size-11 !min-h-11 !min-w-11 !max-h-11 !max-w-11 rounded-xl border border-border bg-card !p-0 hover:bg-muted/60"
                   />

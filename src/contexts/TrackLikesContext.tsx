@@ -19,6 +19,8 @@ type TrackLikesContextValue = {
   user: User | null;
   authReady: boolean;
   isLiked: (trackId: string) => boolean;
+  /** true, калі для гэтага трэка ўжо ідзе POST лайка (каб не дубляваць аптымістыку) */
+  isLikeRequestInFlight: (trackId: string) => boolean;
   /** Пасля паспяху — агульны like_count з сервера; null калі адмена / не аўтарызаваны */
   toggleLike: (trackId: string) => Promise<number | null>;
 };
@@ -150,6 +152,8 @@ export function TrackLikesProvider({ children }: { children: ReactNode }) {
 
   const isLiked = useCallback((trackId: string) => likedIds.has(trackId), [likedIds]);
 
+  const isLikeRequestInFlight = useCallback((trackId: string) => inFlightRef.current.has(trackId), []);
+
   const toggleLike = useCallback(async (trackId: string): Promise<number | null> => {
     if (!user) {
       setRegisterOpen(true);
@@ -205,9 +209,10 @@ export function TrackLikesProvider({ children }: { children: ReactNode }) {
       user,
       authReady,
       isLiked,
+      isLikeRequestInFlight,
       toggleLike,
     }),
-    [user, authReady, isLiked, toggleLike],
+    [user, authReady, isLiked, isLikeRequestInFlight, toggleLike],
   );
 
   return (

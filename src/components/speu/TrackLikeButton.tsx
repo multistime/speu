@@ -10,7 +10,9 @@ type TrackLikeButtonProps = {
   /** sm — у радку трэка; md — на старонцы трэка / плэеры */
   size?: "sm" | "md";
   accentColor?: string | null;
-  /** Пасля паспяховага toggle — агульны лік лайкаў з сервера */
+  /** Бягучы агульны лік (для аптымістычнага +1 / −1 на старонцы трэка) */
+  likeCount?: number;
+  /** Пасля toggle — канчатковы лік з сервера; пры памылцы адкат да папярэдняга */
   onLikeCount?: (count: number) => void;
 };
 
@@ -19,9 +21,10 @@ export function TrackLikeButton({
   className,
   size = "sm",
   accentColor,
+  likeCount: displayLikeCount,
   onLikeCount,
 }: TrackLikeButtonProps) {
-  const { isLiked, toggleLike, authReady } = useTrackLikes();
+  const { isLiked, toggleLike, authReady, user, isLikeRequestInFlight } = useTrackLikes();
   const liked = isLiked(trackId);
 
   const iconClass = size === "md" ? "size-[1.15rem]" : "size-3.5";
@@ -33,8 +36,25 @@ export function TrackLikeButton({
       onClick={async (e) => {
         e.stopPropagation();
         e.preventDefault();
+        if (!user) {
+          void toggleLike(trackId);
+          return;
+        }
+        if (isLikeRequestInFlight(trackId)) return;
+
+        const wasLiked = isLiked(trackId);
+        const prevCount = displayLikeCount;
+
+        if (onLikeCount != null && displayLikeCount !== undefined) {
+          onLikeCount(Math.max(0, displayLikeCount + (wasLiked ? -1 : 1)));
+        }
+
         const c = await toggleLike(trackId);
-        if (c != null) onLikeCount?.(c);
+        if (c != null) {
+          onLikeCount?.(c);
+        } else if (displayLikeCount !== undefined && onLikeCount != null) {
+          onLikeCount(prevCount!);
+        }
       }}
       onKeyDown={(e) => e.stopPropagation()}
       disabled={!authReady}
