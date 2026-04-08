@@ -21,17 +21,17 @@ type SpeuHubClientProps = {
 };
 
 /**
- * Асіметрычнае наслаенне: менш уверх на тыпаграфіку, больш уніз на «Лепшае»,
- * каб цэнтр пластыны (плей) візуальна бліжэй да сярэдзіны між блокам A і B.
+ * Мабільны: адступ пад падзагалоўкам (без нахлосту на тэкст), моцны ўніз на «Лепшае».
+ * sm+: лёгкі нахлост пад загаловак, баланс з блокам ніжэй.
  */
 function hubHeroOverlapStyle(level: number): CSSProperties {
   const L = Math.min(5, Math.max(1, Math.round(level)));
   const t = (L - 1) / 4;
   return {
-    ["--speu-hero-pull-mt" as string]: `${-(0.3 + t * 1.05)}rem`,
-    ["--speu-hero-pull-mt-sm" as string]: `${-(0.45 + t * 1.35)}rem`,
-    ["--speu-hero-pull-mb" as string]: `${-(1.65 + t * 2.45)}rem`,
-    ["--speu-hero-pull-mb-sm" as string]: `${-(2 + t * 2.95)}rem`,
+    ["--speu-hero-disc-mt" as string]: `${0.55 + t * 0.4}rem`,
+    ["--speu-hero-disc-mt-sm" as string]: `${-(0.35 + t * 1.05)}rem`,
+    ["--speu-hero-disc-mb" as string]: `${-(2.4 + t * 3.5)}rem`,
+    ["--speu-hero-disc-mb-sm" as string]: `${-(2.1 + t * 3.05)}rem`,
   } as CSSProperties;
 }
 
@@ -59,7 +59,13 @@ export function SpeuHubClient({
   return (
     <div className="min-h-screen pt-20 pb-28 px-3 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        <section className="relative mb-0">
+        <section className="relative mb-0 overflow-x-clip">
+          {/* Мяккае «поле» за пластынай — глыбіня без шуму */}
+          <div
+            className="pointer-events-none absolute left-1/2 top-[38%] sm:top-[40%] z-0 h-[min(78vw,22rem)] w-[min(110vw,36rem)] -translate-x-1/2 rounded-[50%] bg-primary/[0.07] blur-3xl dark:bg-primary/[0.09]"
+            aria-hidden
+          />
+
           <motion.div
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
@@ -72,13 +78,13 @@ export function SpeuHubClient({
             <h1 className="font-display text-4xl sm:text-5xl font-semibold text-foreground mb-2 sm:mb-3 leading-tight italic [text-shadow:0_0_1px_var(--background),0_1px_2px_var(--background)]">
               Спеў
             </h1>
-            <p className="text-muted-foreground max-w-xl mx-auto text-sm leading-relaxed pb-2 sm:pb-3">
+            <p className="text-muted-foreground max-w-xl mx-auto text-sm leading-relaxed pb-2 sm:pb-3 [text-shadow:0_1px_0_var(--background)]">
               Слухайце трэкі, адкрывайце артыстаў, альбомы і асобныя кампазіцыі.
             </p>
           </motion.div>
 
           <div
-            className="relative z-10 mt-[var(--speu-hero-pull-mt)] mb-[var(--speu-hero-pull-mb)] sm:mt-[var(--speu-hero-pull-mt-sm)] sm:mb-[var(--speu-hero-pull-mb-sm)]"
+            className="relative z-10 mt-[var(--speu-hero-disc-mt)] mb-[var(--speu-hero-disc-mb)] sm:mt-[var(--speu-hero-disc-mt-sm)] sm:mb-[var(--speu-hero-disc-mb-sm)]"
             style={heroPull}
           >
             <SpeuHeroShuffle

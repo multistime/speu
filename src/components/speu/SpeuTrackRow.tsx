@@ -160,13 +160,13 @@ export function SpeuTrackRow({
   return (
     <div
       className={cn(
-        "relative flex items-center gap-0.5 md:gap-1 max-md:pl-0.5 max-md:pr-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg transition-colors group/track",
+        "relative flex items-center gap-0.5 md:gap-1 max-md:pl-0 max-md:pr-1 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg transition-colors group/track",
         "hover:bg-muted",
         className
       )}
       style={active ? { background: `rgba(${accentRgb}, 0.08)` } : undefined}
     >
-      <div className="relative z-[1] flex min-w-0 flex-1 items-center gap-2 sm:gap-2.5 md:gap-3">
+      <div className="relative z-[1] flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2 md:gap-2.5">
         <button
           type="button"
           aria-label={playing ? "Паўза" : "Прайграць"}
@@ -179,13 +179,13 @@ export function SpeuTrackRow({
           )}
         />
 
-        <div className="relative z-[1] flex min-w-0 flex-1 items-center gap-2 max-md:gap-2 sm:gap-2.5 md:gap-3 max-md:pointer-events-none md:pointer-events-auto">
-          {/* Мабільны: вузкая калонка, нумар злева ад вокладкі; дэсктоп: фіксаваная калонка з клікам */}
+        <div className="relative z-[1] flex min-w-0 flex-1 items-center gap-1.5 max-md:gap-1 sm:gap-2 md:gap-2.5 max-md:pointer-events-none md:pointer-events-auto">
+          {/* Мабільны: вузкая калонка, нумар прыціснуты да вокладкі; дэсктоп: фіксаваная калонка з клікам */}
           <div
             className={cn(
               "flex h-10 min-h-10 items-center justify-center",
-              "max-md:w-9 max-md:flex-none max-md:shrink-0 max-md:justify-start",
-              "md:h-10 md:w-12 md:flex-none md:shrink-0"
+              "max-md:w-auto max-md:flex-none max-md:shrink-0 max-md:justify-end max-md:pr-0",
+              "md:h-10 md:w-11 md:flex-none md:shrink-0"
             )}
           >
             <span className="font-mono tabular-nums text-xs text-muted-foreground/40 md:hidden">

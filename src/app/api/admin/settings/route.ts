@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireAdminApi } from "@/lib/auth/admin";
 import { writeAdminAuditLog } from "@/lib/supabase/admin-repos/audit";
@@ -48,6 +49,10 @@ export async function POST(request: Request) {
   await writeAdminAuditLog(adminDb, user.id, "settings.update", "site_settings", "batch", {
     keys: parsed.data.map((r) => r.key),
   });
+
+  if (parsed.data.some((r) => r.key === "speu_hub_hero_disc_scale")) {
+    revalidatePath("/speu");
+  }
 
   return NextResponse.json({ ok: true });
 }

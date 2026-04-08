@@ -78,10 +78,10 @@ function SpeuHeroCoverImage({ src, reduceMotion }: { src: string; reduceMotion: 
   );
 }
 
-/** 1 = мінімальны памер (як раней), 5 — найбуйнейшы; крокі лінейныя */
+/** 1 = мінімальны памер (як раней), 5 — найбуйнейшы; крокі крыху буйнейшыя за бачнасць на экране */
 export function speuHubDiscScaleFactor(level: number): number {
   const L = Math.min(5, Math.max(1, Math.round(level)));
-  return 1 + (L - 1) * 0.1375;
+  return 1 + (L - 1) * 0.168;
 }
 
 type SpeuHeroShuffleProps = {
@@ -117,7 +117,13 @@ export function SpeuHeroShuffle({ tracks, playableCount, scaleLevel = 1 }: SpeuH
   };
 
   const df = speuHubDiscScaleFactor(scaleLevel);
-  const discVars = { "--speu-disc-f": String(df) } as CSSProperties;
+  const outerMob = 11 * df;
+  const outerSm = 13 * df;
+  const discVars = {
+    "--speu-disc-f": String(df),
+    "--speu-o": `${outerMob}rem`,
+    "--speu-o-sm": `${outerSm}rem`,
+  } as CSSProperties;
 
   const discClassName = "relative flex size-full items-center justify-center";
 
@@ -272,7 +278,7 @@ export function SpeuHeroShuffle({ tracks, playableCount, scaleLevel = 1 }: SpeuH
     <div className="flex flex-col items-center justify-center pb-1 sm:pb-2">
       <div
         style={discVars}
-        className="relative mx-auto flex max-h-[min(92vw,calc(11rem*var(--speu-disc-f)))] max-w-[min(92vw,calc(11rem*var(--speu-disc-f)))] items-center justify-center aspect-square sm:max-h-[min(92vw,calc(13rem*var(--speu-disc-f)))] sm:max-w-[min(92vw,calc(13rem*var(--speu-disc-f)))] h-[min(92vw,calc(11rem*var(--speu-disc-f)))] w-[min(92vw,calc(11rem*var(--speu-disc-f)))] sm:h-[min(92vw,calc(13rem*var(--speu-disc-f)))] sm:w-[min(92vw,calc(13rem*var(--speu-disc-f)))]"
+        className="relative mx-auto flex aspect-square w-[min(92vw,var(--speu-o))] max-w-[min(92vw,var(--speu-o))] h-[min(92vw,var(--speu-o))] max-h-[min(92vw,var(--speu-o))] items-center justify-center sm:w-[min(92vw,var(--speu-o-sm))] sm:max-w-[min(92vw,var(--speu-o-sm))] sm:h-[min(92vw,var(--speu-o-sm))] sm:max-h-[min(92vw,var(--speu-o-sm))]"
       >
         {spinning && (
           <div
