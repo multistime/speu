@@ -20,15 +20,18 @@ type SpeuHubClientProps = {
   heroDiscScale?: number;
 };
 
-/** Негатыўныя водступы: пластына заходзіць пад загаловак і на «Лепшае» */
+/**
+ * Асіметрычнае наслаенне: менш уверх на тыпаграфіку, больш уніз на «Лепшае»,
+ * каб цэнтр пластыны (плей) візуальна бліжэй да сярэдзіны між блокам A і B.
+ */
 function hubHeroOverlapStyle(level: number): CSSProperties {
   const L = Math.min(5, Math.max(1, Math.round(level)));
   const t = (L - 1) / 4;
   return {
-    ["--speu-hero-pull-mt" as string]: `${-(1.1 + t * 2.35)}rem`,
-    ["--speu-hero-pull-mt-sm" as string]: `${-(1.5 + t * 3.1)}rem`,
-    ["--speu-hero-pull-mb" as string]: `${-(0.45 + t * 1)}rem`,
-    ["--speu-hero-pull-mb-sm" as string]: `${-(0.65 + t * 1.25)}rem`,
+    ["--speu-hero-pull-mt" as string]: `${-(0.3 + t * 1.05)}rem`,
+    ["--speu-hero-pull-mt-sm" as string]: `${-(0.45 + t * 1.35)}rem`,
+    ["--speu-hero-pull-mb" as string]: `${-(1.65 + t * 2.45)}rem`,
+    ["--speu-hero-pull-mb-sm" as string]: `${-(2 + t * 2.95)}rem`,
   } as CSSProperties;
 }
 
@@ -56,7 +59,7 @@ export function SpeuHubClient({
   return (
     <div className="min-h-screen pt-20 pb-28 px-3 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        <section className="relative mb-3 sm:mb-5">
+        <section className="relative mb-0">
           <motion.div
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
@@ -69,7 +72,7 @@ export function SpeuHubClient({
             <h1 className="font-display text-4xl sm:text-5xl font-semibold text-foreground mb-2 sm:mb-3 leading-tight italic [text-shadow:0_0_1px_var(--background),0_1px_2px_var(--background)]">
               Спеў
             </h1>
-            <p className="text-muted-foreground max-w-xl mx-auto text-sm leading-relaxed pb-1">
+            <p className="text-muted-foreground max-w-xl mx-auto text-sm leading-relaxed pb-2 sm:pb-3">
               Слухайце трэкі, адкрывайце артыстаў, альбомы і асобныя кампазіцыі.
             </p>
           </motion.div>
@@ -86,7 +89,7 @@ export function SpeuHubClient({
           </div>
         </section>
 
-        {/* Лепшае (топ-10) */}
+        {/* Лепшае (топ-10); z вышэй за пластыню — загаловак чытаецца над кольцамі */}
         <section className="relative z-20 mb-16">
           <div className="flex flex-row items-baseline justify-between gap-4 mb-6">
             <h2 className="font-display text-2xl sm:text-3xl font-semibold text-foreground italic">
