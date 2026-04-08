@@ -89,7 +89,8 @@ export type SpeuAlbumPageData = {
   coverUrl: string | null;
   releaseDate: string | null;
   description: string | null;
-  artist: { slug: string; name: string; photoUrl: string | null; theme: SpeuArtistTheme };
+  /** Усе артысты альбома (крэдыты); першы — асноўны для акцэнту старонкі. */
+  artists: { slug: string; name: string; photoUrl: string | null; theme: SpeuArtistTheme }[];
   tracks: SpeuPublicTrack[];
 };
 

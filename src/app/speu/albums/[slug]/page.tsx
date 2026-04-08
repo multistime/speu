@@ -11,7 +11,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!data) return { title: "Альбом — Спеў" };
   return {
     title: `${data.title} — Спеў`,
-    description: `Альбом ${data.title} · ${data.artist.name}`,
+    description: `Альбом ${data.title} · ${data.artists.map((a) => a.name).join(", ")}`,
   };
 }
 

@@ -64,9 +64,10 @@ function AlbumDescription({ text }: { text: string }) {
 
 export function SpeuAlbumPageView({ data }: { data: SpeuAlbumPageData }) {
   const { startNonStopShuffle, playPlaylistAt } = usePlayer();
-  const { accent, accentRgb, gradientFrom, gradientTo } = data.artist.theme;
+  const primary = data.artists[0];
+  if (!primary) return null;
+  const { accent, accentRgb, gradientFrom, gradientTo } = primary.theme;
   const playable = data.tracks;
-  const artistPhoto = data.artist.photoUrl;
 
   const albumPlaylist = useMemo(
     () => playable.map(speuPublicTrackToPlayerTrack),
@@ -148,31 +149,38 @@ export function SpeuAlbumPageView({ data }: { data: SpeuAlbumPageData }) {
                 <SpeuShareButton
                   path={`/speu/albums/${data.slug}`}
                   title={data.title}
-                  text={`${data.artist.name} — ${data.title}`}
+                  text={`${data.artists.map((a) => a.name).join(", ")} — ${data.title}`}
                   className="size-11 !min-h-11 !min-w-11 !max-h-11 !max-w-11 !p-0"
                 />
               </div>
             </div>
 
-            <SpeuInlineNavLink
-              href={`/speu/artists/${data.artist.slug}`}
-              className="mb-4 text-sm"
-              leading={
-                artistPhoto ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={artistPhoto}
-                    alt=""
-                    className="size-7 shrink-0 rounded-full border border-border object-cover"
-                    aria-hidden
-                  />
-                ) : (
-                  <User className="size-3.5 shrink-0 text-muted-foreground/80" strokeWidth={1.5} />
-                )
-              }
-            >
-              {data.artist.name}
-            </SpeuInlineNavLink>
+            <div className="mb-4 flex flex-wrap items-center justify-center sm:justify-start gap-x-2 gap-y-1.5 text-sm">
+              {data.artists.map((artist, i) => (
+                <span key={artist.slug} className="inline-flex items-center gap-2">
+                  {i > 0 && <span className="text-muted-foreground/60">·</span>}
+                  <SpeuInlineNavLink
+                    href={`/speu/artists/${artist.slug}`}
+                    className="inline-flex items-center gap-2"
+                    leading={
+                      artist.photoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={artist.photoUrl}
+                          alt=""
+                          className="size-7 shrink-0 rounded-full border border-border object-cover"
+                          aria-hidden
+                        />
+                      ) : (
+                        <User className="size-3.5 shrink-0 text-muted-foreground/80" strokeWidth={1.5} />
+                      )
+                    }
+                  >
+                    {artist.name}
+                  </SpeuInlineNavLink>
+                </span>
+              ))}
+            </div>
             {data.releaseDate && (
               <p className="text-xs text-muted-foreground font-mono mb-4">{data.releaseDate}</p>
             )}

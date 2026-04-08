@@ -55,11 +55,19 @@ const emptyForm = {
   photoUrl: "",
 };
 
+type CatalogVisibilityFilter = "all" | "published" | "unpublished";
+
 type AdminArtistsPanelProps = {
   onCatalogChanged?: () => void;
+  listSearch?: string;
+  visibilityFilter?: CatalogVisibilityFilter;
 };
 
-export function AdminArtistsPanel({ onCatalogChanged }: AdminArtistsPanelProps) {
+export function AdminArtistsPanel({
+  onCatalogChanged,
+  listSearch = "",
+  visibilityFilter = "unpublished",
+}: AdminArtistsPanelProps) {
   const [items, setItems] = useState<Artist[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -95,6 +103,32 @@ export function AdminArtistsPanel({ onCatalogChanged }: AdminArtistsPanelProps) 
   useEffect(() => {
     void load();
   }, []);
+
+  const visibleItems = useMemo(() => {
+    let list = items;
+    if (visibilityFilter === "published") {
+      list = list.filter((a) => a.status === "published");
+    } else if (visibilityFilter === "unpublished") {
+      list = list.filter((a) => a.status !== "published");
+    }
+    const q = listSearch.trim().toLowerCase();
+    if (q) {
+      list = list.filter((a) => {
+        const hay = [
+          a.name,
+          a.slug,
+          a.name_en ?? "",
+          ...(a.genres ?? []),
+          a.tagline ?? "",
+          a.location ?? "",
+        ]
+          .join(" ")
+          .toLowerCase();
+        return hay.includes(q);
+      });
+    }
+    return list;
+  }, [items, listSearch, visibilityFilter]);
 
   const editArtist = (artist: Artist) => {
     const vj = (artist.visual_json ?? {}) as Record<string, unknown>;
@@ -539,7 +573,10 @@ export function AdminArtistsPanel({ onCatalogChanged }: AdminArtistsPanelProps) 
 
       <div className="glass rounded-2xl border border-border p-6">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-          <h2 className="text-sm font-semibold">Спіс ({items.length})</h2>
+          <h2 className="text-sm font-semibold">
+            Спіс ({visibleItems.length}
+            {visibleItems.length !== items.length ? ` з ${items.length}` : ""})
+          </h2>
           <button
             type="button"
             onClick={openNewArtist}
@@ -553,9 +590,13 @@ export function AdminArtistsPanel({ onCatalogChanged }: AdminArtistsPanelProps) 
           <p className="text-sm text-muted-foreground">Загружаецца…</p>
         ) : items.length === 0 ? (
           <p className="text-sm text-muted-foreground">Артысты не знойдзены</p>
+        ) : visibleItems.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Нічога не адпавядае пошуку або фільтру публікацыі.
+          </p>
         ) : (
           <div className="space-y-2">
-            {items.map((artist) => (
+            {visibleItems.map((artist) => (
               <div key={artist.id} className="rounded-lg border border-border p-3 flex items-center gap-3">
                 {artist.photo_url ? (
                   // eslint-disable-next-line @next/next/no-img-element

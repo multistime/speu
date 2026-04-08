@@ -648,10 +648,10 @@ function AdminServiceRequestsPageInner() {
   const router = useRouter();
   const pathname = usePathname();
   const rawTab = searchParams.get("tab");
-  const tab: "label" | "services" = rawTab === "label" ? "label" : "services";
+  const tab: "label" | "services" = rawTab === "services" ? "services" : "label";
 
   const setTab = (next: "label" | "services") => {
-    const q = next === "services" ? "" : "?tab=label";
+    const q = next === "services" ? "?tab=services" : "";
     router.replace(`${pathname}${q}`, { scroll: false });
   };
 

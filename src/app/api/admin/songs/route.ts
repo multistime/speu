@@ -101,11 +101,21 @@ export async function POST(request: Request) {
     if (albumErr || !albumRow) {
       return NextResponse.json({ error: "album_not_found" }, { status: 400 });
     }
-    if (!artistIds.includes(albumRow.artist_id as string)) {
+    const { data: aaRows } = await adminDb
+      .schema("speu")
+      .from("album_artists")
+      .select("artist_id")
+      .eq("album_id", albumId);
+    const albumArtistIds = new Set<string>([
+      ...(aaRows ?? []).map((r) => r.artist_id as string),
+      ...(albumRow.artist_id ? [albumRow.artist_id as string] : []),
+    ]);
+    const ok = artistIds.some((id) => albumArtistIds.has(id));
+    if (!ok) {
       return NextResponse.json(
         {
           error: "album_artist_mismatch",
-          message: "Альбом належыць артысту, якога няма сярод выбраных на трэку",
+          message: "Альбом належыць артыстам, якіх няма сярод выбраных на трэку",
         },
         { status: 400 }
       );

@@ -273,13 +273,24 @@ export async function fetchSpeuArtistBySlug(slug: string): Promise<SpeuArtistPag
 
   const theme = themeFromVisualJson(artist.visual_json as Record<string, unknown> | null);
 
-  const { data: albumRows } = await supabase
+  const { data: albumCreditRows } = await supabase
     .schema("speu")
-    .from("albums")
-    .select("id, slug, title, cover_url, release_date")
-    .eq("artist_id", artist.id)
-    .eq("is_published", true)
-    .order("sort_order", { ascending: true });
+    .from("album_artists")
+    .select("album_id")
+    .eq("artist_id", artist.id);
+
+  const creditedAlbumIds = [...new Set((albumCreditRows ?? []).map((r) => r.album_id))];
+
+  const { data: albumRows } =
+    creditedAlbumIds.length > 0
+      ? await supabase
+          .schema("speu")
+          .from("albums")
+          .select("id, slug, title, cover_url, release_date, sort_order")
+          .in("id", creditedAlbumIds)
+          .eq("is_published", true)
+          .order("sort_order", { ascending: true })
+      : { data: [] as { id: string; slug: string; title: string; cover_url: string | null; release_date: string | null; sort_order: number }[] };
 
   const albums: SpeuArtistAlbum[] = (albumRows ?? []).map((r) => ({
     id: r.id,
@@ -413,17 +424,60 @@ export async function fetchSpeuAlbumBySlugOrId(param: string): Promise<SpeuAlbum
 
   if (!album) return null;
 
-  const { data: artist } = await supabase
+  const { data: creditRows } = await supabase
     .schema("speu")
-    .from("artists")
-    .select("slug, name, status, photo_url, visual_json")
-    .eq("id", album.artist_id)
-    .eq("status", "published")
-    .maybeSingle();
+    .from("album_artists")
+    .select(
+      `
+      sort_order,
+      artists ( slug, name, status, photo_url, visual_json )
+    `
+    )
+    .eq("album_id", album.id)
+    .order("sort_order", { ascending: true });
 
-  if (!artist) return null;
+  type CreditArtistEmb = {
+    slug: string;
+    name: string;
+    status: string;
+    photo_url: string | null;
+    visual_json: unknown;
+  };
 
-  const artistTheme = themeFromVisualJson(artist.visual_json as Record<string, unknown> | null);
+  let pageArtists: SpeuAlbumPageData["artists"] = [];
+  for (const r of creditRows ?? []) {
+    const emb = (r as { artists?: CreditArtistEmb | CreditArtistEmb[] | null }).artists;
+    const a: CreditArtistEmb | null = Array.isArray(emb) ? emb[0] ?? null : emb ?? null;
+    if (!a || a.status !== "published") continue;
+    pageArtists.push({
+      slug: a.slug,
+      name: a.name,
+      photoUrl: a.photo_url?.trim() || null,
+      theme: themeFromVisualJson(a.visual_json as Record<string, unknown> | null),
+    });
+  }
+
+  if (pageArtists.length === 0 && album.artist_id) {
+    const { data: solo } = await supabase
+      .schema("speu")
+      .from("artists")
+      .select("slug, name, status, photo_url, visual_json")
+      .eq("id", album.artist_id)
+      .eq("status", "published")
+      .maybeSingle();
+    if (solo) {
+      pageArtists = [
+        {
+          slug: solo.slug,
+          name: solo.name,
+          photoUrl: solo.photo_url?.trim() || null,
+          theme: themeFromVisualJson(solo.visual_json as Record<string, unknown> | null),
+        },
+      ];
+    }
+  }
+
+  if (pageArtists.length === 0) return null;
 
   const { data: trackRows } = await supabase
     .schema("speu")
@@ -463,12 +517,7 @@ export async function fetchSpeuAlbumBySlugOrId(param: string): Promise<SpeuAlbum
     coverUrl: album.cover_url?.trim() || null,
     releaseDate: album.release_date ?? null,
     description: album.description?.trim() || null,
-    artist: {
-      slug: artist.slug,
-      name: artist.name,
-      photoUrl: artist.photo_url?.trim() || null,
-      theme: artistTheme,
-    },
+    artists: pageArtists,
     tracks,
   };
 }

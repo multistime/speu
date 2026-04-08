@@ -1,8 +1,8 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Trash2, Pencil, Plus, Upload, Music, Disc, Users, X, Check } from "lucide-react";
+import { Trash2, Pencil, Plus, Upload, Music, Disc, Users, X, Check, Search } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { AdminFormModal } from "@/components/admin/AdminFormModal";
 import { AdminArtistsPanel } from "@/components/admin/AdminArtistsPanel";
@@ -11,7 +11,8 @@ import { AdminImageSourceField } from "@/components/admin/AdminImageSourceField"
 type Artist = { id: string; name: string; slug: string };
 type Album = {
   id: string;
-  artist_id: string;
+  artist_id?: string;
+  artist_ids?: string[];
   title: string;
   slug?: string | null;
   cover_url: string | null;
@@ -19,8 +20,21 @@ type Album = {
   description: string | null;
   is_published: boolean;
   sort_order: number;
-  artists?: { id: string; name: string; slug: string };
+  artists?: { id: string; name: string; slug: string } | null;
+  artists_list?: { id: string; name: string; slug: string }[];
 };
+
+function albumCreditIds(album: Album): string[] {
+  if (album.artist_ids && album.artist_ids.length > 0) return album.artist_ids;
+  return album.artist_id ? [album.artist_id] : [];
+}
+
+function albumArtistsLabel(album: Album): string {
+  if (album.artists_list && album.artists_list.length > 0) {
+    return album.artists_list.map((a) => a.name).join(", ");
+  }
+  return album.artists?.name ?? "—";
+}
 type Song = {
   id: string;
   artist_id: string;
@@ -43,7 +57,7 @@ type Song = {
 
 const emptyAlbumForm = {
   id: "",
-  artistId: "",
+  artistIds: [] as string[],
   title: "",
   slug: "",
   coverUrl: "",
@@ -75,6 +89,8 @@ function formatDuration(sec: number | null) {
   const s = sec % 60;
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
+
+type CatalogVisibilityFilter = "all" | "published" | "unpublished";
 
 async function fetchCatalogData() {
   const [artistsRes, albumsRes, songsRes] = await Promise.all([
@@ -124,6 +140,8 @@ function AdminLabelPageInner() {
   const [albumForm, setAlbumForm] = useState(emptyAlbumForm);
   const [songFormOpen, setSongFormOpen] = useState(false);
   const [albumFormOpen, setAlbumFormOpen] = useState(false);
+  const [listSearch, setListSearch] = useState("");
+  const [visibilityFilter, setVisibilityFilter] = useState<CatalogVisibilityFilter>("unpublished");
 
   const loadAll = async () => {
     setLoading(true);
@@ -151,7 +169,46 @@ function AdminLabelPageInner() {
     };
   }, []);
 
-  const albumsForSong = albums.filter((a) => songForm.artistIds.includes(a.artist_id));
+  const albumsForSong = albums.filter((a) =>
+    albumCreditIds(a).some((id) => songForm.artistIds.includes(id))
+  );
+
+  const filteredSongs = useMemo(() => {
+    const q = listSearch.trim().toLowerCase();
+    return songs.filter((song) => {
+      if (visibilityFilter === "published" && !song.is_published) return false;
+      if (visibilityFilter === "unpublished" && song.is_published) return false;
+      if (!q) return true;
+      const hay = [
+        song.title,
+        song.slug ?? "",
+        ...(song.artists_list?.map((x) => x.name) ?? []),
+        song.artists?.name ?? "",
+        song.albums?.title ?? "",
+      ]
+        .join(" ")
+        .toLowerCase();
+      return hay.includes(q);
+    });
+  }, [songs, listSearch, visibilityFilter]);
+
+  const filteredAlbums = useMemo(() => {
+    const q = listSearch.trim().toLowerCase();
+    return albums.filter((album) => {
+      if (visibilityFilter === "published" && !album.is_published) return false;
+      if (visibilityFilter === "unpublished" && album.is_published) return false;
+      if (!q) return true;
+      const hay = [album.title, album.slug ?? "", albumArtistsLabel(album)].join(" ").toLowerCase();
+      return hay.includes(q);
+    });
+  }, [albums, listSearch, visibilityFilter]);
+
+  const filterChipCls = (active: boolean) =>
+    `min-h-9 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+      active
+        ? "bg-primary/15 border-primary/40 text-foreground"
+        : "bg-muted/40 border-border text-muted-foreground hover:text-foreground hover:border-border"
+    }`;
 
   const toggleSongArtist = (artistId: string) => {
     setSongForm((f) => {
@@ -159,7 +216,9 @@ function AdminLabelPageInner() {
       const nextIds = has ? f.artistIds.filter((x) => x !== artistId) : [...f.artistIds, artistId];
       const albumOk =
         f.albumId &&
-        albums.some((al) => al.id === f.albumId && nextIds.includes(al.artist_id));
+        albums.some(
+          (al) => al.id === f.albumId && albumCreditIds(al).some((aid) => nextIds.includes(aid))
+        );
       return { ...f, artistIds: nextIds, albumId: albumOk ? f.albumId : "" };
     });
   };
@@ -285,9 +344,17 @@ function AdminLabelPageInner() {
     setSongFormOpen(true);
   };
 
+  const toggleAlbumArtist = (artistId: string) => {
+    setAlbumForm((f) => {
+      const has = f.artistIds.includes(artistId);
+      const nextIds = has ? f.artistIds.filter((x) => x !== artistId) : [...f.artistIds, artistId];
+      return { ...f, artistIds: nextIds };
+    });
+  };
+
   const saveAlbum = async () => {
-    if (!albumForm.title || !albumForm.artistId) {
-      setError("Патрабуецца назва і артыст");
+    if (!albumForm.title || albumForm.artistIds.length === 0) {
+      setError("Патрабуецца назва і хаця б адзін артыст");
       return;
     }
     setSaving(true);
@@ -297,7 +364,7 @@ function AdminLabelPageInner() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         id: albumForm.id || undefined,
-        artistId: albumForm.artistId,
+        artistIds: albumForm.artistIds,
         title: albumForm.title,
         slug: albumForm.slug.trim() || undefined,
         coverUrl: albumForm.coverUrl || null,
@@ -333,7 +400,7 @@ function AdminLabelPageInner() {
   const editAlbum = (album: Album) => {
     setAlbumForm({
       id: album.id,
-      artistId: album.artist_id,
+      artistIds: albumCreditIds(album),
       title: album.title,
       slug: album.slug ?? "",
       coverUrl: album.cover_url ?? "",
@@ -426,6 +493,52 @@ function AdminLabelPageInner() {
         </button>
       </div>
 
+      <div className="glass rounded-2xl border border-border p-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="relative flex-1 min-w-0 lg:max-w-md">
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden
+          />
+          <input
+            type="search"
+            className={`${inputCls} pl-9`}
+            placeholder={
+              tab === "songs"
+                ? "Пошук: назва, артыст, альбом…"
+                : tab === "albums"
+                  ? "Пошук: альбом, артыст…"
+                  : "Пошук: назва, slug, жанры…"
+            }
+            value={listSearch}
+            onChange={(e) => setListSearch(e.target.value)}
+            autoComplete="off"
+          />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            className={filterChipCls(visibilityFilter === "all")}
+            onClick={() => setVisibilityFilter("all")}
+          >
+            Усе
+          </button>
+          <button
+            type="button"
+            className={filterChipCls(visibilityFilter === "published")}
+            onClick={() => setVisibilityFilter("published")}
+          >
+            Апублікаваныя
+          </button>
+          <button
+            type="button"
+            className={filterChipCls(visibilityFilter === "unpublished")}
+            onClick={() => setVisibilityFilter("unpublished")}
+          >
+            Неапублікаваныя
+          </button>
+        </div>
+      </div>
+
       {error && (
         <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive flex items-center justify-between">
           {error}
@@ -480,7 +593,7 @@ function AdminLabelPageInner() {
                   <option value="">— без альбома —</option>
                   {albumsForSong.map((a) => (
                     <option key={a.id} value={a.id}>
-                      {a.title} ({artists.find((ar) => ar.id === a.artist_id)?.name ?? a.artist_id})
+                      {a.title} ({albumArtistsLabel(a)})
                     </option>
                   ))}
                 </select>
@@ -653,7 +766,10 @@ function AdminLabelPageInner() {
           {/* Songs list */}
           <div className="glass rounded-2xl border border-border p-6">
             <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-              <h2 className="text-sm font-semibold">Спіс песень ({songs.length})</h2>
+              <h2 className="text-sm font-semibold">
+                Спіс песень ({filteredSongs.length}
+                {filteredSongs.length !== songs.length ? ` з ${songs.length}` : ""})
+              </h2>
               <button
                 type="button"
                 onClick={openNewSong}
@@ -667,9 +783,13 @@ function AdminLabelPageInner() {
               <p className="text-sm text-muted-foreground">Загружаецца…</p>
               ) : songs.length === 0 ? (
               <p className="text-sm text-muted-foreground">Песні не знойдзены</p>
+            ) : filteredSongs.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Нічога не адпавядае пошуку або фільтру публікацыі.
+              </p>
             ) : (
               <div className="space-y-2">
-                {songs.map((song) => (
+                {filteredSongs.map((song) => (
                   <div key={song.id} className="rounded-lg border border-border p-3 flex items-center gap-3">
                     {song.cover_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -749,18 +869,31 @@ function AdminLabelPageInner() {
             </h2>
 
             <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <label className={labelCls}>Артыст *</label>
-                <select
-                  className={inputCls}
-                  value={albumForm.artistId}
-                  onChange={(e) => setAlbumForm({ ...albumForm, artistId: e.target.value })}
-                >
-                  <option value="">— выбраць —</option>
-                  {artists.map((a) => (
-                    <option key={a.id} value={a.id}>{a.name}</option>
-                  ))}
-                </select>
+              <div className="md:col-span-2">
+                <label className={labelCls}>Артысты на альбоме *</label>
+                <p className="text-[11px] text-muted-foreground mb-2">
+                  Некалькі артыстаў (колабы). Парадак у спісе — парадак у крэдытах; першы лічыцца асноўным для акцэнту старонкі.
+                </p>
+                <div className="max-h-44 overflow-y-auto rounded-lg border border-border bg-muted/30 p-3 space-y-2">
+                  {artists.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">Спачатку дадайце артыстаў на ўкладцы «Артысты».</p>
+                  ) : (
+                    artists.map((a) => (
+                      <label
+                        key={a.id}
+                        className="flex items-center gap-2.5 cursor-pointer select-none text-sm"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={albumForm.artistIds.includes(a.id)}
+                          onChange={() => toggleAlbumArtist(a.id)}
+                          className="w-4 h-4 rounded border-border accent-primary shrink-0"
+                        />
+                        <span>{a.name}</span>
+                      </label>
+                    ))
+                  )}
+                </div>
               </div>
 
               <div>
@@ -861,7 +994,10 @@ function AdminLabelPageInner() {
           {/* Albums list */}
           <div className="glass rounded-2xl border border-border p-6">
             <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-              <h2 className="text-sm font-semibold">Спіс альбомаў ({albums.length})</h2>
+              <h2 className="text-sm font-semibold">
+                Спіс альбомаў ({filteredAlbums.length}
+                {filteredAlbums.length !== albums.length ? ` з ${albums.length}` : ""})
+              </h2>
               <button
                 type="button"
                 onClick={openNewAlbum}
@@ -875,9 +1011,13 @@ function AdminLabelPageInner() {
               <p className="text-sm text-muted-foreground">Загружаецца…</p>
             ) : albums.length === 0 ? (
               <p className="text-sm text-muted-foreground">Альбомы не знойдзены</p>
+            ) : filteredAlbums.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Нічога не адпавядае пошуку або фільтру публікацыі.
+              </p>
             ) : (
               <div className="space-y-2">
-                {albums.map((album) => {
+                {filteredAlbums.map((album) => {
                   const trackCount = songs.filter((s) => s.album_id === album.id).length;
                   return (
                     <div key={album.id} className="rounded-lg border border-border p-3 flex items-center gap-3">
@@ -892,7 +1032,7 @@ function AdminLabelPageInner() {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{album.title}</p>
                         <p className="text-xs text-muted-foreground">
-                          {album.artists?.name ?? "—"}
+                          {albumArtistsLabel(album)}
                           {album.release_date ? ` · ${album.release_date}` : ""}
                           {` · ${trackCount} тр.`}
                         </p>
@@ -926,7 +1066,13 @@ function AdminLabelPageInner() {
         </>
       )}
 
-      {tab === "artists" && <AdminArtistsPanel onCatalogChanged={() => void loadAll()} />}
+      {tab === "artists" && (
+        <AdminArtistsPanel
+          onCatalogChanged={() => void loadAll()}
+          listSearch={listSearch}
+          visibilityFilter={visibilityFilter}
+        />
+      )}
     </div>
   );
 }
