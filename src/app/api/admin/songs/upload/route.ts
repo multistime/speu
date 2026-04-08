@@ -20,14 +20,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "file_too_large", maxMb: 50 }, { status: 413 });
   }
 
-  const allowed = ["audio/mpeg", "audio/mp3", "audio/wav", "audio/ogg", "audio/x-wav", "audio/x-mp3"];
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+  if (ext !== "mp3") {
+    return NextResponse.json({ error: "invalid_extension", expected: "mp3" }, { status: 400 });
+  }
+
+  const allowed = ["audio/mpeg", "audio/mp3", "audio/x-mp3"];
   const mime = file.type || "audio/mpeg";
   if (!allowed.includes(mime)) {
     return NextResponse.json({ error: "invalid_mime", mime }, { status: 415 });
   }
 
-  const ext = file.name.split(".").pop()?.toLowerCase() ?? "mp3";
-  const filename = `songs/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const filename = `songs/${Date.now()}-${Math.random().toString(36).slice(2)}.mp3`;
 
   const arrayBuffer = await file.arrayBuffer();
   const buffer = new Uint8Array(arrayBuffer);

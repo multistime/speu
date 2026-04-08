@@ -168,16 +168,20 @@ function AdminLabelPageInner() {
   const uploadAudio = async (file: File): Promise<string | null> => {
     setUploadProgress("uploading");
 
-    const allowed = ["audio/mpeg", "audio/mp3", "audio/wav", "audio/ogg", "audio/x-wav", "audio/x-mp3"];
+    const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+    if (ext !== "mp3") {
+      setUploadProgress("error");
+      setError("У першай версіі падтрымліваецца толькі MP3 (.mp3).");
+      return null;
+    }
+    const allowed = ["audio/mpeg", "audio/mp3", "audio/x-mp3"];
     const mime = file.type || "audio/mpeg";
     if (!allowed.includes(mime)) {
       setUploadProgress("error");
-      setError(`Непадтрымоўваны фармат: ${mime}. Выкарыстоўвайце MP3, WAV або OGG.`);
+      setError(`Непадтрымоўваны фармат: ${mime}. Выкарыстоўвайце MP3.`);
       return null;
     }
-
-    const ext = file.name.split(".").pop()?.toLowerCase() ?? "mp3";
-    const path = `songs/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const path = `songs/${Date.now()}-${Math.random().toString(36).slice(2)}.mp3`;
 
     const supabase = createClient();
     const { data, error } = await supabase.storage
@@ -516,7 +520,7 @@ function AdminLabelPageInner() {
                     <input
                       ref={fileInputRef}
                       type="file"
-                      accept="audio/mpeg,audio/mp3,audio/wav,audio/ogg,.mp3,.wav,.ogg"
+                      accept="audio/mpeg,audio/mp3,audio/x-mp3,.mp3"
                       className="hidden"
                       onChange={(e) => {
                         const f = e.target.files?.[0] ?? null;

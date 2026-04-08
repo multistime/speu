@@ -2,7 +2,7 @@ import { Upload } from "tus-js-client";
 
 const TUS_CHUNK_BYTES = 6 * 1024 * 1024;
 
-/** Supabase: для файлаў буйней за ~6 МБ лепш TUS, інакш стандартны upload часта дае 400 у браўзеры. */
+/** Supabase: для буйных MP3 праз TUS (чанкі 6 МБ), інакш стандартны upload часта дае 400 у браўзеры. */
 export const SPEU_AUDIO_TUS_THRESHOLD_BYTES = 5 * 1024 * 1024;
 
 function storageTusEndpoint(supabaseUrl: string): string {

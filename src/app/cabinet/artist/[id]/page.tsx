@@ -17,7 +17,12 @@ import {
   type ReleaseSubmissionTrackRow,
 } from "@/lib/speu/release-submissions";
 import { getAudioDurationSecFromFile } from "@/lib/speu/audio-duration";
-import { audioUploadContentType, imageUploadContentType } from "@/lib/speu/storage-upload-mime";
+import {
+  SPEU_MP3_AUDIO_ACCEPT,
+  getMp3OnlyAudioRejectionMessage,
+  imageUploadContentType,
+  mp3AudioUploadContentType,
+} from "@/lib/speu/storage-upload-mime";
 import { formatTrackDuration } from "@/components/speu/speu-format-duration";
 import { cn } from "@/lib/utils";
 
@@ -32,12 +37,12 @@ function storageUploadUserMessage(message: string, kind: "image" | "audio"): str
   ) {
     return kind === "image"
       ? "Выява занадта вялікая. Пасля абнаўлення сховішча дазволена да ~12 МБ; інакш сцісніце PNG/JPEG."
-      : "Файл аўдыё занадта вялікі. Пасля абнаўлення сховішча дазволена да ~150 МБ; можна таксама загрузіць MP3/FLAC меншага памеру.";
+      : "Файл MP3 занадта вялікі. Дазволена да ~100 МБ (абмежаванне сховішча); паспрабуйце ніжэйшы бітрэйт.";
   }
   if (m.includes("mime") || m.includes("invalid type") || m.includes("not allowed") || m.includes("content type")) {
     return kind === "image"
       ? "Сховішча адхіліла тып выявы. Выкарыстоўвайце JPEG, PNG, WebP або GIF; паспрабуйце іншы браўзер, калі type файла пусты."
-      : "Сховішча адхіліла тып аўдыё. Для WAV патрэбна пашырэнне .wav; таксама даступныя MP3 і OGG.";
+      : "Сховішча адхіліла тып аўдыё. У першай версіі дазволены толькі MP3 (.mp3).";
   }
   return message;
 }
@@ -213,12 +218,16 @@ export default function ArtistSubmissionPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     setError(null);
+    const mp3Reject = getMp3OnlyAudioRejectionMessage(file);
+    if (mp3Reject) {
+      setError(mp3Reject);
+      return;
+    }
     const durationSec = await getAudioDurationSecFromFile(file);
-    const ext = file.name.split(".").pop()?.toLowerCase() || "mp3";
-    const path = `submission-drafts/${user.id}/${submission.id}/${crypto.randomUUID()}.${ext}`;
-    const contentType = audioUploadContentType(file);
+    const path = `submission-drafts/${user.id}/${submission.id}/${crypto.randomUUID()}.mp3`;
+    const contentType = mp3AudioUploadContentType(file);
 
-    /** Парог як у `supabase-tus-upload` — буйныя WAV праз TUS (чанкі 6 МБ), інакш Storage часта адказвае 400. */
+    /** Парог як у `supabase-tus-upload` — буйныя MP3 праз TUS (чанкі 6 МБ), інакш Storage часта адказвае 400. */
     const largeAudioBytes = 5 * 1024 * 1024;
 
     if (file.size > largeAudioBytes) {
@@ -631,7 +640,12 @@ export default function ArtistSubmissionPage() {
                   </div>
                 )}
                 <div>
-                  <label className="block text-xs text-muted-foreground mb-1">Аўдыё</label>
+                  <label className="block text-xs text-muted-foreground mb-1">Аўдыё (MP3)</label>
+                  {editable ? (
+                    <p className="text-xs text-muted-foreground/90 mb-1">
+                      У першай версіі прымаем толькі MP3 (.mp3), да ~100 МБ на файл.
+                    </p>
+                  ) : null}
                   {t.audio_url ? (
                     <div className="space-y-1">
                       <audio src={t.audio_url} controls className="w-full h-9 mt-1" />
@@ -647,10 +661,10 @@ export default function ArtistSubmissionPage() {
                   {editable && (
                     <label className="mt-2 inline-flex items-center gap-2 text-xs text-primary cursor-pointer hover:underline">
                       <Upload className="h-3.5 w-3.5" strokeWidth={1.5} />
-                      Загрузіць MP3 / WAV / OGG
+                      Загрузіць MP3
                       <input
                         type="file"
-                        accept="audio/mpeg,audio/mp3,audio/wav,audio/ogg,audio/x-wav"
+                        accept={SPEU_MP3_AUDIO_ACCEPT}
                         className="hidden"
                         onChange={(e) => {
                           const f = e.target.files?.[0];
