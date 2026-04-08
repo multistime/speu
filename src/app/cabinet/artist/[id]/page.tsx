@@ -216,15 +216,52 @@ export default function ArtistSubmissionPage() {
     const durationSec = await getAudioDurationSecFromFile(file);
     const ext = file.name.split(".").pop()?.toLowerCase() || "mp3";
     const path = `submission-drafts/${user.id}/${submission.id}/${crypto.randomUUID()}.${ext}`;
-    const { error: upErr } = await supabase.storage.from("speu-audio").upload(path, file, {
-      cacheControl: "3600",
-      upsert: false,
-      contentType: audioUploadContentType(file),
-    });
-    if (upErr) {
-      setError(storageUploadUserMessage(upErr.message, "audio"));
-      return;
+    const contentType = audioUploadContentType(file);
+
+    /** Парог як у `supabase-tus-upload` — буйныя WAV праз TUS (чанкі 6 МБ), інакш Storage часта адказвае 400. */
+    const largeAudioBytes = 5 * 1024 * 1024;
+
+    if (file.size > largeAudioBytes) {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      if (!supabaseUrl || !anonKey) {
+        setError("Наладкі Supabase (URL / ключ) не знойдзены.");
+        return;
+      }
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        setError("Увайдзіце зноў, каб загрузіць вялікі аўдыёфайл.");
+        return;
+      }
+      try {
+        const { uploadBlobTusToSupabaseStorage } = await import("@/lib/speu/supabase-tus-upload");
+        await uploadBlobTusToSupabaseStorage({
+          supabaseUrl,
+          supabaseAnonKey: anonKey,
+          accessToken: session.access_token,
+          bucket: "speu-audio",
+          objectPath: path,
+          file,
+          contentType,
+        });
+      } catch (e) {
+        setError(storageUploadUserMessage(e instanceof Error ? e.message : String(e), "audio"));
+        return;
+      }
+    } else {
+      const { error: upErr } = await supabase.storage.from("speu-audio").upload(path, file, {
+        cacheControl: "3600",
+        upsert: false,
+        contentType,
+      });
+      if (upErr) {
+        setError(storageUploadUserMessage(upErr.message, "audio"));
+        return;
+      }
     }
+
     const { data: pub } = supabase.storage.from("speu-audio").getPublicUrl(path);
     setTracks((prev) =>
       prev.map((x) =>
