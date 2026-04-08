@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Calendar, MapPin, Music } from "lucide-react";
+import { MapPin, Music } from "lucide-react";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ArtistPattern } from "@/components/artists/artist-pattern";
 import { SpeuInlineNavLink } from "@/components/speu/SpeuInlineNavLink";
 import type { SpeuArtistAlbum, SpeuArtistPageData } from "@/lib/speu/types";
 import { SpeuTrackRow } from "@/components/speu/SpeuTrackRow";
 import { speuPublicTrackToPlayerTrack } from "@/lib/speu/player-map";
+import { SpeuShareButton } from "@/components/speu/SpeuShareButton";
 import {
   SpeuInstagramIcon,
   SpeuSpotifyIcon,
@@ -17,7 +18,21 @@ import {
 } from "@/components/speu/speu-social-icons";
 import { cn } from "@/lib/utils";
 
-const TRACK_ROW_PX = 54;
+function speuTrackCountLabel(n: number): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return `${n} трэк`;
+  if ([2, 3, 4].includes(mod10) && ![12, 13, 14].includes(mod100)) return `${n} трэкі`;
+  return `${n} трэкаў`;
+}
+
+function speuAlbumCountLabel(n: number): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return `${n} альбом`;
+  if ([2, 3, 4].includes(mod10) && ![12, 13, 14].includes(mod100)) return `${n} альбомы`;
+  return `${n} альбомаў`;
+}
 
 function TracksSectionHeader({ artistSlug, showAllLink }: { artistSlug: string; showAllLink: boolean }) {
   return (
@@ -145,24 +160,8 @@ function SpeuArtistProfileCard({
         </div>
       )}
 
-      <div className="flex min-h-0 flex-1 flex-col gap-4 p-5">
+      <div className="flex flex-col gap-4 p-5">
         <div className="flex gap-4 items-start">
-          <div className="min-w-0 flex-1">
-            <h1 className="font-display text-2xl font-semibold leading-tight text-foreground italic sm:text-3xl">
-              {data.name}
-            </h1>
-            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-              <span className="inline-flex items-center gap-1">
-                <MapPin className="h-3 w-3 shrink-0" strokeWidth={1.5} />
-                {data.location}
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <Calendar className="h-3 w-3 shrink-0" strokeWidth={1.5} />
-                З {data.year}
-              </span>
-            </div>
-          </div>
-
           <div
             className={cn(
               "relative size-24 shrink-0 overflow-hidden rounded-xl border border-border/60 sm:size-[7.25rem]",
@@ -188,69 +187,105 @@ function SpeuArtistProfileCard({
               </>
             )}
           </div>
+
+          <div className="min-w-0 flex-1">
+            <h1 className="font-display text-2xl font-semibold leading-tight text-foreground italic sm:text-3xl">
+              {data.name}
+            </h1>
+            {data.location.trim().length > 0 && (
+              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                <span className="inline-flex items-center gap-1">
+                  <MapPin className="h-3 w-3 shrink-0" strokeWidth={1.5} />
+                  {data.location}
+                </span>
+              </div>
+            )}
+            {data.tracks.length > 0 && (
+              <p className="mt-2 text-xs text-muted-foreground/90">
+                <span className="tabular-nums">{speuTrackCountLabel(data.tracks.length)}</span>
+                {data.albums.length > 0 ? (
+                  <>
+                    <span className="mx-1.5 text-muted-foreground/35" aria-hidden>
+                      ·
+                    </span>
+                    <span className="tabular-nums">{speuAlbumCountLabel(data.albums.length)}</span>
+                  </>
+                ) : null}
+              </p>
+            )}
+          </div>
         </div>
 
         {data.bio.trim().length > 0 && (
           <p className="text-sm leading-relaxed text-muted-foreground">{data.bio}</p>
         )}
 
-        {hasSocials && (
-          <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
-            <span className="mr-1 text-xs text-muted-foreground/60">Сачыць:</span>
-            {instagram && instagram.length > 1 && (
-              <a
-                href={instagram}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-lg p-2 text-muted-foreground/50 transition-all hover:bg-muted hover:text-foreground"
-                aria-label="Instagram"
-              >
-                <SpeuInstagramIcon className="h-4 w-4" />
-              </a>
-            )}
-            {youtube && youtube.length > 1 && (
-              <a
-                href={youtube}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-lg p-2 text-muted-foreground/50 transition-all hover:bg-muted hover:text-foreground"
-                aria-label="YouTube"
-              >
-                <SpeuYoutubeIcon className="h-4 w-4" />
-              </a>
-            )}
-            {spotify && spotify.length > 1 && (
-              <a
-                href={spotify}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-lg p-2 text-muted-foreground/50 transition-all hover:bg-muted hover:text-foreground"
-                aria-label="Spotify"
-              >
-                <SpeuSpotifyIcon className="h-4 w-4" />
-              </a>
-            )}
-            {telegram && telegram.length > 1 && (
-              <a
-                href={telegram}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-lg p-2 text-muted-foreground/50 transition-all hover:bg-muted hover:text-foreground"
-                aria-label="Telegram"
-              >
-                <SpeuTelegramIcon className="h-4 w-4" />
-              </a>
-            )}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            {hasSocials ? (
+              <>
+                <span className="mr-1 text-xs text-muted-foreground/60">Сачыць:</span>
+                {instagram && instagram.length > 1 && (
+                  <a
+                    href={instagram}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-lg p-2 text-muted-foreground/50 transition-all hover:bg-muted hover:text-foreground"
+                    aria-label="Instagram"
+                  >
+                    <SpeuInstagramIcon className="h-4 w-4" />
+                  </a>
+                )}
+                {youtube && youtube.length > 1 && (
+                  <a
+                    href={youtube}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-lg p-2 text-muted-foreground/50 transition-all hover:bg-muted hover:text-foreground"
+                    aria-label="YouTube"
+                  >
+                    <SpeuYoutubeIcon className="h-4 w-4" />
+                  </a>
+                )}
+                {spotify && spotify.length > 1 && (
+                  <a
+                    href={spotify}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-lg p-2 text-muted-foreground/50 transition-all hover:bg-muted hover:text-foreground"
+                    aria-label="Spotify"
+                  >
+                    <SpeuSpotifyIcon className="h-4 w-4" />
+                  </a>
+                )}
+                {telegram && telegram.length > 1 && (
+                  <a
+                    href={telegram}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-lg p-2 text-muted-foreground/50 transition-all hover:bg-muted hover:text-foreground"
+                    aria-label="Telegram"
+                  >
+                    <SpeuTelegramIcon className="h-4 w-4" />
+                  </a>
+                )}
+              </>
+            ) : null}
           </div>
-        )}
+          <SpeuShareButton
+            path={`/speu/artists/${data.slug}`}
+            title={data.name}
+            className="size-10 !min-h-10 !min-w-10 !max-h-10 !max-w-10 !p-0 sm:size-11 sm:!min-h-11 sm:!min-w-11 sm:!max-h-11 sm:!max-w-11"
+          />
+        </div>
       </div>
     </motion.div>
   );
 }
 
 export function SpeuArtistPageView({ data }: { data: SpeuArtistPageData }) {
-  const tracksViewportRef = useRef<HTMLDivElement>(null);
-  const [previewLimit, setPreviewLimit] = useState(8);
+  const profileColRef = useRef<HTMLDivElement>(null);
+  const [tracksColHeight, setTracksColHeight] = useState<number | null>(null);
   const { accent, gradientFrom, gradientTo } = data.theme;
 
   const singlesTracks = useMemo(() => data.tracks.filter((t) => !t.album), [data.tracks]);
@@ -276,21 +311,14 @@ export function SpeuArtistPageView({ data }: { data: SpeuArtistPageData }) {
   }, [data.albums, hasSingles, singlesCover]);
 
   useLayoutEffect(() => {
-    const el = tracksViewportRef.current;
-    if (!el) return;
-    const measure = () => {
-      const h = el.clientHeight;
-      if (h < TRACK_ROW_PX) return;
-      const n = Math.floor(h / TRACK_ROW_PX);
-      setPreviewLimit(Math.min(Math.max(3, n), Math.max(1, data.tracks.length)));
-    };
+    const wrap = profileColRef.current;
+    if (!wrap) return;
+    const measure = () => setTracksColHeight(wrap.offsetHeight);
     measure();
     const ro = new ResizeObserver(measure);
-    ro.observe(el);
+    ro.observe(wrap);
     return () => ro.disconnect();
-  }, [data.tracks.length]);
-
-  const previewTracks = data.tracks.slice(0, previewLimit);
+  }, []);
 
   const artistPlaylist = useMemo(
     () => data.tracks.map(speuPublicTrackToPlayerTrack),
@@ -300,13 +328,13 @@ export function SpeuArtistPageView({ data }: { data: SpeuArtistPageData }) {
   return (
     <>
       {/* Мабільны: адна калонка ў стылі старонкі альбома */}
-      <div className="min-h-screen pt-20 pb-24 px-4 sm:px-6 lg:hidden">
+      <div className="min-h-screen pt-20 pb-24 px-3 sm:px-6 lg:hidden">
         <div className="mx-auto max-w-4xl">
           <SpeuArtistProfileCard data={data} className="mb-10" />
 
           <TracksSectionHeader artistSlug={data.slug} showAllLink={data.tracks.length > 0} />
 
-          <div className="space-y-0.5 rounded-xl border border-border/60 bg-card/30 p-2 sm:p-3 mb-10">
+          <div className="space-y-0.5 rounded-xl border border-border/60 bg-card/30 p-1.5 sm:p-3 mb-10">
             {data.tracks.length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-2 py-10 text-center text-sm text-muted-foreground">
                 <Music className="h-8 w-8 opacity-25" />
@@ -332,18 +360,18 @@ export function SpeuArtistPageView({ data }: { data: SpeuArtistPageData }) {
       {/* Дэсктоп: адзін экран — сетка + паласа альбомаў */}
       <div className="box-border hidden h-svh max-h-svh flex-col overflow-hidden pt-20 pb-4 lg:flex">
         <div className="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col px-4 sm:px-6 lg:px-8">
-          <div className="grid min-h-0 flex-1 grid-cols-12 gap-6 overflow-hidden">
-            <div className="col-span-4 flex min-h-0 flex-col overflow-hidden">
-              <SpeuArtistProfileCard data={data} className="min-h-0 flex-1 overflow-y-auto" />
+          <div className="grid shrink-0 grid-cols-12 gap-6 items-start">
+            <div ref={profileColRef} className="col-span-4 w-full self-start">
+              <SpeuArtistProfileCard data={data} className="w-full" />
             </div>
 
-            <div className="col-span-8 flex min-h-0 flex-col overflow-hidden">
+            <div
+              className="col-span-8 flex min-h-0 flex-col overflow-hidden"
+              style={tracksColHeight != null ? { height: tracksColHeight } : undefined}
+            >
               <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                 <TracksSectionHeader artistSlug={data.slug} showAllLink={data.tracks.length > 0} />
-                <div
-                  ref={tracksViewportRef}
-                  className="min-h-0 flex-1 overflow-hidden rounded-xl border border-border/60 bg-card/30 p-2 sm:p-3"
-                >
+                <div className="min-h-0 flex-1 overflow-y-auto rounded-xl border border-border/60 bg-card/30 p-2 sm:p-3">
                   {data.tracks.length === 0 ? (
                     <div className="flex flex-col items-center justify-center gap-2 py-12 text-center text-sm text-muted-foreground">
                       <Music className="h-8 w-8 opacity-25" />
@@ -351,7 +379,7 @@ export function SpeuArtistPageView({ data }: { data: SpeuArtistPageData }) {
                     </div>
                   ) : (
                     <div className="space-y-0.5">
-                      {previewTracks.map((t, i) => (
+                      {data.tracks.map((t, i) => (
                         <SpeuTrackRow
                           key={t.id}
                           track={t}
@@ -367,7 +395,7 @@ export function SpeuArtistPageView({ data }: { data: SpeuArtistPageData }) {
             </div>
           </div>
 
-          <div className="mt-3 shrink-0 border-t border-border/40 pt-3">
+          <div className="mt-3 min-h-0 flex-1 shrink border-t border-border/40 pt-3 overflow-auto">
             <AlbumsStrip
               albums={albumsForStrip}
               artistSlug={data.slug}

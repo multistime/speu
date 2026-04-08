@@ -35,6 +35,7 @@ type RawArtistEmbed = {
   name_en: string | null;
   status: string;
   visual_json: Record<string, unknown> | null;
+  photo_url?: string | null;
 };
 
 type RawCreditRow = {
@@ -54,6 +55,7 @@ type RawTrackRow = {
   sort_order: number;
   play_on_radio: boolean | null;
   created_at: string;
+  lyrics?: string | null;
   albums: RawAlbum | RawAlbum[];
   track_artists: RawCreditRow[] | null;
 };
@@ -99,11 +101,11 @@ function mapRawTrackToPublic(row: RawTrackRow): SpeuPublicTrack | null {
 
   if (credits.length === 0) return null;
 
-  const artists: SpeuCreditArtist[] = credits.map((c) => ({
-    id: c.artists!.id,
-    slug: c.artists!.slug,
-    name: c.artists!.name,
-  }));
+  const artists: SpeuCreditArtist[] = credits.map((c) => {
+    const base = { id: c.artists!.id, slug: c.artists!.slug, name: c.artists!.name };
+    const ph = c.artists?.photo_url?.trim();
+    return ph ? { ...base, photoUrl: ph } : base;
+  });
 
   const primaryVisual = credits[0]?.artists?.visual_json;
   const th = themeFromVisualJson(primaryVisual ?? undefined);
@@ -460,10 +462,8 @@ export async function fetchSpeuAlbumBySlugOrId(param: string): Promise<SpeuAlbum
   };
 }
 
-export async function fetchSpeuTrackBySlugOrId(param: string): Promise<SpeuTrackPageData | null> {
-  const supabase = await createClient();
-
-  const selectTracks = `
+/** Поўны select для старонкі трэка: тэкст, фота артыстаў */
+const SPEU_TRACK_PAGE_TRACK_SELECT = `
       id,
       slug,
       title,
@@ -475,12 +475,16 @@ export async function fetchSpeuTrackBySlugOrId(param: string): Promise<SpeuTrack
       sort_order,
       play_on_radio,
       created_at,
+      lyrics,
       albums ( id, slug, title, cover_url, is_published ),
       track_artists (
         sort_order,
-        artists ( id, slug, name, name_en, status, visual_json )
+        artists ( id, slug, name, name_en, status, visual_json, photo_url )
       )
-    `;
+    ` as const;
+
+export async function fetchSpeuTrackBySlugOrId(param: string): Promise<SpeuTrackPageData | null> {
+  const supabase = await createClient();
 
   let row: Record<string, unknown> | null = null;
 
@@ -488,7 +492,7 @@ export async function fetchSpeuTrackBySlugOrId(param: string): Promise<SpeuTrack
     const { data } = await supabase
       .schema("speu")
       .from("artist_tracks")
-      .select(selectTracks)
+      .select(SPEU_TRACK_PAGE_TRACK_SELECT)
       .eq("id", param)
       .eq("is_published", true)
       .maybeSingle();
@@ -499,7 +503,7 @@ export async function fetchSpeuTrackBySlugOrId(param: string): Promise<SpeuTrack
     const { data } = await supabase
       .schema("speu")
       .from("artist_tracks")
-      .select(selectTracks)
+      .select(SPEU_TRACK_PAGE_TRACK_SELECT)
       .eq("slug", param)
       .eq("is_published", true)
       .maybeSingle();
@@ -517,26 +521,7 @@ export async function fetchSpeuTrackBySlugOrId(param: string): Promise<SpeuTrack
     const { data: siblings } = await supabase
       .schema("speu")
       .from("artist_tracks")
-      .select(
-        `
-        id,
-        slug,
-        title,
-        audio_url,
-        external_url,
-        cover_url,
-        duration_sec,
-        album_id,
-        sort_order,
-        play_on_radio,
-        created_at,
-        albums ( id, slug, title, cover_url, is_published ),
-        track_artists (
-          sort_order,
-          artists ( id, slug, name, name_en, status, visual_json )
-        )
-      `
-      )
+      .select(SPEU_TRACK_PAGE_TRACK_SELECT)
       .eq("album_id", albumId)
       .eq("is_published", true)
       .order("sort_order", { ascending: true });
@@ -547,5 +532,9 @@ export async function fetchSpeuTrackBySlugOrId(param: string): Promise<SpeuTrack
     sameAlbum = sameAlbum.filter((t) => t.id !== track.id);
   }
 
-  return { track, sameAlbum };
+  const lyricsRaw = row.lyrics;
+  const lyrics =
+    typeof lyricsRaw === "string" && lyricsRaw.trim().length > 0 ? lyricsRaw.trim() : null;
+
+  return { track, sameAlbum, lyrics };
 }

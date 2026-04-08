@@ -9,7 +9,7 @@ export default async function SpeuTop100Page() {
   const topPlaylist = list.map(speuPublicTrackToPlayerTrack);
 
   return (
-    <div className="min-h-screen pt-20 pb-24 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen pt-20 pb-24 px-3 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto">
         <p className="text-xs uppercase tracking-[0.18em] text-primary/70 mb-3 font-medium text-center">
           Рэйтынг
@@ -26,7 +26,7 @@ export default async function SpeuTop100Page() {
             <p className="text-sm">Пакуль няма трэкаў у каталозе.</p>
           </div>
         ) : (
-          <div className="space-y-0.5 rounded-xl border border-border/60 bg-card/30 p-2 sm:p-3">
+          <div className="space-y-0.5 rounded-xl border border-border/60 bg-card/30 p-1.5 sm:p-3">
             {list.map((t, i) => (
               <SpeuTrackRow key={t.id} track={t} index={i} showCover playlist={topPlaylist} />
             ))}

@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { Menu } from "@base-ui/react/menu";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Music,
+  MoreHorizontal,
   Pause,
   Play,
   Repeat,
@@ -15,7 +17,7 @@ import {
 } from "lucide-react";
 import { TrackLikeButton } from "@/components/speu/TrackLikeButton";
 import { useCallback, useRef, useState } from "react";
-import { usePlayer, type PlayerTrack } from "@/contexts/PlayerContext";
+import { usePlayer, type PlayerRepeatMode, type PlayerTrack } from "@/contexts/PlayerContext";
 import { formatPlayerTime } from "@/lib/format-player-time";
 import { clientXToSeekRatio } from "@/lib/player-progress";
 import { cn } from "@/lib/utils";
@@ -177,6 +179,118 @@ function GlobalPlayerProgress({ track }: { track: PlayerTrack }) {
   );
 }
 
+function GlobalPlayerCoverEqualizer({ accentColor }: { accentColor: string | null | undefined }) {
+  const color = accentColor ?? "rgba(255,255,255,0.92)";
+  return (
+    <div
+      className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] flex h-[48%] items-end justify-center gap-0.5 bg-gradient-to-t from-black/45 to-transparent pb-1 pt-5"
+      aria-hidden
+    >
+      {[1, 2, 3].map((i) => (
+        <motion.span
+          key={i}
+          className="w-0.5 rounded-full"
+          style={{ background: color }}
+          animate={{ height: ["35%", "100%", "45%", "85%", "35%"] }}
+          transition={{
+            duration: 0.75,
+            repeat: Infinity,
+            delay: i * 0.12,
+            ease: "easeInOut",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+const overflowItemClass =
+  "flex cursor-pointer items-center rounded-md px-3 py-2.5 text-sm text-foreground outline-none select-none data-highlighted:bg-muted";
+
+function GlobalPlayerOverflowMenu({
+  canShuffle,
+  shuffleEnabled,
+  toggleShuffle,
+  skipNext,
+  canSkipNext,
+  skipPrevious,
+  cycleRepeatMode,
+  repeatMode,
+  queueNav,
+  stop,
+}: {
+  canShuffle: boolean;
+  shuffleEnabled: boolean;
+  toggleShuffle: () => void;
+  skipNext: () => void;
+  canSkipNext: boolean;
+  skipPrevious: () => void;
+  cycleRepeatMode: () => void;
+  repeatMode: PlayerRepeatMode;
+  queueNav: boolean;
+  stop: () => void;
+}) {
+  const repeatLine =
+    !queueNav
+      ? repeatMode === "off"
+        ? "Паўтар аднаго: выкл"
+        : "Паўтар аднаго: укл"
+      : repeatMode === "off"
+        ? "Паўтар: выкл"
+        : repeatMode === "all"
+          ? "Паўтар: уся чарга"
+          : "Паўтар: адзін трэк";
+
+  return (
+    <div className="relative shrink-0" onPointerDown={(e) => e.stopPropagation()}>
+      <Menu.Root modal={false}>
+        <Menu.Trigger
+          type="button"
+          aria-label="Дадаткова"
+          className={cn(
+            "flex size-9 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors",
+            "hover:border-foreground/30 hover:text-foreground",
+            "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary/40"
+          )}
+        >
+          <MoreHorizontal className="size-4" strokeWidth={2} />
+        </Menu.Trigger>
+        <Menu.Portal>
+          <Menu.Positioner side="top" sideOffset={8} align="end" className="z-[60]">
+            <Menu.Popup className="min-w-[13rem] rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-md outline-none">
+              <Menu.Item className={overflowItemClass} onClick={skipPrevious}>
+                Папярэдні трэк
+              </Menu.Item>
+              <Menu.Item
+                className={cn(overflowItemClass, !canSkipNext && "pointer-events-none opacity-40")}
+                onClick={() => {
+                  if (canSkipNext) skipNext();
+                }}
+              >
+                Наступны трэк
+              </Menu.Item>
+              <Menu.Item
+                className={cn(overflowItemClass, !canShuffle && "pointer-events-none opacity-40")}
+                onClick={() => {
+                  if (canShuffle) toggleShuffle();
+                }}
+              >
+                {shuffleEnabled ? "Выпадковы парадак (уваход)" : "Выпадковы парадак"}
+              </Menu.Item>
+              <Menu.Item className={overflowItemClass} onClick={cycleRepeatMode}>
+                {repeatLine}
+              </Menu.Item>
+              <Menu.Item className={overflowItemClass} onClick={stop}>
+                Спыніць плэер
+              </Menu.Item>
+            </Menu.Popup>
+          </Menu.Positioner>
+        </Menu.Portal>
+      </Menu.Root>
+    </div>
+  );
+}
+
 const ctrlBtn =
   "w-9 h-9 rounded-full border flex items-center justify-center transition-colors shrink-0 disabled:opacity-35 disabled:pointer-events-none";
 
@@ -190,7 +304,6 @@ export function GlobalPlayer() {
     queueSize,
     currentTime,
     duration,
-    canSeek,
     togglePlay,
     cycleRepeatMode,
     toggleShuffle,
@@ -231,7 +344,114 @@ export function GlobalPlayer() {
         >
           <GlobalPlayerProgress track={track} />
 
-          <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 sm:py-3 flex flex-row items-center gap-2 sm:gap-4 min-h-[3.25rem]">
+          <div className="max-w-7xl mx-auto px-2 sm:px-6 py-2.5 sm:py-3 min-h-[3.25rem]">
+            {/* Мабільны плэер: вокладка + метаданыя, час / лайк / прайграванне, меню «⋯» */}
+            <div className="flex md:hidden flex-row items-center gap-1.5 min-w-0">
+              <div
+                className="relative w-10 h-10 shrink-0 overflow-hidden rounded-lg flex items-center justify-center"
+                style={{
+                  background: track.accentColor
+                    ? `rgba(${track.accentRgb ?? "125,191,158"}, 0.15)`
+                    : "var(--muted)",
+                  border: track.accentColor
+                    ? `1px solid rgba(${track.accentRgb ?? "125,191,158"}, 0.25)`
+                    : "1px solid var(--border)",
+                }}
+              >
+                {track.coverUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={track.coverUrl} alt="" className="size-full object-cover" />
+                ) : (
+                  <Music
+                    className="w-4 h-4"
+                    style={{ color: track.accentColor ?? "var(--primary)" }}
+                    strokeWidth={1.5}
+                  />
+                )}
+                {isPlaying ? <GlobalPlayerCoverEqualizer accentColor={track.accentColor} /> : null}
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-foreground leading-tight truncate">
+                  {track.trackHref ? (
+                    <Link
+                      href={track.trackHref}
+                      className="hover:underline underline-offset-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {track.title}
+                    </Link>
+                  ) : (
+                    track.title
+                  )}
+                </p>
+                <div className="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-muted-foreground tabular-nums">
+                  {track.artistName ? (
+                    track.artistSlug ? (
+                      <Link
+                        href={`/speu/artists/${track.artistSlug}`}
+                        className="min-w-0 truncate hover:text-foreground transition-colors"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {track.artistName}
+                      </Link>
+                    ) : (
+                      <span className="min-w-0 truncate">{track.artistName}</span>
+                    )
+                  ) : null}
+                </div>
+              </div>
+
+              <span
+                className="shrink-0 font-mono text-[10px] tracking-tight text-muted-foreground/90 tabular-nums whitespace-nowrap"
+                aria-live="polite"
+              >
+                {formatPlayerTime(currentTime)}
+                <span className="text-muted-foreground/50"> / </span>
+                {duration > 0 ? formatPlayerTime(duration) : "—:—"}
+              </span>
+
+              {track.trackHref?.startsWith("/speu/tracks/") ? (
+                <TrackLikeButton
+                  trackId={track.id}
+                  size="sm"
+                  accentColor={track.accentColor ?? null}
+                  className="border-border/60 size-9 !min-h-9 !min-w-9 !max-h-9 !max-w-9 shrink-0 rounded-full !p-0 hover:bg-muted/50"
+                />
+              ) : null}
+
+              <button
+                type="button"
+                onClick={() => togglePlay(track)}
+                aria-label={isPlaying ? "Паўза" : "Прайграць"}
+                className="flex size-10 shrink-0 items-center justify-center rounded-full shadow-sm transition-transform duration-200 hover:scale-105 active:scale-95"
+                style={{
+                  background: track.accentColor ?? "var(--primary)",
+                  color: "white",
+                }}
+              >
+                {isPlaying ? (
+                  <Pause className="size-[17px]" fill="currentColor" strokeWidth={0} />
+                ) : (
+                  <Play className="size-[17px] ml-0.5" fill="currentColor" strokeWidth={0} />
+                )}
+              </button>
+
+              <GlobalPlayerOverflowMenu
+                canShuffle={canShuffle}
+                shuffleEnabled={shuffleEnabled}
+                toggleShuffle={toggleShuffle}
+                skipNext={skipNext}
+                canSkipNext={canSkipNext}
+                skipPrevious={skipPrevious}
+                cycleRepeatMode={cycleRepeatMode}
+                repeatMode={repeatMode}
+                queueNav={queueNav}
+                stop={stop}
+              />
+            </div>
+
+            <div className="hidden md:flex flex-row items-center gap-4 min-h-[3.25rem] w-full">
             <div className="flex min-w-0 flex-1 items-center gap-2.5 sm:gap-3">
               <div
                 className="w-10 h-10 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden"
@@ -378,7 +598,7 @@ export function GlobalPlayer() {
                     trackId={track.id}
                     size="sm"
                     accentColor={track.accentColor ?? null}
-                    className="border-border/60 size-9 rounded-full flex items-center justify-center !p-0 hover:bg-muted/50"
+                    className="border-border/60 size-9 !min-h-9 !min-w-9 !max-h-9 !max-w-9 rounded-full !p-0 hover:bg-muted/50"
                   />
                 ) : null}
               </span>
@@ -423,6 +643,7 @@ export function GlobalPlayer() {
               >
                 <X className="w-3.5 h-3.5" strokeWidth={2} />
               </button>
+            </div>
             </div>
           </div>
         </motion.div>

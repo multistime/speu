@@ -156,7 +156,7 @@ export function SpeuTrackRow({
   return (
     <div
       className={cn(
-        "relative flex items-center gap-0.5 md:gap-1 px-3 py-2 rounded-lg transition-colors group/track",
+        "relative flex items-center gap-0.5 md:gap-1 max-md:pl-0.5 max-md:pr-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg transition-colors group/track",
         "hover:bg-muted",
         className
       )}
@@ -175,22 +175,31 @@ export function SpeuTrackRow({
           )}
         />
 
-        <div className="relative z-[1] flex min-w-0 flex-1 items-center gap-2 sm:gap-2.5 md:gap-3 max-md:pointer-events-none md:pointer-events-auto">
-          <span className="shrink-0 min-w-[2.25rem] pr-1 text-right font-mono tabular-nums text-xs text-muted-foreground/40 sm:min-w-[2.5rem] sm:pr-2 md:hidden">
-            {index + 1}
-          </span>
-          <span
-            role="button"
-            tabIndex={0}
-            onClick={desktopPlayHit}
-            onKeyDown={desktopPlayHit}
+        <div className="relative z-[1] flex min-w-0 flex-1 items-center gap-2.5 sm:gap-2.5 md:gap-3 max-md:pointer-events-none md:pointer-events-auto">
+          {/* Мабільны: паласа да вокладкі flex-1 + max-w — нумар па цэнтры ў гэтай зоне; дэсктоп: фіксаваная калонка */}
+          <div
             className={cn(
-              "hidden min-w-[2.25rem] shrink-0 cursor-pointer rounded-md pr-1 text-right font-mono tabular-nums text-xs text-muted-foreground/40 outline-none sm:min-w-[2.5rem] md:min-w-[3rem] sm:pr-2 md:inline-flex md:items-center md:justify-end",
-              "focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              "flex h-10 min-h-10 items-center justify-center",
+              "max-md:min-w-0 max-md:max-w-[min(5.75rem,32vw)] max-md:flex-1",
+              "md:h-10 md:w-12 md:max-w-none md:flex-none md:shrink-0"
             )}
           >
-            {index + 1}
-          </span>
+            <span className="font-mono tabular-nums text-xs text-muted-foreground/40 md:hidden">
+              {index + 1}
+            </span>
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={desktopPlayHit}
+              onKeyDown={desktopPlayHit}
+              className={cn(
+                "hidden h-full w-full cursor-pointer items-center justify-center rounded-md font-mono tabular-nums text-xs text-muted-foreground/40 outline-none md:flex",
+                "focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              )}
+            >
+              {index + 1}
+            </span>
+          </div>
 
           {showCover && (
             <div
@@ -216,33 +225,37 @@ export function SpeuTrackRow({
             </div>
           )}
 
-          <div
-            role="presentation"
-            onClick={desktopPlayHit}
-            className="relative flex w-4 shrink-0 cursor-default items-center justify-center md:cursor-pointer"
-          >
-            {playing ? (
+          {playing ? (
+            <div
+              role="presentation"
+              onClick={desktopPlayHit}
+              className="relative flex w-4 shrink-0 cursor-default items-center justify-center md:cursor-pointer"
+            >
               <Pause
                 className="h-3.5 w-3.5"
                 style={{ color: accentColor }}
                 fill="currentColor"
                 strokeWidth={0}
               />
-            ) : (
-              <>
-                <Music
-                  className="h-3 w-3 text-muted-foreground/40 transition-opacity group-hover/track:opacity-0"
-                  strokeWidth={1.5}
-                />
-                <Play
-                  className="absolute h-3.5 w-3.5 opacity-0 transition-opacity group-hover/track:opacity-100"
-                  style={{ color: accentColor }}
-                  fill="currentColor"
-                  strokeWidth={0}
-                />
-              </>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div
+              role="presentation"
+              onClick={desktopPlayHit}
+              className="relative hidden w-4 shrink-0 cursor-default items-center justify-center md:flex md:cursor-pointer"
+            >
+              <Music
+                className="h-3 w-3 text-muted-foreground/40 transition-opacity group-hover/track:opacity-0"
+                strokeWidth={1.5}
+              />
+              <Play
+                className="absolute h-3.5 w-3.5 opacity-0 transition-opacity group-hover/track:opacity-100"
+                style={{ color: accentColor }}
+                fill="currentColor"
+                strokeWidth={0}
+              />
+            </div>
+          )}
 
           <div className="min-w-0 flex-1">
             <Link
@@ -280,13 +293,15 @@ export function SpeuTrackRow({
             </div>
           </div>
 
-          <span
-            role="presentation"
-            onClick={desktopPlayHit}
-            className="w-10 shrink-0 cursor-default text-right font-mono text-[11px] tabular-nums text-muted-foreground/70 md:cursor-pointer"
-          >
-            {formatTrackDuration(track.durationSec)}
-          </span>
+          {!active ? (
+            <span
+              role="presentation"
+              onClick={desktopPlayHit}
+              className="w-10 shrink-0 cursor-default text-right font-mono text-[11px] tabular-nums text-muted-foreground/70 md:cursor-pointer"
+            >
+              {formatTrackDuration(track.durationSec)}
+            </span>
+          ) : null}
 
           {playing && <TrackPlayingEqualizer color={accentColor} />}
 

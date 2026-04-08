@@ -28,7 +28,7 @@ export function SpeuArtistTracksListView({
     : `Усе апублікаваныя трэкі ў каталозе «Спеў».`;
 
   return (
-    <div className="min-h-screen pt-20 pb-24 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen pt-20 pb-24 px-3 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto">
         <p className="text-xs uppercase tracking-[0.18em] text-primary/70 mb-3 font-medium">{data.name}</p>
         <h1 className="font-display text-3xl sm:text-4xl font-semibold text-foreground mb-2 italic">{title}</h1>
@@ -42,7 +42,7 @@ export function SpeuArtistTracksListView({
             </p>
           </div>
         ) : (
-          <div className="space-y-0.5 rounded-xl border border-border/60 bg-card/30 p-2 sm:p-3">
+          <div className="space-y-0.5 rounded-xl border border-border/60 bg-card/30 p-1.5 sm:p-3">
             {tracks.map((t, i) => (
               <SpeuTrackRow key={t.id} track={t} index={i} showCover playlist={artistPlaylist} />
             ))}

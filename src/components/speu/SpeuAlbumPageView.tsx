@@ -5,6 +5,7 @@ import { SpeuInlineNavLink } from "@/components/speu/SpeuInlineNavLink";
 import { Music, Play, Shuffle, User } from "lucide-react";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { SpeuAlbumPageData } from "@/lib/speu/types";
+import { SpeuShareButton } from "@/components/speu/SpeuShareButton";
 import { SpeuTrackRow } from "@/components/speu/SpeuTrackRow";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { speuPublicTrackToPlayerTrack } from "@/lib/speu/player-map";
@@ -83,7 +84,7 @@ export function SpeuAlbumPageView({ data }: { data: SpeuAlbumPageData }) {
   };
 
   return (
-    <div className="min-h-screen pt-20 pb-24 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen pt-20 pb-24 px-3 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -91,8 +92,9 @@ export function SpeuAlbumPageView({ data }: { data: SpeuAlbumPageData }) {
           className="flex flex-col sm:flex-row gap-8 mb-10"
         >
           <div
-            className="w-full sm:w-52 shrink-0 aspect-square rounded-2xl border border-border overflow-hidden shadow-lg mx-auto sm:mx-0"
+            className="relative mx-auto w-full shrink-0 overflow-hidden rounded-2xl border border-border shadow-lg sm:mx-0 sm:w-52"
             style={{
+              aspectRatio: "1 / 1",
               boxShadow: `0 0 50px rgba(${accentRgb}, 0.12)`,
               background: data.coverUrl
                 ? undefined
@@ -101,9 +103,14 @@ export function SpeuAlbumPageView({ data }: { data: SpeuAlbumPageData }) {
           >
             {data.coverUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={data.coverUrl} alt="" className="size-full object-cover" />
+              <img
+                src={data.coverUrl}
+                alt=""
+                className="absolute inset-0 size-full object-cover"
+                decoding="async"
+              />
             ) : (
-              <div className="size-full flex items-center justify-center">
+              <div className="absolute inset-0 flex items-center justify-center">
                 <Music className="size-16 opacity-30" style={{ color: accent }} strokeWidth={1} />
               </div>
             )}
@@ -118,26 +125,32 @@ export function SpeuAlbumPageView({ data }: { data: SpeuAlbumPageData }) {
               <h1 className="font-display text-3xl sm:text-4xl font-semibold text-foreground italic min-w-0">
                 {data.title}
               </h1>
-              <div className="flex flex-wrap gap-2 justify-center sm:justify-end shrink-0">
+              <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-end shrink-0">
                 <button
                   type="button"
                   disabled={playable.length === 0}
                   onClick={playFirst}
-                  className="inline-flex items-center gap-2 text-sm px-4 py-2.5 rounded-xl text-white font-medium disabled:opacity-40"
+                  aria-label="Прайграць альбом"
+                  className="inline-flex size-11 items-center justify-center rounded-xl text-white shadow-sm transition-transform duration-200 hover:scale-[1.03] active:scale-[0.98] disabled:opacity-40 disabled:hover:scale-100"
                   style={{ background: accent }}
                 >
-                  <Play className="size-4 fill-current" strokeWidth={0} />
-                  Слухаць
+                  <Play className="size-[1.35rem] fill-current ml-0.5" strokeWidth={0} />
                 </button>
                 <button
                   type="button"
                   disabled={playable.length < 2}
                   onClick={playAlbumShuffle}
-                  className="inline-flex items-center gap-2 text-sm px-4 py-2.5 rounded-xl border border-border bg-card hover:bg-muted/60 transition-colors disabled:opacity-40"
+                  aria-label="Перамяшаць і слухаць"
+                  className="inline-flex size-11 items-center justify-center rounded-xl border border-border bg-card transition-colors hover:bg-muted/60 disabled:opacity-40"
                 >
-                  <Shuffle className="size-4 shrink-0" strokeWidth={2} />
-                  Перамяшаць
+                  <Shuffle className="size-[1.15rem] shrink-0" strokeWidth={2} />
                 </button>
+                <SpeuShareButton
+                  path={`/speu/albums/${data.slug}`}
+                  title={data.title}
+                  text={`${data.artist.name} — ${data.title}`}
+                  className="size-11 !min-h-11 !min-w-11 !max-h-11 !max-w-11 !p-0"
+                />
               </div>
             </div>
 
@@ -170,7 +183,7 @@ export function SpeuAlbumPageView({ data }: { data: SpeuAlbumPageData }) {
         <h2 className="text-xs uppercase tracking-widest text-muted-foreground/50 mb-3 font-medium">
           Трэкі
         </h2>
-        <div className="space-y-0.5 rounded-xl border border-border/60 bg-card/30 p-2 sm:p-3">
+        <div className="space-y-0.5 rounded-xl border border-border/60 bg-card/30 p-1.5 sm:p-3">
           {data.tracks.length === 0 ? (
             <p className="text-sm text-muted-foreground py-8 text-center">Альбом пусты.</p>
           ) : (

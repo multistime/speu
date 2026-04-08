@@ -4,6 +4,8 @@ export type SpeuCreditArtist = {
   id: string;
   slug: string;
   name: string;
+  /** Фота артыста, калі ёсьць у адказе БД (напрыклад, старонка трэка) */
+  photoUrl?: string | null;
 };
 
 export type SpeuPublicTrack = {
@@ -81,4 +83,6 @@ export type SpeuAlbumPageData = {
 export type SpeuTrackPageData = {
   track: SpeuPublicTrack;
   sameAlbum: SpeuPublicTrack[];
+  /** Тэкст песні (калі захаваны ў каталозе) */
+  lyrics: string | null;
 };

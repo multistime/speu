@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { Menu } from "@base-ui/react/menu";
 import {
   LogIn,
   LogOut,
@@ -17,6 +18,7 @@ import {
   AlertCircle,
   Info,
   Disc3,
+  Settings,
 } from "lucide-react";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
@@ -364,8 +366,8 @@ export function CabinetPageClient({ initialUser, initialProfile }: CabinetPageCl
   return (
     <div className="min-h-screen pt-28 pb-20 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto space-y-4">
-        <div className="glass rounded-2xl border border-border p-8">
-          <div className="flex items-start gap-5 mb-6">
+        <div className="glass rounded-2xl border border-border p-6 sm:p-8">
+          <div className="flex items-start gap-4 sm:gap-5">
             <div className="relative shrink-0">
               {avatarUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -388,7 +390,7 @@ export function CabinetPageClient({ initialUser, initialProfile }: CabinetPageCl
                 </div>
               )}
             </div>
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 pt-0.5">
               <h1 className="font-display text-2xl font-semibold text-foreground italic truncate">
                 {displayName}
               </h1>
@@ -402,17 +404,35 @@ export function CabinetPageClient({ initialUser, initialProfile }: CabinetPageCl
                 </span>
               )}
             </div>
-          </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={signOut}
-              className="inline-flex items-center gap-2 text-sm px-4 py-2.5 rounded-xl border border-border text-foreground/70 font-medium hover:bg-muted hover:text-foreground transition-all duration-200"
-            >
-              <LogOut className="h-4 w-4" />
-              Выйсці
-            </button>
+            <div className="shrink-0 pt-0.5">
+              <Menu.Root modal={false}>
+                <Menu.Trigger
+                  type="button"
+                  aria-label="Налады"
+                  className={cn(
+                    "rounded-xl border border-border p-2.5 text-muted-foreground transition-colors",
+                    "hover:bg-muted hover:text-foreground",
+                    "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary/40",
+                  )}
+                >
+                  <Settings className="h-5 w-5" strokeWidth={1.75} />
+                </Menu.Trigger>
+                <Menu.Portal>
+                  <Menu.Positioner sideOffset={8} align="end" className="z-50">
+                    <Menu.Popup className="min-w-[12rem] rounded-xl border border-border bg-popover p-1 text-popover-foreground shadow-md outline-none">
+                      <Menu.Item
+                        className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-foreground outline-none select-none data-highlighted:bg-muted"
+                        onClick={signOut}
+                      >
+                        <LogOut className="h-4 w-4 shrink-0 opacity-70" strokeWidth={2} />
+                        Выйсці
+                      </Menu.Item>
+                    </Menu.Popup>
+                  </Menu.Positioner>
+                </Menu.Portal>
+              </Menu.Root>
+            </div>
           </div>
 
           {message && (

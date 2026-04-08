@@ -21,7 +21,7 @@ export function TrackLikeButton({
   const { isLiked, toggleLike, authReady } = useTrackLikes();
   const liked = isLiked(trackId);
 
-  const iconClass = size === "md" ? "size-5" : "size-4";
+  const iconClass = size === "md" ? "size-[1.15rem]" : "size-3.5";
   const pad = size === "md" ? "p-3" : "p-1.5";
 
   return (
@@ -37,7 +37,7 @@ export function TrackLikeButton({
       aria-pressed={liked}
       aria-label={liked ? "Зняць лайк" : "Паставіць лайк"}
       className={cn(
-        "rounded-lg border border-transparent shrink-0 transition-colors",
+        "box-border inline-flex shrink-0 items-center justify-center overflow-hidden rounded-lg border border-transparent transition-colors",
         "hover:bg-muted/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary/40",
         liked && !accentColor && "text-rose-500",
         !liked && "text-muted-foreground hover:text-foreground",
@@ -46,7 +46,10 @@ export function TrackLikeButton({
       )}
       style={liked && accentColor ? { color: accentColor } : undefined}
     >
-      <Heart className={cn(iconClass, liked && "fill-current")} strokeWidth={liked ? 0 : 1.75} />
+      <Heart
+        className={cn("pointer-events-none shrink-0", iconClass, liked && "fill-current")}
+        strokeWidth={liked ? 0 : 1.5}
+      />
     </button>
   );
 }
