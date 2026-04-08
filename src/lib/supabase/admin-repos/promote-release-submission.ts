@@ -13,6 +13,7 @@ type SubmissionTrackRow = {
   duration_sec: number | null;
   lyrics: string | null;
   artist_track_id: string | null;
+  cover_url: string | null;
 };
 
 type SubmissionRow = {
@@ -20,6 +21,7 @@ type SubmissionRow = {
   status: string;
   artist_id: string;
   title: string;
+  release_kind: string;
   cover_url: string | null;
   release_submission_tracks: SubmissionTrackRow[] | null;
 };
@@ -42,6 +44,7 @@ export async function promoteApprovedReleaseSubmission(
       status,
       artist_id,
       title,
+      release_kind,
       cover_url,
       release_submission_tracks (
         id,
@@ -50,7 +53,8 @@ export async function promoteApprovedReleaseSubmission(
         audio_url,
         duration_sec,
         lyrics,
-        artist_track_id
+        artist_track_id,
+        cover_url
       )
     `
     )
@@ -92,6 +96,12 @@ export async function promoteApprovedReleaseSubmission(
       }
     }
 
+    const isSingle = row.release_kind === "single";
+    const coverForCatalog =
+      isSingle && st.cover_url?.trim()
+        ? st.cover_url.trim()
+        : row.cover_url?.trim() || null;
+
     const { data: inserted, error: insErr } = await adminDb
       .schema("speu")
       .from("artist_tracks")
@@ -102,7 +112,7 @@ export async function promoteApprovedReleaseSubmission(
         slug,
         audio_url: audioUrl,
         external_url: null,
-        cover_url: row.cover_url?.trim() || null,
+        cover_url: coverForCatalog,
         duration_sec: durationSec,
         track_number: null,
         sort_order: st.sort_order,

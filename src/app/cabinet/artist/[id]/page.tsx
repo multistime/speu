@@ -9,6 +9,8 @@ import { getSpeuProfile } from "@/lib/supabase/speu";
 import {
   RELEASE_KIND_LABELS,
   RELEASE_STATUS_LABELS,
+  getReleaseSubmissionSubmitError,
+  submissionArtistCanDelete,
   submissionIsEditable,
   type ReleaseKind,
   type ReleaseSubmissionRow,
@@ -38,6 +40,20 @@ export default function ArtistSubmissionPage() {
 
   const editable = submission ? submissionIsEditable(submission.status) : false;
 
+  const submitBlockedReason = useMemo(() => {
+    if (!submission || !editable) return null;
+    return getReleaseSubmissionSubmitError({
+      release_kind: releaseKind,
+      title,
+      cover_url: submission.cover_url,
+      tracks: tracks.map((t) => ({
+        title: t.title,
+        audio_url: t.audio_url,
+        cover_url: t.cover_url ?? null,
+      })),
+    });
+  }, [submission, editable, releaseKind, title, tracks]);
+
   const load = useCallback(async () => {
     if (!id) return;
     setError(null);
@@ -56,7 +72,7 @@ export default function ArtistSubmissionPage() {
       .schema("speu")
       .from("release_submissions")
       .select(
-        "id, artist_id, user_id, release_kind, status, title, cover_url, cover_storage_path, artist_note, moderator_message, created_at, updated_at",
+        "id, artist_id, user_id, release_kind, status, title, cover_url, cover_storage_path, artist_note, moderator_message, archived_at, created_at, updated_at",
       )
       .eq("id", id)
       .maybeSingle();
@@ -67,7 +83,10 @@ export default function ArtistSubmissionPage() {
       return;
     }
 
-    const row = sub as ReleaseSubmissionRow;
+    const row = {
+      ...(sub as ReleaseSubmissionRow),
+      archived_at: (sub as { archived_at?: string | null }).archived_at ?? null,
+    };
     setSubmission(row);
     setTitle(row.title ?? "");
     setReleaseKind(row.release_kind);
@@ -77,7 +96,7 @@ export default function ArtistSubmissionPage() {
       .schema("speu")
       .from("release_submission_tracks")
       .select(
-        "id, submission_id, sort_order, title, audio_url, audio_storage_path, duration_sec, notes, lyrics, artist_track_id, created_at, updated_at",
+        "id, submission_id, sort_order, title, audio_url, audio_storage_path, cover_url, cover_storage_path, duration_sec, notes, lyrics, artist_track_id, created_at, updated_at",
       )
       .eq("submission_id", id)
       .order("sort_order", { ascending: true });
@@ -86,7 +105,13 @@ export default function ArtistSubmissionPage() {
       setError(tErr.message);
       setTracks([]);
     } else {
-      setTracks((tr ?? []) as ReleaseSubmissionTrackRow[]);
+      setTracks(
+        (tr ?? []).map((t) => ({
+          ...(t as ReleaseSubmissionTrackRow),
+          cover_url: (t as { cover_url?: string | null }).cover_url ?? null,
+          cover_storage_path: (t as { cover_storage_path?: string | null }).cover_storage_path ?? null,
+        })),
+      );
     }
     setLoading(false);
   }, [id, router, supabase]);
@@ -130,7 +155,7 @@ export default function ArtistSubmissionPage() {
       }
 
       await persistSubmission({
-        title: title.trim() || "Без назвы",
+        title: title.trim(),
         release_kind: releaseKind,
         artist_note: artistNote.trim() || null,
       });
@@ -144,6 +169,8 @@ export default function ArtistSubmissionPage() {
             lyrics: t.lyrics?.trim() || null,
             audio_url: t.audio_url,
             audio_storage_path: t.audio_storage_path,
+            cover_url: t.cover_url,
+            cover_storage_path: t.cover_storage_path,
             duration_sec: t.duration_sec ?? null,
           })
           .eq("id", t.id);
@@ -214,6 +241,27 @@ export default function ArtistSubmissionPage() {
     }
   };
 
+  const uploadTrackCover = async (track: ReleaseSubmissionTrackRow, file: File) => {
+    if (!submission || !editable) return;
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+    setError(null);
+    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+    const path = `submission-drafts/${user.id}/${submission.id}/track-${track.id}/cover-${crypto.randomUUID()}.${ext}`;
+    const { error: upErr } = await supabase.storage.from("speu-images").upload(path, file, {
+      cacheControl: "3600",
+      upsert: false,
+    });
+    if (upErr) {
+      setError(upErr.message);
+      return;
+    }
+    const { data: pub } = supabase.storage.from("speu-images").getPublicUrl(path);
+    updateTrackLocal(track.id, { cover_url: pub.publicUrl, cover_storage_path: path });
+  };
+
   const addTrack = async () => {
     if (!submission || !editable) return;
     const nextOrder = tracks.length === 0 ? 0 : Math.max(...tracks.map((t) => t.sort_order)) + 1;
@@ -222,14 +270,22 @@ export default function ArtistSubmissionPage() {
       .from("release_submission_tracks")
       .insert({ submission_id: submission.id, sort_order: nextOrder, title: "" })
       .select(
-        "id, submission_id, sort_order, title, audio_url, audio_storage_path, duration_sec, notes, lyrics, artist_track_id, created_at, updated_at",
+        "id, submission_id, sort_order, title, audio_url, audio_storage_path, cover_url, cover_storage_path, duration_sec, notes, lyrics, artist_track_id, created_at, updated_at",
       )
       .single();
     if (insErr || !data) {
       setError(insErr?.message ?? "Не ўдалося дадаць трэк");
       return;
     }
-    setTracks((prev) => [...prev, data as ReleaseSubmissionTrackRow]);
+    const tr = data as ReleaseSubmissionTrackRow;
+    setTracks((prev) => [
+      ...prev,
+      {
+        ...tr,
+        cover_url: tr.cover_url ?? null,
+        cover_storage_path: tr.cover_storage_path ?? null,
+      },
+    ]);
   };
 
   const removeTrack = async (trackId: string) => {
@@ -244,13 +300,18 @@ export default function ArtistSubmissionPage() {
 
   const submitForReview = async () => {
     if (!submission || !editable) return;
-    const validTracks = tracks.filter((t) => t.title.trim() && t.audio_url);
-    if (validTracks.length === 0) {
-      setError("Дадайце хаця б адзін трэк з назвай і аўдыёфайлам.");
-      return;
-    }
-    if (releaseKind === "single" && validTracks.length !== 1) {
-      setError("Для сінгла патрэбны роўна адзін трэк з аўдыё.");
+    const msg = getReleaseSubmissionSubmitError({
+      release_kind: releaseKind,
+      title,
+      cover_url: submission.cover_url,
+      tracks: tracks.map((t) => ({
+        title: t.title,
+        audio_url: t.audio_url,
+        cover_url: t.cover_url ?? null,
+      })),
+    });
+    if (msg) {
+      setError(msg);
       return;
     }
     setSubmitting(true);
@@ -267,8 +328,8 @@ export default function ArtistSubmissionPage() {
     }
   };
 
-  const deleteDraft = async () => {
-    if (!submission || submission.status !== "draft") return;
+  const deleteSubmission = async () => {
+    if (!submission || !submissionArtistCanDelete(submission.status)) return;
     if (!window.confirm("Выдаліць заяўку і ўсе трэкі? Гэта незваротна.")) return;
     setDeleting(true);
     setError(null);
@@ -355,7 +416,7 @@ export default function ArtistSubmissionPage() {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             disabled={!editable}
-            className="w-full px-3 py-2 rounded-xl bg-muted/40 border border-border text-sm outline-none focus:border-primary/40 disabled:opacity-60"
+            className="w-full min-h-10 px-3 py-2 rounded-xl bg-muted/40 border border-border text-sm outline-none focus-visible:border-primary/40 focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-60"
           />
         </div>
 
@@ -369,7 +430,7 @@ export default function ArtistSubmissionPage() {
                 disabled={!editable}
                 onClick={() => setReleaseKind(k)}
                 className={cn(
-                  "px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors disabled:opacity-50",
+                  "min-h-9 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                   releaseKind === k
                     ? "bg-primary/12 border-primary/35 text-primary"
                     : "bg-muted/30 border-border text-muted-foreground hover:border-primary/20",
@@ -381,35 +442,44 @@ export default function ArtistSubmissionPage() {
           </div>
         </div>
 
-        <div>
-          <label className="block text-xs text-muted-foreground mb-1.5">Вокладка</label>
-          {submission.cover_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={submission.cover_url}
-              alt=""
-              className="h-32 w-32 rounded-xl object-cover border border-border mb-2"
-            />
-          ) : (
-            <p className="text-xs text-muted-foreground mb-2">Пакуль без вокладкі</p>
-          )}
-          {editable && (
-            <label className="inline-flex items-center gap-2 text-xs text-primary cursor-pointer hover:underline">
-              <Upload className="h-3.5 w-3.5" strokeWidth={1.5} />
-              Загрузіць файл
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif"
-                className="hidden"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  e.target.value = "";
-                  if (f) void uploadCover(f);
-                }}
-              />
+        {releaseKind === "album" ? (
+          <div>
+            <label className="block text-xs text-muted-foreground mb-1.5">
+              Вокладка альбома{" "}
+              <span className="text-muted-foreground/80">(абавязкова перад адпраўкай)</span>
             </label>
-          )}
-        </div>
+            {submission.cover_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={submission.cover_url}
+                alt=""
+                className="min-w-[8rem] w-32 h-32 aspect-square rounded-xl object-cover border border-border mb-2"
+              />
+            ) : (
+              <p className="text-xs text-muted-foreground mb-2">Пакуль без вокладкі</p>
+            )}
+            {editable && (
+              <label className="inline-flex items-center gap-2 text-xs text-primary cursor-pointer hover:underline">
+                <Upload className="h-3.5 w-3.5" strokeWidth={1.5} />
+                Загрузіць файл
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    e.target.value = "";
+                    if (f) void uploadCover(f);
+                  }}
+                />
+              </label>
+            )}
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground rounded-xl border border-border/60 bg-muted/20 px-3 py-2">
+            Для сінгла вокладку загружаеце да кожнага трэка ніжэй (абавязкова перад адпраўкай).
+          </p>
+        )}
 
         <div>
           <label className="block text-xs text-muted-foreground mb-1.5">Нататка для лэйбла (неабавязкова)</label>
@@ -430,7 +500,7 @@ export default function ArtistSubmissionPage() {
             <button
               type="button"
               onClick={() => void addTrack()}
-              className="text-xs font-medium text-primary hover:underline"
+              className="min-h-10 px-2 -mr-2 rounded-lg text-xs font-medium text-primary hover:underline hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               + Дадаць трэк
             </button>
@@ -462,9 +532,42 @@ export default function ArtistSubmissionPage() {
                     value={t.title}
                     onChange={(e) => updateTrackLocal(t.id, { title: e.target.value })}
                     disabled={!editable}
-                    className="w-full px-3 py-2 rounded-xl bg-muted/40 border border-border text-sm outline-none focus:border-primary/40 disabled:opacity-60"
+                    className="w-full min-h-10 px-3 py-2 rounded-xl bg-muted/40 border border-border text-sm outline-none focus-visible:border-primary/40 focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-60"
                   />
                 </div>
+                {releaseKind === "single" && (
+                  <div>
+                    <label className="block text-xs text-muted-foreground mb-1">
+                      Вокладка трэка <span className="text-muted-foreground/80">(абавязкова)</span>
+                    </label>
+                    {t.cover_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={t.cover_url}
+                        alt=""
+                        className="min-w-[9rem] w-36 h-36 aspect-square rounded-xl object-cover border border-border mb-2"
+                      />
+                    ) : (
+                      <p className="text-xs text-muted-foreground mb-2">Пакуль без вокладкі</p>
+                    )}
+                    {editable && (
+                      <label className="inline-flex items-center gap-2 text-xs text-primary cursor-pointer hover:underline">
+                        <Upload className="h-3.5 w-3.5" strokeWidth={1.5} />
+                        Загрузіць выяву
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,image/gif"
+                          className="hidden"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            e.target.value = "";
+                            if (f) void uploadTrackCover(t, f);
+                          }}
+                        />
+                      </label>
+                    )}
+                  </div>
+                )}
                 <div>
                   <label className="block text-xs text-muted-foreground mb-1">Аўдыё</label>
                   {t.audio_url ? (
@@ -521,38 +624,52 @@ export default function ArtistSubmissionPage() {
         )}
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex w-full flex-wrap items-center justify-between gap-3">
         {editable && (
           <>
-            <button
-              type="button"
-              onClick={() => void saveAll()}
-              disabled={saving}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors disabled:opacity-60"
-            >
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              Захаваць змены
-            </button>
-            <button
-              type="button"
-              onClick={() => void submitForReview()}
-              disabled={submitting || saving}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-60"
-            >
-              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              Адправіць на мадэрацыю
-            </button>
-            {submission.status === "draft" && (
+            <div className="flex flex-wrap items-center gap-2">
+              {submissionArtistCanDelete(submission.status) && (
+                <button
+                  type="button"
+                  onClick={() => void deleteSubmission()}
+                  disabled={deleting}
+                  className="inline-flex items-center gap-2 min-h-10 px-4 py-2.5 rounded-xl text-sm text-destructive hover:bg-destructive/10 disabled:opacity-60 border border-destructive/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                >
+                  {deleting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" strokeWidth={1.5} />
+                  )}
+                  Выдаліць заяўку
+                </button>
+              )}
               <button
                 type="button"
-                onClick={() => void deleteDraft()}
-                disabled={deleting}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm text-destructive hover:bg-destructive/10 disabled:opacity-60"
+                onClick={() => void saveAll()}
+                disabled={saving}
+                className="inline-flex items-center justify-center gap-2 min-h-10 px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
-                {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" strokeWidth={1.5} />}
-                Выдаліць чарнік
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                Захаваць змены
               </button>
-            )}
+            </div>
+            <div className="flex w-full sm:w-auto flex-1 sm:flex-initial flex-col items-stretch sm:items-end gap-1.5 min-w-0 sm:min-w-[11rem]">
+              <button
+                type="button"
+                onClick={() => void submitForReview()}
+                disabled={submitting || saving || submitBlockedReason != null}
+                title={submitBlockedReason ?? undefined}
+                className="inline-flex items-center justify-center gap-2 min-h-10 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-60 w-full sm:w-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              >
+                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                Адправіць на мадэрацыю
+              </button>
+              {submitBlockedReason ? (
+                <p className="text-xs text-muted-foreground text-center sm:text-right max-w-md sm:ml-auto">
+                  {submitBlockedReason}
+                </p>
+              ) : null}
+            </div>
           </>
         )}
         {!editable && (

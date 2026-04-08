@@ -30,6 +30,102 @@ function statusPillClass(status: ReleaseSubmissionRow["status"]): string {
   }
 }
 
+const SECTIONS: {
+  id: string;
+  title: string;
+  statuses: ReleaseSubmissionRow["status"][];
+}[] = [
+  { id: "draft", title: "Чарнікі", statuses: ["draft"] },
+  { id: "submitted", title: "На мадэрацыі", statuses: ["submitted"] },
+  { id: "needs_changes", title: "Патрэбныя праўкі", statuses: ["needs_changes"] },
+  { id: "done", title: "Завершаныя", statuses: ["approved", "rejected"] },
+];
+
+function normalizeRow(raw: Record<string, unknown>): ReleaseSubmissionRow {
+  return {
+    ...(raw as ReleaseSubmissionRow),
+    archived_at: (raw.archived_at as string | null | undefined) ?? null,
+  };
+}
+
+type SubmissionTrackCover = { cover_url: string | null; sort_order: number };
+
+/** Абкладка для спісу: рэліз або (для сінгла) першая вокладка трэка. */
+function listThumbnailUrl(
+  row: ReleaseSubmissionRow,
+  trackCovers: SubmissionTrackCover[] | undefined,
+): string | null {
+  if (row.cover_url?.trim()) return row.cover_url.trim();
+  if (row.release_kind !== "single" || !trackCovers?.length) return null;
+  const sorted = [...trackCovers].sort((a, b) => a.sort_order - b.sort_order);
+  for (const t of sorted) {
+    if (t.cover_url?.trim()) return t.cover_url.trim();
+  }
+  return null;
+}
+
+function toListItem(raw: Record<string, unknown>): ReleaseSubmissionRow & { listThumbnailUrl: string | null } {
+  const tracks = (raw.release_submission_tracks as SubmissionTrackCover[] | null | undefined) ?? undefined;
+  const rest = { ...raw };
+  delete rest.release_submission_tracks;
+  const row = normalizeRow(rest);
+  return {
+    ...row,
+    listThumbnailUrl: listThumbnailUrl(row, tracks),
+  };
+}
+
+type ApplicationListRow = ReleaseSubmissionRow & { listThumbnailUrl: string | null };
+
+function SubmissionListRow({ row }: { row: ApplicationListRow }) {
+  const thumb = row.listThumbnailUrl;
+  return (
+    <li>
+      <Link
+        href={`/cabinet/artist/${row.id}`}
+        className="group flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-4 glass rounded-2xl border border-border p-4 sm:p-5 hover:border-emerald-500/30 hover:bg-emerald-500/[0.03] transition-all min-w-0 focus-within:ring-2 focus-within:ring-primary/25 focus-within:ring-offset-2 focus-within:ring-offset-background"
+      >
+        <div className="shrink-0 min-w-[4.5rem] w-[4.5rem] h-[4.5rem] rounded-xl border border-border bg-muted/40 overflow-hidden flex items-center justify-center aspect-square">
+          {thumb ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={thumb} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <Disc3 className="h-8 w-8 text-muted-foreground/50" strokeWidth={1.25} />
+          )}
+        </div>
+        <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-foreground truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+              {row.title?.trim() || "Без назвы"}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {RELEASE_KIND_LABELS[row.release_kind]} ·{" "}
+              {new Date(row.updated_at).toLocaleString("be-BY", {
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </p>
+          </div>
+          <span
+            className={cn(
+              "shrink-0 self-start sm:self-center text-xs font-medium px-2.5 py-1 rounded-full border",
+              statusPillClass(row.status),
+            )}
+          >
+            {RELEASE_STATUS_LABELS[row.status]}
+          </span>
+        </div>
+        <span className="text-muted-foreground/40 group-hover:text-emerald-500/50 text-lg shrink-0 hidden sm:inline sm:ml-auto">
+          →
+        </span>
+      </Link>
+    </li>
+  );
+}
+
 export default function ArtistApplicationsPage() {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
@@ -37,7 +133,7 @@ export default function ArtistApplicationsPage() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [allowed, setAllowed] = useState(false);
-  const [items, setItems] = useState<ReleaseSubmissionRow[]>([]);
+  const [items, setItems] = useState<ApplicationListRow[]>([]);
 
   const load = useCallback(async () => {
     setError(null);
@@ -59,7 +155,7 @@ export default function ArtistApplicationsPage() {
       .schema("speu")
       .from("release_submissions")
       .select(
-        "id, artist_id, user_id, release_kind, status, title, cover_url, cover_storage_path, artist_note, moderator_message, created_at, updated_at",
+        "id, artist_id, user_id, release_kind, status, title, cover_url, cover_storage_path, artist_note, moderator_message, archived_at, created_at, updated_at, release_submission_tracks ( cover_url, sort_order )",
       )
       .eq("user_id", user.id)
       .order("updated_at", { ascending: false });
@@ -67,14 +163,22 @@ export default function ArtistApplicationsPage() {
       setError(qErr.message);
       setItems([]);
     } else {
-      setItems((data ?? []) as ReleaseSubmissionRow[]);
+      setItems((data ?? []).map((r) => toListItem(r as Record<string, unknown>)));
     }
     setLoading(false);
   }, [router, supabase]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial list fetch
     void load();
   }, [load]);
+
+  const sectionsWithItems = useMemo(() => {
+    return SECTIONS.map((sec) => ({
+      ...sec,
+      rows: items.filter((r) => sec.statuses.includes(r.status)),
+    })).filter((s) => s.rows.length > 0);
+  }, [items]);
 
   const createDraft = async () => {
     setCreating(true);
@@ -162,7 +266,7 @@ export default function ArtistApplicationsPage() {
           type="button"
           onClick={() => void createDraft()}
           disabled={creating}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-60 transition-opacity"
+          className="inline-flex items-center justify-center gap-2 min-h-10 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-60 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
           {creating ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -184,41 +288,20 @@ export default function ArtistApplicationsPage() {
           <p className="text-sm text-muted-foreground">Пакуль няма заявак. Стварыце першую — кнопка вышэй.</p>
         </div>
       ) : (
-        <ul className="space-y-3">
-          {items.map((row) => (
-            <li key={row.id}>
-              <Link
-                href={`/cabinet/artist/${row.id}`}
-                className="group flex items-center gap-4 glass rounded-2xl border border-border p-5 hover:border-emerald-500/30 hover:bg-emerald-500/[0.03] transition-all"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-foreground truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-                    {row.title?.trim() || "Без назвы"}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {RELEASE_KIND_LABELS[row.release_kind]} ·{" "}
-                    {new Date(row.updated_at).toLocaleString("be-BY", {
-                      day: "numeric",
-                      month: "short",
-                      year: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
-                </div>
-                <span
-                  className={cn(
-                    "shrink-0 text-xs font-medium px-2.5 py-1 rounded-full border",
-                    statusPillClass(row.status),
-                  )}
-                >
-                  {RELEASE_STATUS_LABELS[row.status]}
-                </span>
-                <span className="text-muted-foreground/40 group-hover:text-emerald-500/50 text-lg">→</span>
-              </Link>
-            </li>
+        <div className="space-y-8">
+          {sectionsWithItems.map((sec) => (
+            <section key={sec.id} className="space-y-3">
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground px-1">
+                {sec.title}
+              </h2>
+              <ul className="space-y-3">
+                {sec.rows.map((row) => (
+                  <SubmissionListRow key={row.id} row={row} />
+                ))}
+              </ul>
+            </section>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );

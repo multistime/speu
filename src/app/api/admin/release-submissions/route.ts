@@ -11,10 +11,18 @@ const patchSchema = z
     id: z.string().uuid(),
     status: z.enum(releaseStatuses).optional(),
     moderator_message: z.string().nullable().optional(),
+    /** ISO timestamp to archive, or null to restore to active queue */
+    archived_at: z.union([z.string(), z.null()]).optional(),
   })
-  .refine((d) => d.status !== undefined || d.moderator_message !== undefined, {
-    message: "need_status_or_message",
-  });
+  .refine(
+    (d) =>
+      d.status !== undefined || d.moderator_message !== undefined || d.archived_at !== undefined,
+    { message: "need_patch_field" },
+  );
+
+const deleteSchema = z.object({
+  id: z.string().uuid(),
+});
 
 export async function GET() {
   const { adminDb, user } = await requireAdminApi();
@@ -35,10 +43,11 @@ export async function GET() {
       cover_storage_path,
       artist_note,
       moderator_message,
+      archived_at,
       created_at,
       updated_at,
       artists ( id, name, slug ),
-      release_submission_tracks ( id, title, sort_order, audio_url, duration_sec, notes, lyrics, artist_track_id )
+      release_submission_tracks ( id, title, sort_order, audio_url, duration_sec, notes, lyrics, artist_track_id, cover_url, cover_storage_path )
     `,
     )
     .order("updated_at", { ascending: false });
@@ -58,6 +67,8 @@ export async function GET() {
     notes: string | null;
     lyrics: string | null;
     artist_track_id: string | null;
+    cover_url: string | null;
+    cover_storage_path: string | null;
   };
   type Row = {
     id: string;
@@ -70,6 +81,7 @@ export async function GET() {
     cover_storage_path: string | null;
     artist_note: string | null;
     moderator_message: string | null;
+    archived_at: string | null;
     created_at: string;
     updated_at: string;
     artists: ArtistEmbed | ArtistEmbed[] | null;
@@ -94,10 +106,11 @@ export async function PATCH(request: Request) {
   const parsed = patchSchema.safeParse(payload);
   if (!parsed.success) return NextResponse.json({ error: "invalid_payload" }, { status: 400 });
 
-  const { id, status, moderator_message } = parsed.data;
+  const { id, status, moderator_message, archived_at } = parsed.data;
   const patch: Record<string, unknown> = {};
   if (status !== undefined) patch.status = status;
   if (moderator_message !== undefined) patch.moderator_message = moderator_message;
+  if (archived_at !== undefined) patch.archived_at = archived_at;
 
   const { data: beforeRow, error: beforeErr } = await adminDb
     .schema("speu")
@@ -117,6 +130,7 @@ export async function PATCH(request: Request) {
   await writeAdminAuditLog(adminDb, user.id, "release_submission.update", "release_submissions", id, {
     status,
     moderator_message,
+    archived_at,
   });
 
   const { data: afterRow } = await adminDb
@@ -126,7 +140,7 @@ export async function PATCH(request: Request) {
     .eq("id", id)
     .maybeSingle();
 
-  if (afterRow?.status === "approved") {
+  if (afterRow?.status === "approved" && previousStatus !== "approved") {
     const { createdTrackIds, error: promErr } = await promoteApprovedReleaseSubmission(adminDb, user.id, id);
     if (promErr) {
       const transitionedToApproved = previousStatus !== "approved";
@@ -145,6 +159,34 @@ export async function PATCH(request: Request) {
     }
     return NextResponse.json({ ok: true, promotedTrackIds: createdTrackIds });
   }
+
+  return NextResponse.json({ ok: true });
+}
+
+export async function DELETE(request: Request) {
+  const { adminDb, user } = await requireAdminApi();
+  if (!user || !adminDb) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+
+  const payload = await request.json().catch(() => null);
+  const parsed = deleteSchema.safeParse(payload);
+  if (!parsed.success) return NextResponse.json({ error: "invalid_payload" }, { status: 400 });
+
+  const { id } = parsed.data;
+
+  const { data: existing, error: exErr } = await adminDb
+    .schema("speu")
+    .from("release_submissions")
+    .select("id")
+    .eq("id", id)
+    .maybeSingle();
+  if (exErr || !existing) {
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
+
+  const { error } = await adminDb.schema("speu").from("release_submissions").delete().eq("id", id);
+  if (error) return NextResponse.json({ error: "delete_failed" }, { status: 500 });
+
+  await writeAdminAuditLog(adminDb, user.id, "release_submission.delete", "release_submissions", id, {});
 
   return NextResponse.json({ ok: true });
 }
