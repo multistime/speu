@@ -62,6 +62,8 @@ type PlayerContextValue = {
   toggleShuffle: () => void;
   skipNext: () => void;
   skipPrevious: () => void;
+  /** Папярэдні трэк у чарзе без «>3 с → пачатак» (карусель, жэсты шторкі) */
+  skipToPreviousInQueue: () => void;
   /** Пазіцыя 0…1 */
   seekRatio: (ratio: number) => void;
   stop: () => void;
@@ -623,6 +625,26 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     if (prevTr) playTrackInternalRef.current(prevTr);
   }, []);
 
+  const skipToPreviousInQueue = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (!nonStopRef.current || poolRef.current.length === 0) {
+      seekRatioRef.current(0);
+      return;
+    }
+    let idx = queueIndexRef.current - 1;
+    if (idx < 0) {
+      if (!repeatAllRef.current) {
+        seekRatioRef.current(0);
+        return;
+      }
+      idx = queueRef.current.length - 1;
+    }
+    queueIndexRef.current = idx;
+    const prevTr = queueRef.current[idx];
+    if (prevTr) playTrackInternalRef.current(prevTr);
+  }, []);
+
   const toggleShuffle = useCallback(() => {
     if (!nonStopRef.current || poolRef.current.length < 2) return;
     const current = trackRef.current;
@@ -658,6 +680,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const canSeek = duration > 0;
 
+  /** Суседзі ў парадку чаргі (без увагі на рэжым паўтора) — як у спісе плэйліста */
   const queueNeighborTracks = useMemo((): {
     prev: PlayerTrack | null;
     next: PlayerTrack | null;
@@ -667,19 +690,11 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const idx = queueIndexRef.current;
     const len = q.length;
     if (len < 2) return { prev: null, next: null };
-
-    const ra = repeatMode === "all";
-    let prev: PlayerTrack | null = null;
-    let next: PlayerTrack | null = null;
-
-    if (idx > 0) prev = q[idx - 1] ?? null;
-    else if (ra) prev = q[len - 1] ?? null;
-
-    if (idx < len - 1) next = q[idx + 1] ?? null;
-    else if (ra) next = q[0] ?? null;
-
-    return { prev, next };
-  }, [nonStopActive, queueSize, repeatMode, track?.id, shuffleEnabled]);
+    return {
+      prev: idx > 0 ? (q[idx - 1] ?? null) : null,
+      next: idx < len - 1 ? (q[idx + 1] ?? null) : null,
+    };
+  }, [nonStopActive, queueSize, track?.id, shuffleEnabled]);
 
   return (
     <PlayerContext.Provider
@@ -699,6 +714,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         toggleShuffle,
         skipNext,
         skipPrevious,
+        skipToPreviousInQueue,
         seekRatio,
         stop,
         isTrackActive,

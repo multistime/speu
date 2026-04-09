@@ -450,60 +450,65 @@ function MobileSheetEqBadge({
   );
 }
 
-function MobileSheetSideCoverPeek({
-  neighbor,
-  side,
+function MobileSheetCoverFace({
+  t,
+  className,
+  accentFallback,
 }: {
-  neighbor: PlayerTrack | null;
-  side: "left" | "right";
+  t: PlayerTrack;
+  className?: string;
+  accentFallback?: string | null;
 }) {
-  const wClass = "h-[min(42vw,158px)] w-[17%] max-w-[76px] shrink-0";
-  if (!neighbor) {
-    return <div className={cn(wClass, "shrink-0")} aria-hidden />;
-  }
+  const rgb = t.accentRgb ?? "125,191,158";
   return (
     <div
-      className={cn(
-        wClass,
-        "relative overflow-hidden rounded-xl opacity-[0.5] shadow-sm ring-1 ring-border/40",
-        side === "left" ? "origin-right scale-[0.9]" : "origin-left scale-[0.9]"
-      )}
-      aria-hidden
+      className={cn("relative size-full overflow-hidden rounded-xl bg-muted", className)}
+      style={
+        t.accentColor
+          ? { background: `rgba(${rgb}, 0.14)` }
+          : { background: "var(--muted)" }
+      }
     >
-      <div
-        className={cn(
-          "pointer-events-none absolute inset-0 z-[1]",
-          side === "left"
-            ? "bg-gradient-to-r from-transparent via-background/25 to-background/90"
-            : "bg-gradient-to-l from-transparent via-background/25 to-background/90"
-        )}
-      />
-      {neighbor.coverUrl ? (
+      {t.coverUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={neighbor.coverUrl} alt="" className="size-full object-cover" />
+        <img src={t.coverUrl} alt="" className="size-full object-cover" draggable={false} />
       ) : (
-        <div className="flex size-full items-center justify-center bg-muted">
-          <Music className="size-[22%] max-w-8 text-muted-foreground/50" strokeWidth={1.25} />
+        <div className="flex size-full items-center justify-center">
+          <Music
+            className="size-[26%] max-w-10"
+            style={{ color: t.accentColor ?? accentFallback ?? "var(--primary)" }}
+            strokeWidth={1.25}
+          />
         </div>
       )}
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-[38%] bg-gradient-to-t from-black/40 via-black/10 to-transparent"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-[22%] bg-gradient-to-b from-white/12 to-transparent"
+        aria-hidden
+      />
     </div>
   );
 }
 
+/** Cover Flow: тры вокладкі, свайп адразу мяняе трэк; тап па баку — пераход */
 function MobileSheetCoverCarousel({
   track,
   prevTrack,
   nextTrack,
-  skipNext,
-  skipPrevious,
+  skipToNext,
+  skipToPreviousInQueue,
 }: {
   track: PlayerTrack;
   prevTrack: PlayerTrack | null;
   nextTrack: PlayerTrack | null;
-  skipNext: () => void;
-  skipPrevious: () => void;
+  skipToNext: () => void;
+  skipToPreviousInQueue: () => void;
 }) {
   const x = useMotionValue(0);
+  const slideHintRef = useRef(0);
   const rowRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -512,81 +517,147 @@ function MobileSheetCoverCarousel({
 
   const canDrag = Boolean(prevTrack || nextTrack);
 
+  const goPrev = useCallback(() => {
+    slideHintRef.current = -1;
+    skipToPreviousInQueue();
+    x.set(0);
+  }, [skipToPreviousInQueue, x]);
+
+  const goNext = useCallback(() => {
+    slideHintRef.current = 1;
+    skipToNext();
+    x.set(0);
+  }, [skipToNext, x]);
+
   const onDragEnd = (_: unknown, info: PanInfo) => {
-    const th = 52;
+    const th = 48;
     const vx = info.velocity.x;
     const ox = info.offset.x;
-    const w = rowRef.current?.offsetWidth ?? 300;
-    const slide = Math.min(140, w * 0.32);
 
-    if ((ox <= -th || vx < -300) && prevTrack) {
-      animate(x, -slide, {
-        duration: 0.22,
-        ease: [0.32, 0.72, 0, 1],
-        onComplete: () => {
-          skipPrevious();
-          x.set(0);
-        },
-      });
+    if (ox <= -th || vx < -280) {
+      if (prevTrack) goPrev();
+      else animate(x, 0, { type: "spring", stiffness: 460, damping: 38 });
       return;
     }
-    if ((ox >= th || vx > 300) && nextTrack) {
-      animate(x, slide, {
-        duration: 0.22,
-        ease: [0.32, 0.72, 0, 1],
-        onComplete: () => {
-          skipNext();
-          x.set(0);
-        },
-      });
+    if (ox >= th || vx > 280) {
+      if (nextTrack) goNext();
+      else animate(x, 0, { type: "spring", stiffness: 460, damping: 38 });
       return;
     }
-    animate(x, 0, { type: "spring", stiffness: 440, damping: 36 });
+    animate(x, 0, { type: "spring", stiffness: 460, damping: 36 });
   };
+
+  const sideH = "h-[min(40vw,148px)]";
+  const sideW = "w-[min(28vw,104px)] max-w-[104px]";
 
   return (
     <div
       ref={rowRef}
-      className="mx-auto mt-2 flex w-full max-w-[min(100vw-1.75rem,400px)] items-center justify-center gap-1 px-0.5"
+      className="mx-auto mt-2 w-full max-w-[min(100vw-1rem,380px)] px-1 [perspective:920px]"
       data-sheet-no-gesture
     >
-      <MobileSheetSideCoverPeek neighbor={prevTrack} side="left" />
       <motion.div
-        style={{
-          x,
-          background: track.accentColor
-            ? `rgba(${track.accentRgb ?? "125,191,158"}, 0.12)`
-            : "var(--muted)",
-        }}
+        style={{ x, transformStyle: "preserve-3d" }}
         drag={canDrag ? "x" : false}
         dragConstraints={{ left: 0, right: 0 }}
-        dragElastic={0.2}
-        dragTransition={{ bounceStiffness: 380, bounceDamping: 22 }}
+        dragElastic={0.18}
+        dragTransition={{ bounceStiffness: 400, bounceDamping: 24 }}
         onDragEnd={onDragEnd}
-        className="relative aspect-square w-[min(54vw,200px)] shrink-0 overflow-hidden rounded-xl shadow-lg ring-2 ring-background"
+        className="relative flex items-center justify-center gap-0"
       >
         <motion.div
-          key={track.id}
-          className="size-full"
-          initial={{ opacity: 0.65, scale: 0.96, filter: "blur(5px)" }}
-          animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-          transition={{ type: "spring", stiffness: 320, damping: 28 }}
+          className={cn(
+            sideW,
+            sideH,
+            "relative z-0 shrink-0 [transform-style:preserve-3d]"
+          )}
+          style={{
+            rotateY: 58,
+            scale: 0.88,
+            transformOrigin: "100% 50%",
+          }}
         >
-          {track.coverUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={track.coverUrl} alt="" className="size-full object-cover" />
+          {prevTrack ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                goPrev();
+              }}
+              aria-label="Папярэдні трэк"
+              className="size-full cursor-pointer rounded-xl border border-border/50 shadow-md ring-1 ring-black/5 transition-opacity hover:opacity-95 active:scale-[0.98]"
+            >
+              <MobileSheetCoverFace t={prevTrack} />
+            </button>
           ) : (
-            <div className="flex size-full items-center justify-center">
-              <Music
-                className="size-[20%] max-w-[4rem]"
-                style={{ color: track.accentColor ?? "var(--primary)" }}
-                strokeWidth={1.25}
-              />
-            </div>
+            <div
+              className="flex size-full items-center justify-center rounded-xl border border-dashed border-border/35 bg-muted/25 opacity-50"
+              aria-hidden
+            />
+          )}
+        </motion.div>
+
+        <motion.div
+          className={cn(
+            "relative z-10 mx-[-6px] aspect-square w-[min(52vw,198px)] max-w-[198px] shrink-0 overflow-hidden rounded-2xl shadow-xl ring-2 ring-background"
+          )}
+          style={{
+            scale: 1.02,
+            transformStyle: "preserve-3d",
+          }}
+        >
+          <motion.div
+            key={track.id}
+            className="size-full"
+            initial={{
+              x: slideHintRef.current * 72,
+              opacity: 0.78,
+              scale: 0.9,
+              filter: "blur(6px)",
+            }}
+            animate={{
+              x: 0,
+              opacity: 1,
+              scale: 1,
+              filter: "blur(0px)",
+            }}
+            transition={{ type: "spring", stiffness: 420, damping: 34, mass: 0.85 }}
+            onAnimationComplete={() => {
+              slideHintRef.current = 0;
+            }}
+          >
+            <MobileSheetCoverFace t={track} accentFallback={track.accentColor} />
+          </motion.div>
+        </motion.div>
+
+        <motion.div
+          className={cn(sideW, sideH, "relative z-0 shrink-0 [transform-style:preserve-3d]")}
+          style={{
+            rotateY: -58,
+            scale: 0.88,
+            transformOrigin: "0% 50%",
+          }}
+        >
+          {nextTrack ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                goNext();
+              }}
+              aria-label="Наступны трэк"
+              className="size-full cursor-pointer rounded-xl border border-border/50 shadow-md ring-1 ring-black/5 transition-opacity hover:opacity-95 active:scale-[0.98]"
+            >
+              <MobileSheetCoverFace t={nextTrack} />
+            </button>
+          ) : (
+            <div
+              className="flex size-full items-center justify-center rounded-xl border border-dashed border-border/35 bg-muted/25 opacity-50"
+              aria-hidden
+            />
           )}
         </motion.div>
       </motion.div>
-      <MobileSheetSideCoverPeek neighbor={nextTrack} side="right" />
     </div>
   );
 }
@@ -615,7 +686,7 @@ function MobileNowPlayingSheet({
     cycleRepeatMode,
     toggleShuffle,
     skipNext,
-    skipPrevious,
+    skipToPreviousInQueue,
     queueNeighborTracks,
   } = usePlayer();
 
@@ -724,7 +795,7 @@ function MobileNowPlayingSheet({
       );
       const vx = (e.clientX - g.lastX) / dt;
       const th = skipThresholdX();
-      if (dx <= -th || vx < -SHEET_SKIP_VELOCITY) skipPrevious();
+      if (dx <= -th || vx < -SHEET_SKIP_VELOCITY) skipToPreviousInQueue();
       else if (dx >= th || vx > SHEET_SKIP_VELOCITY) skipNext();
     }
 
@@ -779,8 +850,8 @@ function MobileNowPlayingSheet({
                   track={track}
                   prevTrack={queueNeighborTracks.prev}
                   nextTrack={queueNeighborTracks.next}
-                  skipNext={skipNext}
-                  skipPrevious={skipPrevious}
+                  skipToNext={skipNext}
+                  skipToPreviousInQueue={skipToPreviousInQueue}
                 />
 
                 <div className="mt-2.5 space-y-1">
