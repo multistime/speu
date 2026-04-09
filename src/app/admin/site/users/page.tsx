@@ -25,7 +25,7 @@ type AdminUserListItem = {
   is_superadmin?: boolean;
   role_codes: string[];
   product_role_codes: AdminUiRoleCode[];
-  linked_artists: { id: string; name: string; slug: string }[];
+  linked_artists: { id: string; name: string; slug: string; can_edit_profile: boolean }[];
 };
 
 type CatalogArtist = { id: string; name: string; slug: string };
@@ -58,6 +58,8 @@ export default function AdminUsersPage() {
   const [selected, setSelected] = useState<AdminUserListItem | null>(null);
   const [editCodes, setEditCodes] = useState<AdminUiRoleCode[]>([]);
   const [linkedArtistIds, setLinkedArtistIds] = useState<string[]>([]);
+  /** id → можа рэдагаваць публічную картачку з кабінета (false = толькі заяўкі / аналітыка) */
+  const [linkedArtistCardEdit, setLinkedArtistCardEdit] = useState<Record<string, boolean>>({});
   const [catalogArtists, setCatalogArtists] = useState<CatalogArtist[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -128,6 +130,9 @@ export default function AdminUsersPage() {
     if (u.is_superadmin && !base.includes("admin")) base.push("admin");
     setEditCodes(base);
     setLinkedArtistIds((u.linked_artists ?? []).map((a) => a.id));
+    setLinkedArtistCardEdit(
+      Object.fromEntries((u.linked_artists ?? []).map((a) => [a.id, a.can_edit_profile !== false])),
+    );
     setError(null);
   };
 
@@ -135,7 +140,10 @@ export default function AdminUsersPage() {
     if (selected?.is_superadmin && code === "admin") return;
     setEditCodes((prev) => {
       if (prev.includes(code)) {
-        if (code === "artist") setLinkedArtistIds([]);
+        if (code === "artist") {
+          setLinkedArtistIds([]);
+          setLinkedArtistCardEdit({});
+        }
         return prev.filter((c) => c !== code);
       }
       return [...prev, code];
@@ -150,12 +158,19 @@ export default function AdminUsersPage() {
     }
     setSaving(true);
     setError(null);
+    const uniqueLinked = [...new Set(linkedArtistIds)];
+    const linkedArtistCanEditProfile =
+      editCodes.includes("artist") && uniqueLinked.length > 0
+        ? Object.fromEntries(uniqueLinked.map((id) => [id, linkedArtistCardEdit[id] !== false]))
+        : null;
+
     const res = await fetch(`/api/admin/users/${selected.id}/roles`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         codes: editCodes,
-        linkedArtistIds: editCodes.includes("artist") ? [...new Set(linkedArtistIds)] : null,
+        linkedArtistIds: editCodes.includes("artist") ? uniqueLinked : null,
+        linkedArtistCanEditProfile,
       }),
     });
     const data = await res.json().catch(() => ({}));
@@ -390,6 +405,11 @@ export default function AdminUsersPage() {
                       {selected.linked_artists.map((a) => (
                         <li key={a.id}>
                           {a.name} <span className="font-mono text-xs">({a.slug})</span>
+                          {a.can_edit_profile === false ? (
+                            <span className="block text-xs text-muted-foreground mt-0.5">
+                              рэдагаванне картачкі на сайце: выключана
+                            </span>
+                          ) : null}
                         </li>
                       ))}
                     </ul>
@@ -444,9 +464,7 @@ export default function AdminUsersPage() {
               </ul>
               <p className="text-xs text-muted-foreground mt-3">
                 «Адмін» — доступ у адмінку. «Слухач» / «Артыст» — радкі ў{" "}
-                <span className="font-mono">speu.user_roles</span>. Для «артыст» абярыце адну або некалькі картачак —
-                захоўваецца ў <span className="font-mono">speu.artists.user_id</span> (не некалькі карыстальнікаў на
-                адну картачку).
+                <span className="font-mono">speu.user_roles</span>.                 Для «артыст» абярыце картачкі; па жаданні адключыце рэдагаванне публічнай старонкі артыста з кабінета.
               </p>
             </div>
 
@@ -459,24 +477,45 @@ export default function AdminUsersPage() {
                   {catalogArtists.length === 0 ? (
                     <p className="text-xs text-muted-foreground">Каталог артыстаў пусты або не загрузіўся.</p>
                   ) : (
-                    catalogArtists.map((a) => (
-                      <label key={a.id} className="flex items-start gap-2.5 cursor-pointer select-none text-sm">
-                        <input
-                          type="checkbox"
-                          className="mt-0.5 size-4 rounded border-border accent-primary shrink-0"
-                          checked={linkedArtistIds.includes(a.id)}
-                          onChange={() => {
-                            setLinkedArtistIds((prev) =>
-                              prev.includes(a.id) ? prev.filter((id) => id !== a.id) : [...prev, a.id],
-                            );
-                          }}
-                        />
-                        <span>
-                          <span className="font-medium text-foreground">{a.name}</span>{" "}
-                          <span className="text-xs text-muted-foreground font-mono">({a.slug})</span>
-                        </span>
-                      </label>
-                    ))
+                    catalogArtists.map((a) => {
+                      const linked = linkedArtistIds.includes(a.id);
+                      return (
+                        <div key={a.id} className="space-y-1.5">
+                          <label className="flex items-start gap-2.5 cursor-pointer select-none text-sm">
+                            <input
+                              type="checkbox"
+                              className="mt-0.5 size-4 rounded border-border accent-primary shrink-0"
+                              checked={linked}
+                              onChange={() => {
+                                if (linkedArtistIds.includes(a.id)) {
+                                  setLinkedArtistIds((prev) => prev.filter((id) => id !== a.id));
+                                } else {
+                                  setLinkedArtistIds((prev) => [...prev, a.id]);
+                                  setLinkedArtistCardEdit((m) => ({ ...m, [a.id]: true }));
+                                }
+                              }}
+                            />
+                            <span>
+                              <span className="font-medium text-foreground">{a.name}</span>{" "}
+                              <span className="text-xs text-muted-foreground font-mono">({a.slug})</span>
+                            </span>
+                          </label>
+                          {linked ? (
+                            <label className="flex items-start gap-2.5 cursor-pointer select-none text-xs text-muted-foreground pl-7">
+                              <input
+                                type="checkbox"
+                                className="mt-0.5 size-3.5 rounded border-border accent-primary shrink-0"
+                                checked={linkedArtistCardEdit[a.id] !== false}
+                                onChange={(e) =>
+                                  setLinkedArtistCardEdit((m) => ({ ...m, [a.id]: e.target.checked }))
+                                }
+                              />
+                              <span>Можа рэдагаваць картачку на сайце (фота, біяграфія, сацсеткі, візуал)</span>
+                            </label>
+                          ) : null}
+                        </div>
+                      );
+                    })
                   )}
                 </div>
               </div>

@@ -223,9 +223,14 @@ export function SpeuTrackPageView({ data }: { data: SpeuTrackPageData }) {
                   18+
                 </span>
               ) : null}
-              {track.isAi ? (
+              {track.isAiMusic ? (
                 <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-0.5 text-xs text-violet-800 dark:text-violet-200">
-                  ІІ
+                  ІІ у музыцы
+                </span>
+              ) : null}
+              {track.vocalLanguage !== "instrumental" && track.isAiLyrics ? (
+                <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-0.5 text-xs text-violet-800 dark:text-violet-200">
+                  ІІ у словах
                 </span>
               ) : null}
               <span className="rounded-full border border-border/70 bg-muted/40 px-2.5 py-0.5 text-xs text-muted-foreground">
@@ -240,6 +245,22 @@ export function SpeuTrackPageView({ data }: { data: SpeuTrackPageData }) {
                 </span>
               ))}
             </div>
+
+            {(track.musicAuthor || track.lyricsAuthor) && (
+              <p className="mt-3 text-sm text-muted-foreground">
+                {track.musicAuthor ? (
+                  <>
+                    <span className="text-foreground/75">Музыка:</span> {track.musicAuthor}
+                  </>
+                ) : null}
+                {track.lyricsAuthor ? (
+                  <>
+                    {track.musicAuthor ? " · " : null}
+                    <span className="text-foreground/75">Словы:</span> {track.lyricsAuthor}
+                  </>
+                ) : null}
+              </p>
+            )}
 
             <div className="mt-5 flex flex-col gap-3 sm:mt-6">
               <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">

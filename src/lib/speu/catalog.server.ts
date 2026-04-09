@@ -64,7 +64,10 @@ type RawTrackRow = {
   genres?: string[] | null;
   work_kind?: string | null;
   is_explicit?: boolean | null;
-  is_ai?: boolean | null;
+  is_ai_lyrics?: boolean | null;
+  is_ai_music?: boolean | null;
+  lyrics_author?: string | null;
+  music_author?: string | null;
   language?: string | null;
   albums: RawAlbum | RawAlbum[];
   track_artists: RawCreditRow[] | null;
@@ -99,7 +102,10 @@ const SPEU_PLAYABLE_TRACK_EMBED = `
       genres,
       work_kind,
       is_explicit,
-      is_ai,
+      is_ai_lyrics,
+      is_ai_music,
+      lyrics_author,
+      music_author,
       language,
       albums ( id, slug, title, cover_url, is_published ),
       track_artists (
@@ -173,7 +179,13 @@ function mapRawTrackToPublic(row: RawTrackRow): SpeuPublicTrack | null {
     genres,
     workKind: parseWorkKindCatalog(row.work_kind),
     isExplicit: row.is_explicit === true,
-    isAi: row.is_ai === true,
+    isAiLyrics: row.is_ai_lyrics === true,
+    isAiMusic: row.is_ai_music === true,
+    lyricsAuthor:
+      parseVocalLanguageCatalog(row.language) === "instrumental"
+        ? null
+        : row.lyrics_author?.trim() || null,
+    musicAuthor: row.music_author?.trim() || null,
     vocalLanguage: parseVocalLanguageCatalog(row.language),
   };
   return typeof lc === "number" && Number.isFinite(lc) ? { ...base, likeCount: lc } : base;
@@ -381,7 +393,10 @@ export async function fetchSpeuArtistBySlug(slug: string): Promise<SpeuArtistPag
       genres,
       work_kind,
       is_explicit,
-      is_ai,
+      is_ai_lyrics,
+      is_ai_music,
+      lyrics_author,
+      music_author,
       language,
       albums ( id, slug, title, cover_url, is_published ),
       track_artists (
@@ -533,7 +548,10 @@ export async function fetchSpeuAlbumBySlugOrId(param: string): Promise<SpeuAlbum
       genres,
       work_kind,
       is_explicit,
-      is_ai,
+      is_ai_lyrics,
+      is_ai_music,
+      lyrics_author,
+      music_author,
       language,
       albums ( id, slug, title, cover_url, is_published ),
       track_artists (
@@ -580,7 +598,10 @@ const SPEU_TRACK_PAGE_TRACK_SELECT = `
       genres,
       work_kind,
       is_explicit,
-      is_ai,
+      is_ai_lyrics,
+      is_ai_music,
+      lyrics_author,
+      music_author,
       language,
       albums ( id, slug, title, cover_url, is_published ),
       track_artists (

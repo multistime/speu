@@ -1,8 +1,12 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
-import { BarChart3, Inbox, Disc3 } from "lucide-react";
+import { BarChart3, Disc3, Inbox, UserRound } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { getSpeuProfile } from "@/lib/supabase/speu";
+import { linkedArtistCanEditProfile } from "@/lib/cabinet/artist-access";
 import { cn } from "@/lib/utils";
 
 function isArtistSubmissionPath(pathname: string, artistId: string): boolean {
@@ -14,12 +18,38 @@ export function ArtistCabinetSidebar() {
   const pathname = usePathname();
   const params = useParams();
   const artistId = typeof params.artistId === "string" ? params.artistId : "";
+  const [showProfileNav, setShowProfileNav] = useState(false);
+
+  useEffect(() => {
+    if (!artistId) {
+      setShowProfileNav(false);
+      return;
+    }
+    let cancelled = false;
+    const supabase = createClient();
+    void (async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user || cancelled) return;
+      const profile = await getSpeuProfile(supabase, user.id);
+      if (!cancelled) {
+        setShowProfileNav(linkedArtistCanEditProfile(profile, artistId));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [artistId]);
 
   const navItems =
     artistId.length > 0
       ? [
           { href: `/cabinet/artist/${artistId}/analytics`, label: "Аналітыка", icon: BarChart3 },
           { href: `/cabinet/artist/${artistId}/applications`, label: "Заяўкі", icon: Inbox },
+          ...(showProfileNav
+            ? [{ href: `/cabinet/artist/${artistId}/profile`, label: "Картачка на сайце", icon: UserRound }]
+            : []),
         ]
       : [];
 
@@ -40,8 +70,9 @@ export function ArtistCabinetSidebar() {
         </p>
         <nav className="space-y-1" aria-label="Раздзелы кабінета артыста">
           {navItems.map((item) => {
-            const active =
-              item.href.endsWith("/analytics")
+            const active = item.href.endsWith("/profile")
+              ? pathname === item.href
+              : item.href.endsWith("/analytics")
                 ? pathname === item.href
                 : pathname === item.href || (artistId ? isArtistSubmissionPath(pathname, artistId) : false);
             return (

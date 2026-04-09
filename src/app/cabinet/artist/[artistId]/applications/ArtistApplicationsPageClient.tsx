@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Disc3, Loader2, Plus } from "lucide-react";
+import { ChevronDown, Disc3, Loader2, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { getSpeuProfile, type SpeuProfile } from "@/lib/supabase/speu";
+import { getSpeuProfile } from "@/lib/supabase/speu";
+import { profileOwnsArtist } from "@/lib/cabinet/artist-access";
 import {
   RELEASE_KIND_LABELS,
   RELEASE_STATUS_LABELS,
@@ -74,62 +75,105 @@ function toListItem(raw: Record<string, unknown>): ReleaseSubmissionRow & { list
 
 type ApplicationListRow = ReleaseSubmissionRow & { listThumbnailUrl: string | null };
 
-function SubmissionListRow({ row, artistId }: { row: ApplicationListRow; artistId: string }) {
+function SubmissionListRow({
+  row,
+  artistId,
+  compact,
+  onToggleCompact,
+}: {
+  row: ApplicationListRow;
+  artistId: string;
+  compact: boolean;
+  onToggleCompact: () => void;
+}) {
   const thumb = row.listThumbnailUrl;
   return (
     <li>
-      <Link
-        href={`/cabinet/artist/${artistId}/submission/${row.id}`}
-        className="group flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-4 glass rounded-2xl border border-border p-4 sm:p-5 hover:border-emerald-500/30 hover:bg-emerald-500/[0.03] transition-all min-w-0 focus-within:ring-2 focus-within:ring-primary/25 focus-within:ring-offset-2 focus-within:ring-offset-background"
-      >
-        <div className="shrink-0 min-w-[4.5rem] w-[4.5rem] h-[4.5rem] rounded-xl border border-border bg-muted/40 overflow-hidden flex items-center justify-center aspect-square">
-          {thumb ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={thumb} alt="" className="w-full h-full object-cover" />
-          ) : (
-            <Disc3 className="h-8 w-8 text-muted-foreground/50" strokeWidth={1.25} />
+      <div className="flex items-stretch glass rounded-2xl border border-border min-w-0 overflow-hidden transition-all hover:border-emerald-500/30 hover:bg-emerald-500/[0.03] focus-within:ring-2 focus-within:ring-primary/25 focus-within:ring-offset-2 focus-within:ring-offset-background">
+        <Link
+          href={`/cabinet/artist/${artistId}/submission/${row.id}`}
+          className={cn(
+            "group flex flex-1 min-w-0 items-center gap-2 sm:gap-4 transition-colors",
+            compact ? "py-2 pl-3 pr-2" : "flex-wrap sm:flex-nowrap p-4 sm:p-5",
           )}
-        </div>
-        <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-foreground truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-              {row.title?.trim() || "Без назвы"}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              {RELEASE_KIND_LABELS[row.release_kind]} ·{" "}
-              {new Date(row.updated_at).toLocaleString("be-BY", {
-                day: "numeric",
-                month: "short",
-                year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </p>
-          </div>
-          <span
+        >
+          <div
             className={cn(
-              "shrink-0 self-start sm:self-center text-xs font-medium px-2.5 py-1 rounded-full border",
-              statusPillClass(row.status),
+              "shrink-0 rounded-xl border border-border bg-muted/40 overflow-hidden flex items-center justify-center aspect-square",
+              compact ? "min-w-10 w-10 h-10" : "min-w-[4.5rem] w-[4.5rem] h-[4.5rem]",
             )}
           >
-            {RELEASE_STATUS_LABELS[row.status]}
-          </span>
-        </div>
-        <span className="text-muted-foreground/40 group-hover:text-emerald-500/50 text-lg shrink-0 hidden sm:inline sm:ml-auto">
-          →
-        </span>
-      </Link>
+            {thumb ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={thumb} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <Disc3
+                className={cn("text-muted-foreground/50", compact ? "h-5 w-5" : "h-8 w-8")}
+                strokeWidth={1.25}
+              />
+            )}
+          </div>
+          <div
+            className={cn(
+              "flex-1 min-w-0 flex gap-2 sm:gap-3",
+              compact ? "flex-row items-center" : "flex-col sm:flex-row sm:items-center",
+            )}
+          >
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-foreground truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                {row.title?.trim() || "Без назвы"}
+              </p>
+              {!compact ? (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {RELEASE_KIND_LABELS[row.release_kind]} ·{" "}
+                  {new Date(row.updated_at).toLocaleString("be-BY", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </p>
+              ) : (
+                <p className="text-[11px] text-muted-foreground truncate sm:hidden">
+                  {RELEASE_STATUS_LABELS[row.status]}
+                </p>
+              )}
+            </div>
+            <span
+              className={cn(
+                "shrink-0 text-xs font-medium px-2.5 py-1 rounded-full border",
+                compact ? "self-center hidden sm:inline-flex" : "self-start sm:self-center",
+                statusPillClass(row.status),
+              )}
+            >
+              {RELEASE_STATUS_LABELS[row.status]}
+            </span>
+          </div>
+          {!compact ? (
+            <span className="text-muted-foreground/40 group-hover:text-emerald-500/50 text-lg shrink-0 hidden sm:inline sm:ml-auto">
+              →
+            </span>
+          ) : null}
+        </Link>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            onToggleCompact();
+          }}
+          aria-expanded={!compact}
+          aria-label={compact ? "Разгарнуць картку" : "Згарнуць кампактна"}
+          className="shrink-0 w-10 sm:w-11 flex items-center justify-center border-l border-border/60 hover:bg-muted/40 text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ChevronDown
+            className={cn("h-4 w-4 transition-transform duration-200", compact && "-rotate-90")}
+            strokeWidth={2}
+          />
+        </button>
+      </div>
     </li>
   );
-}
-
-function profileOwnsArtist(profile: SpeuProfile | null, artistId: string): boolean {
-  if (!profile?.is_artist) return false;
-  const linked = profile.linked_artists;
-  if (Array.isArray(linked) && linked.length > 0) {
-    return linked.some((a) => a && typeof a === "object" && "id" in a && (a as { id: string }).id === artistId);
-  }
-  return profile.artist_id === artistId;
 }
 
 export default function ArtistApplicationsPageClient({ artistId }: { artistId: string }) {
@@ -140,6 +184,8 @@ export default function ArtistApplicationsPageClient({ artistId }: { artistId: s
   const [error, setError] = useState<string | null>(null);
   const [allowed, setAllowed] = useState(false);
   const [items, setItems] = useState<ApplicationListRow[]>([]);
+  /** IDs shown in compact (one-line) mode */
+  const [compactIds, setCompactIds] = useState<Set<string>>(() => new Set());
 
   const load = useCallback(async () => {
     setError(null);
@@ -185,6 +231,23 @@ export default function ArtistApplicationsPageClient({ artistId }: { artistId: s
       rows: items.filter((r) => sec.statuses.includes(r.status)),
     })).filter((s) => s.rows.length > 0);
   }, [items]);
+
+  const toggleCompact = useCallback((id: string) => {
+    setCompactIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const collapseAllCompact = useCallback(() => {
+    setCompactIds(new Set(items.map((r) => r.id)));
+  }, [items]);
+
+  const expandAllCompact = useCallback(() => {
+    setCompactIds(new Set());
+  }, []);
 
   const createDraft = async () => {
     setCreating(true);
@@ -295,6 +358,24 @@ export default function ArtistApplicationsPageClient({ artistId }: { artistId: s
         </div>
       ) : (
         <div className="space-y-8">
+          {items.length > 1 ? (
+            <div className="flex flex-wrap gap-2 justify-end px-1">
+              <button
+                type="button"
+                onClick={collapseAllCompact}
+                className="text-xs font-medium px-3 py-1.5 rounded-lg border border-border bg-muted/30 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              >
+                Згарнуць усе
+              </button>
+              <button
+                type="button"
+                onClick={expandAllCompact}
+                className="text-xs font-medium px-3 py-1.5 rounded-lg border border-border bg-muted/30 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              >
+                Разгарнуць усе
+              </button>
+            </div>
+          ) : null}
           {sectionsWithItems.map((sec) => (
             <section key={sec.id} className="space-y-3">
               <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground px-1">
@@ -302,7 +383,13 @@ export default function ArtistApplicationsPageClient({ artistId }: { artistId: s
               </h2>
               <ul className="space-y-3">
                 {sec.rows.map((row) => (
-                  <SubmissionListRow key={row.id} row={row} artistId={artistId} />
+                  <SubmissionListRow
+                    key={row.id}
+                    row={row}
+                    artistId={artistId}
+                    compact={compactIds.has(row.id)}
+                    onToggleCompact={() => toggleCompact(row.id)}
+                  />
                 ))}
               </ul>
             </section>

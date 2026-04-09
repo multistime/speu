@@ -18,6 +18,12 @@ import {
 } from "@/lib/player-media-session";
 import { submitListenTerminal } from "@/lib/listen-analytics/submit";
 import { createClient } from "@/lib/supabase/client";
+import { getSpeuPlayerAudio } from "@/lib/speu-player-audio";
+import {
+  clearSpeuPlayerSession,
+  loadSpeuPlayerSession,
+  saveSpeuPlayerSession,
+} from "@/lib/speu-player-session-storage";
 import { shuffleArray } from "@/lib/speu/shuffle";
 
 export type PlayerTrack = {
@@ -80,6 +86,18 @@ function finiteDuration(d: number): number {
   return d;
 }
 
+function speuSameAudioSrc(audio: HTMLAudioElement, url: string): boolean {
+  const u = url?.trim();
+  if (!u) return false;
+  try {
+    const cur = (audio.currentSrc || audio.src || "").trim();
+    if (!cur) return false;
+    return new URL(cur, window.location.origin).href === new URL(u, window.location.origin).href;
+  } catch {
+    return (audio.currentSrc || audio.src) === u;
+  }
+}
+
 export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const [track, setTrack] = useState<PlayerTrack | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -124,6 +142,36 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const singleRepeatPrefRef = useRef(false);
   const authedRef = useRef(false);
   const persistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const repeatModeRef = useRef<PlayerRepeatMode>("off");
+
+  useLayoutEffect(() => {
+    repeatModeRef.current = repeatMode;
+  }, [repeatMode]);
+
+  useLayoutEffect(() => {
+    return () => {
+      const audio = audioRef.current;
+      const tr = trackRef.current;
+      if (!tr?.audioUrl?.trim()) {
+        clearSpeuPlayerSession();
+        return;
+      }
+      saveSpeuPlayerSession({
+        v: 1,
+        track: tr,
+        nonStop: nonStopRef.current,
+        pool: nonStopRef.current ? [...poolRef.current] : [],
+        queue: nonStopRef.current ? [...queueRef.current] : [],
+        queueIndex: nonStopRef.current ? queueIndexRef.current : 0,
+        repeatMode: repeatModeRef.current,
+        shuffleEnabled: shuffleEnabledRef.current,
+        queueRepeatPref: queueRepeatPrefRef.current,
+        queueShufflePref: queueShufflePrefRef.current,
+        singleRepeatPref: singleRepeatPrefRef.current,
+        wasPlaying: Boolean(audio && !audio.paused),
+      });
+    };
+  }, []);
 
   const flushPersist = useCallback(() => {
     if (!authedRef.current) return;
@@ -284,8 +332,73 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   }, [flushPersist]);
 
   useEffect(() => {
-    const audio = new Audio();
+    const audio = getSpeuPlayerAudio();
     audioRef.current = audio;
+
+    const saved = loadSpeuPlayerSession();
+    if (saved?.track?.audioUrl?.trim()) {
+      const tr = saved.track as PlayerTrack;
+      trackRef.current = tr;
+      if (saved.nonStop) {
+        poolRef.current = saved.pool as PlayerTrack[];
+        queueRef.current = saved.queue as PlayerTrack[];
+        queueIndexRef.current = saved.queueIndex;
+      } else {
+        poolRef.current = [];
+        queueRef.current = [];
+        queueIndexRef.current = 0;
+      }
+      nonStopRef.current = saved.nonStop;
+      shuffleEnabledRef.current = saved.shuffleEnabled;
+      queueRepeatPrefRef.current = saved.queueRepeatPref;
+      queueShufflePrefRef.current = saved.queueShufflePref;
+      singleRepeatPrefRef.current = saved.singleRepeatPref;
+      repeatOneRef.current = saved.repeatMode === "one";
+      repeatAllRef.current = saved.repeatMode === "all";
+
+      queueMicrotask(() => {
+        setTrack(tr);
+        setNonStopActive(saved.nonStop);
+        setQueueSize(saved.nonStop ? saved.pool.length : 0);
+        setShuffleEnabled(saved.shuffleEnabled);
+        setRepeatMode(saved.repeatMode);
+      });
+
+      const wantUrl = tr.audioUrl;
+      const same = speuSameAudioSrc(audio, wantUrl);
+
+      if (!same) {
+        ignoreNextPauseRef.current = true;
+        audio.src = wantUrl;
+        const onRestoreMeta = () => {
+          setDuration(finiteDuration(audio.duration));
+          setCurrentTime(audio.currentTime);
+          setTrackMediaMetadata(tr);
+          if (saved.wasPlaying) {
+            void audio.play().catch(() => setIsPlaying(false));
+          } else {
+            setIsPlaying(false);
+          }
+        };
+        audio.addEventListener("loadedmetadata", onRestoreMeta, { once: true });
+      } else {
+        queueMicrotask(() => {
+          setCurrentTime(audio.currentTime);
+          setDuration(finiteDuration(audio.duration));
+          setIsPlaying(!audio.paused);
+          setTrackMediaMetadata(tr);
+          if (saved.wasPlaying && audio.paused) {
+            void audio.play().catch(() => setIsPlaying(false));
+          }
+          if (!audio.paused) {
+            setMediaSessionPlaybackState("playing");
+            updateMediaSessionPositionState(audio);
+          } else if (audio.src?.trim()) {
+            setMediaSessionPlaybackState("paused");
+          }
+        });
+      }
+    }
 
     /** iOS: ранняя рэгістрацыя пры mount часта дае ±15 с; пасля «playing» — стрэлкі трэкаў (гл. SO 73993512). */
     const applyMediaSessionActionHandlers = () => {
@@ -455,11 +568,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       audio.removeEventListener("waiting", onWaiting);
       audio.removeEventListener("error", onError);
       clearMediaSessionActionHandlers();
-      audio.pause();
-      audio.src = "";
-      setTrackMediaMetadata(null);
-      clearMediaSessionPositionState();
-      setMediaSessionPlaybackState("none");
+      /* Не спыняем аўдыё і не чысцім src: пры перамантаваньні PlayerProvider струмень застаецца;
+         стан аднаўляецца з sessionStorage у пачатку гэтага эфекту. */
     };
   }, []);
 
@@ -607,6 +717,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     setTrackMediaMetadata(null);
     clearMediaSessionPositionState();
     setMediaSessionPlaybackState("none");
+    clearSpeuPlayerSession();
   }, []);
 
   const skipNext = useCallback(() => {

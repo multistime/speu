@@ -51,7 +51,7 @@ export async function GET() {
       created_at,
       updated_at,
       artists ( id, name, slug ),
-      release_submission_tracks ( id, title, sort_order, audio_url, duration_sec, notes, lyrics, artist_track_id, cover_url, cover_storage_path, genres, work_kind, is_explicit, is_ai, language )
+      release_submission_tracks ( id, title, sort_order, audio_url, duration_sec, notes, lyrics, artist_track_id, cover_url, cover_storage_path, genres, work_kind, is_explicit, is_ai_lyrics, is_ai_music, lyrics_author, music_author, language )
     `,
     )
     .order("updated_at", { ascending: false });
@@ -76,7 +76,10 @@ export async function GET() {
     genres: string[] | null;
     work_kind: string | null;
     is_explicit: boolean | null;
-    is_ai: boolean | null;
+    is_ai_lyrics: boolean | null;
+    is_ai_music: boolean | null;
+    lyrics_author: string | null;
+    music_author: string | null;
     language: string | null;
   };
   type Row = {

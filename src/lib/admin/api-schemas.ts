@@ -40,6 +40,8 @@ export const adminUserRolesPatchSchema = z
     codes: z.array(uiRoleEnum),
     /** Required when `artist` is in codes: one or more speu.artists.id bound via artists.user_id */
     linkedArtistIds: z.array(z.string().uuid()).optional().nullable(),
+    /** Per linked artist: allow editing public card from artist cabinet (speu.artists.linked_user_can_edit_profile). Default true if key omitted. */
+    linkedArtistCanEditProfile: z.record(z.string().uuid(), z.boolean()).optional().nullable(),
   })
   .superRefine((data, ctx) => {
     if (data.codes.includes("artist")) {

@@ -94,8 +94,11 @@ export default function ArtistSubmissionPage() {
         genres: t.genres ?? [],
         work_kind: t.work_kind,
         is_explicit: t.is_explicit,
-        is_ai: t.is_ai,
+        is_ai_lyrics: t.is_ai_lyrics,
+        is_ai_music: t.is_ai_music,
         language: t.language,
+        music_author: t.music_author,
+        lyrics_author: t.lyrics_author,
       })),
     });
   }, [submission, editable, releaseKind, title, tracks, acceptedTerms, confirmedRights]);
@@ -141,7 +144,7 @@ export default function ArtistSubmissionPage() {
       .schema("speu")
       .from("release_submission_tracks")
       .select(
-        "id, submission_id, sort_order, title, audio_url, audio_storage_path, cover_url, cover_storage_path, duration_sec, notes, lyrics, artist_track_id, genres, work_kind, is_explicit, is_ai, language, created_at, updated_at",
+        "id, submission_id, sort_order, title, audio_url, audio_storage_path, cover_url, cover_storage_path, duration_sec, notes, lyrics, artist_track_id, genres, work_kind, is_explicit, is_ai_lyrics, is_ai_music, lyrics_author, music_author, language, created_at, updated_at",
       )
       .eq("submission_id", submissionId)
       .order("sort_order", { ascending: true });
@@ -216,7 +219,10 @@ export default function ArtistSubmissionPage() {
             genres: t.genres ?? [],
             work_kind: t.work_kind,
             is_explicit: t.is_explicit,
-            is_ai: t.is_ai,
+            is_ai_lyrics: t.language === "instrumental" ? false : t.is_ai_lyrics,
+            is_ai_music: t.is_ai_music,
+            lyrics_author: t.language === "instrumental" ? null : t.lyrics_author?.trim() || null,
+            music_author: t.music_author?.trim() || null,
             language: t.language,
           })
           .eq("id", t.id);
@@ -360,7 +366,7 @@ export default function ArtistSubmissionPage() {
       .from("release_submission_tracks")
       .insert({ submission_id: submission.id, sort_order: nextOrder, title: "" })
       .select(
-        "id, submission_id, sort_order, title, audio_url, audio_storage_path, cover_url, cover_storage_path, duration_sec, notes, lyrics, artist_track_id, genres, work_kind, is_explicit, is_ai, language, created_at, updated_at",
+        "id, submission_id, sort_order, title, audio_url, audio_storage_path, cover_url, cover_storage_path, duration_sec, notes, lyrics, artist_track_id, genres, work_kind, is_explicit, is_ai_lyrics, is_ai_music, lyrics_author, music_author, language, created_at, updated_at",
       )
       .single();
     if (insErr || !data) {
@@ -396,8 +402,11 @@ export default function ArtistSubmissionPage() {
         genres: t.genres ?? [],
         work_kind: t.work_kind,
         is_explicit: t.is_explicit,
-        is_ai: t.is_ai,
+        is_ai_lyrics: t.is_ai_lyrics,
+        is_ai_music: t.is_ai_music,
         language: t.language,
+        music_author: t.music_author,
+        lyrics_author: t.lyrics_author,
       })),
     });
     if (msg) {
@@ -704,17 +713,6 @@ export default function ArtistSubmissionPage() {
                   )}
                 </div>
                 <div>
-                  <label className="block text-xs text-muted-foreground mb-1">Тэкст песні (неабавязкова)</label>
-                  <textarea
-                    value={t.lyrics ?? ""}
-                    onChange={(e) => updateTrackLocal(t.id, { lyrics: e.target.value })}
-                    disabled={!editable}
-                    rows={4}
-                    className="w-full px-3 py-2 rounded-xl bg-muted/40 border border-border text-sm outline-none focus:border-primary/40 disabled:opacity-60 font-mono text-xs resize-y"
-                  />
-                </div>
-
-                <div>
                   <span className="block text-xs text-muted-foreground mb-2">Тып запісу</span>
                   <div className="flex flex-wrap gap-2">
                     {(["track", "beat", "podcast", "audiobook"] as const).map((k) => (
@@ -754,11 +752,15 @@ export default function ArtistSubmissionPage() {
                       type="checkbox"
                       checked={t.language === "instrumental"}
                       disabled={!editable}
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        const instrumental = e.target.checked;
                         updateTrackLocal(t.id, {
-                          language: (e.target.checked ? "instrumental" : "bel") as TrackVocalLanguage,
-                        })
-                      }
+                          language: (instrumental ? "instrumental" : "bel") as TrackVocalLanguage,
+                          ...(instrumental
+                            ? { lyrics_author: "", is_ai_lyrics: false }
+                            : {}),
+                        });
+                      }}
                       className="rounded border-border"
                     />
                     Інструментал (без вакалу)
@@ -786,6 +788,65 @@ export default function ArtistSubmissionPage() {
                   ) : null}
                 </div>
 
+                <div>
+                  <label className="block text-xs text-muted-foreground mb-1">
+                    Аўтар музыкі <span className="text-muted-foreground/80">(абавязкова)</span>
+                  </label>
+                  <input
+                    value={t.music_author ?? ""}
+                    onChange={(e) => updateTrackLocal(t.id, { music_author: e.target.value })}
+                    disabled={!editable}
+                    placeholder="Поўнае імя або псеўданім"
+                    className="w-full min-h-10 px-3 py-2 rounded-xl bg-muted/40 border border-border text-sm outline-none focus-visible:border-primary/40 disabled:opacity-60"
+                  />
+                  <label className="mt-2 inline-flex items-center gap-2 text-xs text-foreground cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={t.is_ai_music}
+                      disabled={!editable}
+                      onChange={(e) => updateTrackLocal(t.id, { is_ai_music: e.target.checked })}
+                      className="rounded border-border"
+                    />
+                    ІІ удзельнічаў у музыцы / аранжыроўцы
+                  </label>
+                </div>
+
+                <div>
+                  <label className="block text-xs text-muted-foreground mb-1">Тэкст песні (неабавязкова)</label>
+                  <textarea
+                    value={t.lyrics ?? ""}
+                    onChange={(e) => updateTrackLocal(t.id, { lyrics: e.target.value })}
+                    disabled={!editable}
+                    rows={4}
+                    className="w-full px-3 py-2 rounded-xl bg-muted/40 border border-border text-sm outline-none focus:border-primary/40 disabled:opacity-60 font-mono text-xs resize-y"
+                  />
+                </div>
+
+                {t.language !== "instrumental" ? (
+                  <div>
+                    <label className="block text-xs text-muted-foreground mb-1">
+                      Аўтар слоў <span className="text-muted-foreground/80">(абавязкова, калі ёсць вакал)</span>
+                    </label>
+                    <input
+                      value={t.lyrics_author ?? ""}
+                      onChange={(e) => updateTrackLocal(t.id, { lyrics_author: e.target.value })}
+                      disabled={!editable}
+                      placeholder="Поўнае імя або псеўданім"
+                      className="w-full min-h-10 px-3 py-2 rounded-xl bg-muted/40 border border-border text-sm outline-none focus-visible:border-primary/40 disabled:opacity-60"
+                    />
+                    <label className="mt-2 inline-flex items-center gap-2 text-xs text-foreground cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={t.is_ai_lyrics}
+                        disabled={!editable}
+                        onChange={(e) => updateTrackLocal(t.id, { is_ai_lyrics: e.target.checked })}
+                        className="rounded border-border"
+                      />
+                      ІІ удзельнічаў у тэксце / словах
+                    </label>
+                  </div>
+                ) : null}
+
                 <div className="flex flex-col gap-2">
                   <label className="inline-flex items-center gap-2 text-xs text-foreground cursor-pointer select-none">
                     <input
@@ -796,16 +857,6 @@ export default function ArtistSubmissionPage() {
                       className="rounded border-border"
                     />
                     18+ / ненарматыўная лексіка
-                  </label>
-                  <label className="inline-flex items-center gap-2 text-xs text-foreground cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={t.is_ai}
-                      disabled={!editable}
-                      onChange={(e) => updateTrackLocal(t.id, { is_ai: e.target.checked })}
-                      className="rounded border-border"
-                    />
-                    Удзел штучнага інтэлекту (ІІ) у стварэнні гуку / аранжыроўкі / вакалу
                   </label>
                 </div>
 

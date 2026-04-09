@@ -31,7 +31,11 @@ export type SpeuPublicTrack = {
   genres: string[];
   workKind: SpeuTrackWorkKind;
   isExplicit: boolean;
-  isAi: boolean;
+  isAiLyrics: boolean;
+  isAiMusic: boolean;
+  /** Аўтар слоў (null калі інструментал або не ўказана) */
+  lyricsAuthor: string | null;
+  musicAuthor: string | null;
   vocalLanguage: SpeuTrackVocalLanguage;
   /** Агульныя лайкі (калі падгружана з БД) */
   likeCount?: number;

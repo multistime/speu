@@ -105,9 +105,10 @@ function SpeuTrackRowMobileMenu({ track }: { track: SpeuPublicTrack }) {
 }
 
 function SpeuTrackPublicMeta({ track }: { track: SpeuPublicTrack }) {
-  const { genres, workKind, isExplicit, isAi } = track;
+  const { genres, workKind, isExplicit, isAiLyrics, isAiMusic, vocalLanguage } = track;
   const showKind = workKind !== "track";
-  if (!isExplicit && !isAi && !showKind && genres.length === 0) return null;
+  const showAiLyrics = vocalLanguage !== "instrumental" && isAiLyrics;
+  if (!isExplicit && !isAiMusic && !showAiLyrics && !showKind && genres.length === 0) return null;
   return (
     <div className="mt-1 flex flex-wrap gap-1 max-w-full">
       {showKind ? (
@@ -120,9 +121,14 @@ function SpeuTrackPublicMeta({ track }: { track: SpeuPublicTrack }) {
           18+
         </span>
       ) : null}
-      {isAi ? (
+      {isAiMusic ? (
         <span className="rounded border border-violet-500/25 bg-violet-500/10 px-1 py-px text-[10px] text-violet-700 dark:text-violet-300">
-          ІІ
+          ІІ·м
+        </span>
+      ) : null}
+      {showAiLyrics ? (
+        <span className="rounded border border-violet-500/25 bg-violet-500/10 px-1 py-px text-[10px] text-violet-700 dark:text-violet-300">
+          ІІ·с
         </span>
       ) : null}
       {genres.slice(0, 3).map((g) => (

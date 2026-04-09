@@ -1,6 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export type SpeuLinkedArtist = { id: string; name: string; slug: string };
+export type SpeuLinkedArtist = {
+  id: string;
+  name: string;
+  slug: string;
+  /** false — лэйбл адключыў рэдагаванне публічнай картачкі з кабінета */
+  can_edit_profile?: boolean;
+};
 
 export type SpeuProfile = {
   id: string;

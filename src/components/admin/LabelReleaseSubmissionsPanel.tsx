@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { Trash2 } from "lucide-react";
+import { ChevronDown, Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { formatTrackDuration } from "@/components/speu/speu-format-duration";
 import { getGenreLabelBe } from "@/lib/speu/genre-taxonomy";
 import {
@@ -57,7 +58,10 @@ type ReleaseSubmissionAdminItem = {
     genres: string[] | null;
     work_kind: string | null;
     is_explicit: boolean | null;
-    is_ai: boolean | null;
+    is_ai_lyrics: boolean | null;
+    is_ai_music: boolean | null;
+    lyrics_author: string | null;
+    music_author: string | null;
     language: string | null;
   }>;
 };
@@ -134,7 +138,10 @@ export function LabelReleaseSubmissionsPanel() {
         genres: t.genres ?? null,
         work_kind: t.work_kind ?? null,
         is_explicit: t.is_explicit ?? null,
-        is_ai: t.is_ai ?? null,
+        is_ai_lyrics: t.is_ai_lyrics ?? null,
+        is_ai_music: t.is_ai_music ?? null,
+        lyrics_author: t.lyrics_author ?? null,
+        music_author: t.music_author ?? null,
         language: t.language ?? null,
       })),
     }));
@@ -164,6 +171,26 @@ export function LabelReleaseSubmissionsPanel() {
       return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
     });
   }, [items, queueView]);
+
+  /** Compact header only; details (вокладкі, трэкі, каментар) — пасля разгортання */
+  const [compactIds, setCompactIds] = useState<Set<string>>(() => new Set());
+
+  const toggleCompact = useCallback((id: string) => {
+    setCompactIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const collapseAllCompact = useCallback(() => {
+    setCompactIds(new Set(filteredItems.map((it) => it.id)));
+  }, [filteredItems]);
+
+  const expandAllCompact = useCallback(() => {
+    setCompactIds(new Set());
+  }, []);
 
   const changeStatus = async (id: string, status: ReleaseSubmissionStatus) => {
     const res = await fetch("/api/admin/release-submissions", {
@@ -241,6 +268,25 @@ export function LabelReleaseSubmissionsPanel() {
         </TabButton>
       </div>
 
+      {!loading && filteredItems.length > 1 ? (
+        <div className="flex flex-wrap gap-2 justify-end">
+          <button
+            type="button"
+            onClick={collapseAllCompact}
+            className="min-h-9 px-3 py-1.5 rounded-lg text-xs font-medium border border-border bg-muted/30 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          >
+            Згарнуць усе
+          </button>
+          <button
+            type="button"
+            onClick={expandAllCompact}
+            className="min-h-9 px-3 py-1.5 rounded-lg text-xs font-medium border border-border bg-muted/30 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          >
+            Разгарнуць усе
+          </button>
+        </div>
+      ) : null}
+
       <div className="glass rounded-2xl border border-border p-6">
         {loading ? (
           <p className="text-sm text-muted-foreground">Загружаецца…</p>
@@ -254,10 +300,105 @@ export function LabelReleaseSubmissionsPanel() {
           <div className="space-y-6">
             {filteredItems.map((item) => {
               const listPreviewSrc = item.cover_url?.trim() || firstSortedTrackCoverUrl(item);
+              const compact = compactIds.has(item.id);
               return (
-                <div key={item.id} className="rounded-xl border border-border p-4 sm:p-5 space-y-4">
-                  <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
-                    <div className="flex flex-wrap items-start gap-4 shrink-0">
+                <div key={item.id} className="rounded-xl border border-border overflow-hidden">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-muted/10 border-b border-border">
+                    <button
+                      type="button"
+                      onClick={() => toggleCompact(item.id)}
+                      aria-expanded={!compact}
+                      aria-label={compact ? "Разгарнуць картку" : "Згарнуць кампактна"}
+                      className="shrink-0 min-h-9 min-w-9 flex items-center justify-center rounded-md border border-border bg-background/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                    >
+                      <ChevronDown
+                        className={cn("h-4 w-4 transition-transform duration-200", compact && "-rotate-90")}
+                        strokeWidth={2}
+                      />
+                    </button>
+                    {listPreviewSrc ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={listPreviewSrc}
+                        alt=""
+                        className="w-10 h-10 rounded-lg object-cover border border-border shrink-0 aspect-square"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-lg bg-muted border border-border shrink-0" />
+                    )}
+                    <div className="min-w-0 flex-1 basis-[12rem]">
+                      <p className="text-sm font-medium text-foreground truncate">{item.title || "Без назвы"}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {RELEASE_KIND_LABELS[item.release_kind]} ·{" "}
+                        {item.artist ? (
+                          <Link
+                            href={`/speu/artists/${item.artist.slug}`}
+                            className="text-primary hover:underline"
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            {item.artist.name}
+                          </Link>
+                        ) : (
+                          "—"
+                        )}
+                        {" · "}
+                        <span className="font-mono text-foreground/80">{formatDateTime(item.updated_at)}</span>
+                        {item.archived_at ? (
+                          <>
+                            {" "}
+                            · у архіве з <span className="font-mono">{formatDateTime(item.archived_at)}</span>
+                          </>
+                        ) : null}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 shrink-0">
+                      <select
+                        value={item.status}
+                        onChange={(e) => void changeStatus(item.id, e.target.value as ReleaseSubmissionStatus)}
+                        className="min-h-9 px-2 py-1.5 rounded-md bg-muted border border-border text-xs min-w-[10rem] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                      >
+                        {releaseStatuses.map((status) => (
+                          <option key={status} value={status}>
+                            {RELEASE_STATUS_LABELS[status]}
+                          </option>
+                        ))}
+                      </select>
+                      {item.archived_at == null ? (
+                        <button
+                          type="button"
+                          disabled={archivingId === item.id}
+                          onClick={() => void setArchived(item.id, true)}
+                          className="min-h-9 px-2.5 py-1.5 rounded-md border border-border text-xs hover:bg-muted disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                        >
+                          {archivingId === item.id ? "…" : "У архів"}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={archivingId === item.id}
+                          onClick={() => void setArchived(item.id, false)}
+                          className="min-h-9 px-2.5 py-1.5 rounded-md border border-border text-xs hover:bg-muted disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                        >
+                          {archivingId === item.id ? "…" : "Вярнуць"}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        disabled={deletingId === item.id}
+                        onClick={() => void deleteSubmission(item.id)}
+                        className="inline-flex items-center gap-1 min-h-9 px-2.5 py-1.5 rounded-md border border-destructive/40 text-destructive text-xs hover:bg-destructive/10 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Выдаліць
+                      </button>
+                    </div>
+                  </div>
+
+                  {!compact ? (
+                    <div className="p-4 sm:p-5 space-y-4">
+                      <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
+                        <div className="flex flex-wrap items-start gap-4 shrink-0">
                       <div className="space-y-1">
                         <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Вокладка рэлізу</p>
                         {item.cover_url ? (
@@ -298,79 +439,6 @@ export function LabelReleaseSubmissionsPanel() {
                         </div>
                       ) : null}
                     </div>
-
-                    <div className="flex-1 min-w-0 space-y-2">
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="text-base font-medium text-foreground">{item.title || "Без назвы"}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {RELEASE_KIND_LABELS[item.release_kind]} ·{" "}
-                            {item.artist ? (
-                              <Link
-                                href={`/speu/artists/${item.artist.slug}`}
-                                className="text-primary hover:underline"
-                                target="_blank"
-                                rel="noreferrer"
-                              >
-                                {item.artist.name}
-                              </Link>
-                            ) : (
-                              "—"
-                            )}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Абноўлена:{" "}
-                            <span className="font-mono text-foreground/80">{formatDateTime(item.updated_at)}</span>
-                            {item.archived_at ? (
-                              <>
-                                {" "}
-                                · у архіве з{" "}
-                                <span className="font-mono">{formatDateTime(item.archived_at)}</span>
-                              </>
-                            ) : null}
-                          </p>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2 shrink-0">
-                          <select
-                            value={item.status}
-                            onChange={(e) => void changeStatus(item.id, e.target.value as ReleaseSubmissionStatus)}
-                            className="min-h-9 px-2 py-1.5 rounded-md bg-muted border border-border text-xs min-w-[10rem] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                          >
-                            {releaseStatuses.map((status) => (
-                              <option key={status} value={status}>
-                                {RELEASE_STATUS_LABELS[status]}
-                              </option>
-                            ))}
-                          </select>
-                          {item.archived_at == null ? (
-                            <button
-                              type="button"
-                              disabled={archivingId === item.id}
-                              onClick={() => void setArchived(item.id, true)}
-                              className="min-h-9 px-2.5 py-1.5 rounded-md border border-border text-xs hover:bg-muted disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                            >
-                              {archivingId === item.id ? "…" : "У архів"}
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              disabled={archivingId === item.id}
-                              onClick={() => void setArchived(item.id, false)}
-                              className="min-h-9 px-2.5 py-1.5 rounded-md border border-border text-xs hover:bg-muted disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                            >
-                              {archivingId === item.id ? "…" : "Вярнуць"}
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            disabled={deletingId === item.id}
-                            onClick={() => void deleteSubmission(item.id)}
-                            className="inline-flex items-center gap-1 min-h-9 px-2.5 py-1.5 rounded-md border border-destructive/40 text-destructive text-xs hover:bg-destructive/10 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            Выдаліць
-                          </button>
-                        </div>
                       </div>
 
                       {listPreviewSrc ? (
@@ -388,8 +456,6 @@ export function LabelReleaseSubmissionsPanel() {
                           </p>
                         </div>
                       ) : null}
-                    </div>
-                  </div>
 
                   <div className="text-xs border-t border-border pt-3 text-muted-foreground space-y-1">
                     <p>
@@ -466,9 +532,14 @@ export function LabelReleaseSubmissionsPanel() {
                                     18+
                                   </span>
                                 ) : null}
-                                {t.is_ai ? (
+                                {t.is_ai_music ? (
                                   <span className="rounded-md border border-violet-500/30 bg-violet-500/10 px-1.5 py-0.5 text-violet-800 dark:text-violet-200">
-                                    ІІ
+                                    ІІ музыка
+                                  </span>
+                                ) : null}
+                                {t.language !== "instrumental" && t.is_ai_lyrics ? (
+                                  <span className="rounded-md border border-violet-500/30 bg-violet-500/10 px-1.5 py-0.5 text-violet-800 dark:text-violet-200">
+                                    ІІ словы
                                   </span>
                                 ) : null}
                                 {t.language &&
@@ -489,6 +560,16 @@ export function LabelReleaseSubmissionsPanel() {
                                   </span>
                                 ))}
                               </div>
+                              <p className="text-[11px] text-muted-foreground leading-snug">
+                                <span className="text-foreground/80">Музыка:</span> {t.music_author?.trim() || "—"}
+                                {t.language !== "instrumental" ? (
+                                  <>
+                                    {" "}
+                                    · <span className="text-foreground/80">Словы:</span>{" "}
+                                    {t.lyrics_author?.trim() || "—"}
+                                  </>
+                                ) : null}
+                              </p>
                               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                                 {t.duration_sec != null && t.duration_sec > 0 ? (
                                   <span className="font-mono tabular-nums">{formatTrackDuration(t.duration_sec)}</span>
@@ -542,6 +623,8 @@ export function LabelReleaseSubmissionsPanel() {
                       {savingId === item.id ? "Захаванне…" : "Захаваць каментар"}
                     </button>
                   </div>
+                    </div>
+                  ) : null}
                 </div>
               );
             })}

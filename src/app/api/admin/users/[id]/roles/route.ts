@@ -147,10 +147,11 @@ export async function PATCH(
           { status: 409 }
         );
       }
+      const canEdit = parsed.data.linkedArtistCanEditProfile?.[aid] ?? true;
       const { error: linkErr } = await adminDb
         .schema("speu")
         .from("artists")
-        .update({ user_id: targetId })
+        .update({ user_id: targetId, linked_user_can_edit_profile: canEdit })
         .eq("id", aid);
       if (linkErr) {
         return NextResponse.json({ error: "update_failed", details: linkErr.message }, { status: 500 });
@@ -161,6 +162,7 @@ export async function PATCH(
   await writeAdminAuditLog(adminDb, user.id, "user.roles_set", "auth.users", targetId, {
     codes,
     linkedArtistIds: parsed.data.linkedArtistIds ?? null,
+    linkedArtistCanEditProfile: parsed.data.linkedArtistCanEditProfile ?? null,
   });
 
   return NextResponse.json({ ok: true, codes });

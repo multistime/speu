@@ -53,7 +53,7 @@ export type AdminUserListItem = {
   /** Subset managed in admin UI */
   product_role_codes: AdminUiRoleCode[];
   /** Label artist cards linked to this user (speu.artists.user_id) */
-  linked_artists: { id: string; name: string; slug: string }[];
+  linked_artists: { id: string; name: string; slug: string; can_edit_profile: boolean }[];
 };
 
 export async function GET(request: Request) {
@@ -137,15 +137,28 @@ export async function GET(request: Request) {
       ? await adminDb
           .schema("speu")
           .from("artists")
-          .select("id, name, slug, user_id")
+          .select("id, name, slug, user_id, linked_user_can_edit_profile")
           .in("user_id", ids)
-      : { data: [] as { id: string; name: string; slug: string; user_id: string }[] };
+      : {
+          data: [] as {
+            id: string;
+            name: string;
+            slug: string;
+            user_id: string;
+            linked_user_can_edit_profile: boolean | null;
+          }[],
+        };
 
-  const linkedByUserId = new Map<string, { id: string; name: string; slug: string }[]>();
+  const linkedByUserId = new Map<string, { id: string; name: string; slug: string; can_edit_profile: boolean }[]>();
   for (const a of linkedRows ?? []) {
     const uid = a.user_id as string;
     const arr = linkedByUserId.get(uid) ?? [];
-    arr.push({ id: a.id, name: a.name, slug: a.slug });
+    arr.push({
+      id: a.id,
+      name: a.name,
+      slug: a.slug,
+      can_edit_profile: a.linked_user_can_edit_profile !== false,
+    });
     linkedByUserId.set(uid, arr);
   }
 

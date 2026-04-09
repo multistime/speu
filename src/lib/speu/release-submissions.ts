@@ -83,8 +83,13 @@ export type ReleaseSubmissionTrackRow = {
   genres: string[];
   work_kind: WorkKind;
   is_explicit: boolean;
-  is_ai: boolean;
+  is_ai_lyrics: boolean;
+  is_ai_music: boolean;
   language: TrackVocalLanguage;
+  /** Поўнае імя аўтара музыкі (абавязкова перад адпраўкай). */
+  music_author: string | null;
+  /** Аўтар слоў — толькі калі не інструментал; абавязкова перад адпраўкай. */
+  lyrics_author: string | null;
   /** Set after moderator approval — catalog `artist_tracks.id` (unpublished draft). */
   artist_track_id: string | null;
   created_at: string;
@@ -147,8 +152,11 @@ export function normalizeReleaseSubmissionTrackRow(
     genres,
     work_kind: wk,
     is_explicit: Boolean(raw.is_explicit),
-    is_ai: Boolean(raw.is_ai),
+    is_ai_lyrics: Boolean(raw.is_ai_lyrics),
+    is_ai_music: Boolean(raw.is_ai_music),
     language: lang,
+    music_author: typeof raw.music_author === "string" ? raw.music_author : null,
+    lyrics_author: typeof raw.lyrics_author === "string" ? raw.lyrics_author : null,
     artist_track_id: typeof raw.artist_track_id === "string" ? raw.artist_track_id : null,
     created_at: typeof raw.created_at === "string" ? raw.created_at : "",
     updated_at: typeof raw.updated_at === "string" ? raw.updated_at : "",
@@ -184,8 +192,11 @@ export type ReleaseSubmissionSubmitCheckTrack = {
   genres: string[];
   work_kind: WorkKind;
   is_explicit: boolean;
-  is_ai: boolean;
+  is_ai_lyrics: boolean;
+  is_ai_music: boolean;
   language: TrackVocalLanguage;
+  music_author: string | null;
+  lyrics_author: string | null;
 };
 
 export type ReleaseSubmissionSubmitCheckInput = {
@@ -244,6 +255,14 @@ export function getReleaseSubmissionSubmitError(input: ReleaseSubmissionSubmitCh
       t.language !== "instrumental"
     ) {
       return `Трэк ${i + 1}: абярыце мову вакалу або інструментал.`;
+    }
+    if (!t.music_author?.trim()) {
+      return `Трэк ${i + 1}: укажыце аўтара музыкі.`;
+    }
+    if (t.language !== "instrumental") {
+      if (!t.lyrics_author?.trim()) {
+        return `Трэк ${i + 1}: укажыце аўтара слоў (або пазначце інструментал).`;
+      }
     }
   }
   return null;

@@ -17,7 +17,10 @@ type SubmissionTrackRow = {
   genres: string[] | null;
   work_kind: string | null;
   is_explicit: boolean | null;
-  is_ai: boolean | null;
+  is_ai_lyrics: boolean | null;
+  is_ai_music: boolean | null;
+  lyrics_author: string | null;
+  music_author: string | null;
   language: string | null;
 };
 
@@ -63,7 +66,10 @@ export async function promoteApprovedReleaseSubmission(
         genres,
         work_kind,
         is_explicit,
-        is_ai,
+        is_ai_lyrics,
+        is_ai_music,
+        lyrics_author,
+        music_author,
         language
       )
     `
@@ -121,6 +127,9 @@ export async function promoteApprovedReleaseSubmission(
         ? st.work_kind
         : "track";
     const genres = Array.isArray(st.genres) ? st.genres.filter((g): g is string => typeof g === "string") : [];
+    const musicAuthor = st.music_author?.trim() || null;
+    const lyricsAuthor =
+      lang === "instrumental" ? null : st.lyrics_author?.trim() || null;
 
     const { data: inserted, error: insErr } = await adminDb
       .schema("speu")
@@ -140,7 +149,10 @@ export async function promoteApprovedReleaseSubmission(
         play_on_radio: false,
         lyrics: st.lyrics?.trim() || null,
         is_explicit: st.is_explicit === true,
-        is_ai: st.is_ai === true,
+        is_ai_lyrics: lang !== "instrumental" && st.is_ai_lyrics === true,
+        is_ai_music: st.is_ai_music === true,
+        lyrics_author: lyricsAuthor,
+        music_author: musicAuthor,
         language: lang,
         genres,
         work_kind: wk,
