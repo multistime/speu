@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { ChevronDown, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -174,6 +174,27 @@ export function LabelReleaseSubmissionsPanel() {
 
   /** Compact header only; details (вокладкі, трэкі, каментар) — пасля разгортання */
   const [compactIds, setCompactIds] = useState<Set<string>>(() => new Set());
+  const compactSeenIdsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    const ids = new Set(items.map((it) => it.id));
+    setCompactIds((prev) => {
+      const next = new Set(prev);
+      for (const id of ids) {
+        if (!compactSeenIdsRef.current.has(id)) {
+          compactSeenIdsRef.current.add(id);
+          next.add(id);
+        }
+      }
+      for (const id of [...next]) {
+        if (!ids.has(id)) {
+          next.delete(id);
+          compactSeenIdsRef.current.delete(id);
+        }
+      }
+      return next;
+    });
+  }, [items]);
 
   const toggleCompact = useCallback((id: string) => {
     setCompactIds((prev) => {
@@ -387,10 +408,11 @@ export function LabelReleaseSubmissionsPanel() {
                         type="button"
                         disabled={deletingId === item.id}
                         onClick={() => void deleteSubmission(item.id)}
-                        className="inline-flex items-center gap-1 min-h-9 px-2.5 py-1.5 rounded-md border border-destructive/40 text-destructive text-xs hover:bg-destructive/10 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                        title="Выдаліць заяўку"
+                        aria-label="Выдаліць заяўку"
+                        className="inline-flex items-center justify-center min-h-9 min-w-9 shrink-0 rounded-md border border-destructive/40 text-destructive hover:bg-destructive/10 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        Выдаліць
+                        <Trash2 className="w-3.5 h-3.5" strokeWidth={2} />
                       </button>
                     </div>
                   </div>

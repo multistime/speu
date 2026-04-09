@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronDown, Disc3, Loader2, Plus } from "lucide-react";
@@ -184,8 +184,9 @@ export default function ArtistApplicationsPageClient({ artistId }: { artistId: s
   const [error, setError] = useState<string | null>(null);
   const [allowed, setAllowed] = useState(false);
   const [items, setItems] = useState<ApplicationListRow[]>([]);
-  /** IDs shown in compact (one-line) mode */
+  /** IDs shown in compact (one-line) mode; new rows default to compact until expanded */
   const [compactIds, setCompactIds] = useState<Set<string>>(() => new Set());
+  const compactSeenIdsRef = useRef<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     setError(null);
@@ -224,6 +225,31 @@ export default function ArtistApplicationsPageClient({ artistId }: { artistId: s
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    compactSeenIdsRef.current = new Set();
+    setCompactIds(new Set());
+  }, [artistId]);
+
+  useEffect(() => {
+    const ids = new Set(items.map((r) => r.id));
+    setCompactIds((prev) => {
+      const next = new Set(prev);
+      for (const id of ids) {
+        if (!compactSeenIdsRef.current.has(id)) {
+          compactSeenIdsRef.current.add(id);
+          next.add(id);
+        }
+      }
+      for (const id of [...next]) {
+        if (!ids.has(id)) {
+          next.delete(id);
+          compactSeenIdsRef.current.delete(id);
+        }
+      }
+      return next;
+    });
+  }, [items]);
 
   const sectionsWithItems = useMemo(() => {
     return SECTIONS.map((sec) => ({

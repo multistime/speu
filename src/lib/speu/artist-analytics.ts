@@ -35,16 +35,42 @@ export type LabelCatalogSnapshot = {
   releases_in_moderation: number;
 };
 
+/** Топ артыстаў па сесіях за перыяд (агляд лэйбла). */
+export type ArtistListenLeaderboardRow = {
+  id: string;
+  name: string;
+  period_sessions: number;
+};
+
 export type ArtistListenDashboardOk = {
   ok: true;
   period_days: number;
+  /** Калі зададзена ў RPC label — вузкі фільтр па артысту. */
+  filter_artist_id?: string | null;
   range: { start: string; end: string };
   prev_range: { start: string; end: string };
   summary: ArtistListenSummary;
   daily: ArtistListenDailyPoint[];
   tracks: ArtistListenTrackRow[];
   catalog?: LabelCatalogSnapshot;
+  artists?: ArtistListenLeaderboardRow[];
 };
+
+export type TrackListenDashboardOk = {
+  ok: true;
+  period_days: number;
+  range: { start: string; end: string };
+  prev_range: { start: string; end: string };
+  daily: ArtistListenDailyPoint[];
+  track: { id: string; title: string };
+};
+
+export type TrackListenDashboardErr = {
+  ok: false;
+  error: string;
+};
+
+export type TrackListenDashboard = TrackListenDashboardOk | TrackListenDashboardErr;
 
 export type ArtistListenDashboardErr = {
   ok: false;
@@ -79,9 +105,28 @@ export function parseArtistListenDashboard(raw: unknown): ArtistListenDashboard 
     };
   }
 
+  let filter_artist_id: string | null | undefined;
+  if ("filter_artist_id" in o) {
+    const v = o.filter_artist_id;
+    filter_artist_id = v == null || v === "" ? null : String(v);
+  }
+
+  let artists: ArtistListenLeaderboardRow[] | undefined;
+  if (Array.isArray(o.artists)) {
+    artists = o.artists.map((row) => {
+      const r = row as Record<string, unknown>;
+      return {
+        id: String(r.id ?? ""),
+        name: String(r.name ?? ""),
+        period_sessions: num(r.period_sessions),
+      };
+    });
+  }
+
   return {
     ok: true,
     period_days: num(o.period_days) || 28,
+    ...(filter_artist_id !== undefined ? { filter_artist_id } : {}),
     range: {
       start: typeof o.range === "object" && o.range && "start" in (o.range as object)
         ? String((o.range as { start: unknown }).start)
@@ -136,6 +181,61 @@ export function parseArtistListenDashboard(raw: unknown): ArtistListenDashboard 
         })
       : [],
     catalog,
+    ...(artists !== undefined ? { artists } : {}),
+  };
+}
+
+export function parseTrackListenDashboard(raw: unknown): TrackListenDashboard | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  if (o.ok !== true) {
+    if (o.ok === false && typeof o.error === "string") {
+      return { ok: false, error: o.error };
+    }
+    return null;
+  }
+  const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
+  const tr = o.track;
+  if (!tr || typeof tr !== "object") return null;
+  const t = tr as Record<string, unknown>;
+
+  return {
+    ok: true,
+    period_days: num(o.period_days) || 28,
+    range: {
+      start:
+        typeof o.range === "object" && o.range && "start" in (o.range as object)
+          ? String((o.range as { start: unknown }).start)
+          : "",
+      end:
+        typeof o.range === "object" && o.range && "end" in (o.range as object)
+          ? String((o.range as { end: unknown }).end)
+          : "",
+    },
+    prev_range: {
+      start:
+        typeof o.prev_range === "object" && o.prev_range && "start" in (o.prev_range as object)
+          ? String((o.prev_range as { start: unknown }).start)
+          : "",
+      end:
+        typeof o.prev_range === "object" && o.prev_range && "end" in (o.prev_range as object)
+          ? String((o.prev_range as { end: unknown }).end)
+          : "",
+    },
+    daily: Array.isArray(o.daily)
+      ? o.daily.map((row) => {
+          const r = row as Record<string, unknown>;
+          return {
+            d: String(r.d ?? ""),
+            full: num(r.full),
+            partial: num(r.partial),
+          };
+        })
+      : [],
+    track: {
+      id: String(t.id ?? ""),
+      title: String(t.title ?? ""),
+    },
   };
 }
 
