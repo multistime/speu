@@ -10,6 +10,13 @@ import { SpeuTrackRow } from "@/components/speu/SpeuTrackRow";
 import { TrackLikeButton } from "@/components/speu/TrackLikeButton";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { speuPublicTrackToPlayerTrack } from "@/lib/speu/player-map";
+import { getGenreLabelBe } from "@/lib/speu/genre-taxonomy";
+import {
+  TRACK_VOCAL_LANGUAGE_LABELS,
+  WORK_KIND_LABELS,
+  type TrackVocalLanguage,
+  type WorkKind,
+} from "@/lib/speu/release-submissions";
 import type { SpeuTrackPageData } from "@/lib/speu/types";
 import { cn } from "@/lib/utils";
 
@@ -203,6 +210,35 @@ export function SpeuTrackPageView({ data }: { data: SpeuTrackPageData }) {
                   className="size-11 !min-h-11 !min-w-11 !max-h-11 !max-w-11 !p-0"
                 />
               </div>
+            </div>
+
+            <div className="mt-3 flex flex-wrap gap-2">
+              {track.workKind !== "track" ? (
+                <span className="rounded-full border border-border/70 bg-muted/50 px-2.5 py-0.5 text-xs text-muted-foreground">
+                  {WORK_KIND_LABELS[track.workKind as WorkKind]}
+                </span>
+              ) : null}
+              {track.isExplicit ? (
+                <span className="rounded-full border border-amber-500/35 bg-amber-500/10 px-2.5 py-0.5 text-xs text-amber-800 dark:text-amber-200">
+                  18+
+                </span>
+              ) : null}
+              {track.isAi ? (
+                <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-0.5 text-xs text-violet-800 dark:text-violet-200">
+                  ІІ
+                </span>
+              ) : null}
+              <span className="rounded-full border border-border/70 bg-muted/40 px-2.5 py-0.5 text-xs text-muted-foreground">
+                {TRACK_VOCAL_LANGUAGE_LABELS[track.vocalLanguage as TrackVocalLanguage]}
+              </span>
+              {track.genres.map((g) => (
+                <span
+                  key={g}
+                  className="rounded-full border border-primary/20 bg-primary/[0.07] px-2.5 py-0.5 text-xs text-foreground/85"
+                >
+                  {getGenreLabelBe(g)}
+                </span>
+              ))}
             </div>
 
             <div className="mt-5 flex flex-col gap-3 sm:mt-6">

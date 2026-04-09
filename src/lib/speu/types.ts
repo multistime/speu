@@ -8,6 +8,10 @@ export type SpeuCreditArtist = {
   photoUrl?: string | null;
 };
 
+export type SpeuTrackWorkKind = "track" | "beat" | "podcast" | "audiobook";
+
+export type SpeuTrackVocalLanguage = "bel" | "ru" | "en" | "instrumental";
+
 export type SpeuPublicTrack = {
   id: string;
   slug: string;
@@ -23,6 +27,12 @@ export type SpeuPublicTrack = {
   playOnRadio: boolean;
   sortOrder: number;
   createdAt: string;
+  /** Canonical genre codes (see `genre-taxonomy`) */
+  genres: string[];
+  workKind: SpeuTrackWorkKind;
+  isExplicit: boolean;
+  isAi: boolean;
+  vocalLanguage: SpeuTrackVocalLanguage;
   /** Агульныя лайкі (калі падгружана з БД) */
   likeCount?: number;
 };

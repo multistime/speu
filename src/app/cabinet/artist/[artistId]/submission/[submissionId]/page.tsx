@@ -8,14 +8,21 @@ import { createClient } from "@/lib/supabase/client";
 import { getSpeuProfile } from "@/lib/supabase/speu";
 import {
   RELEASE_KIND_LABELS,
+  RELEASE_SUBMISSION_TERMS_VERSION,
   RELEASE_STATUS_LABELS,
+  TRACK_VOCAL_LANGUAGE_LABELS,
+  WORK_KIND_LABELS,
   getReleaseSubmissionSubmitError,
+  normalizeReleaseSubmissionRow,
+  normalizeReleaseSubmissionTrackRow,
   submissionArtistCanDelete,
   submissionIsEditable,
   type ReleaseKind,
   type ReleaseSubmissionRow,
   type ReleaseSubmissionTrackRow,
+  type TrackVocalLanguage,
 } from "@/lib/speu/release-submissions";
+import { SubmissionGenrePicker } from "@/components/cabinet/SubmissionGenrePicker";
 import { getAudioDurationSecFromFile } from "@/lib/speu/audio-duration";
 import {
   SPEU_MP3_AUDIO_ACCEPT,
@@ -47,6 +54,8 @@ function storageUploadUserMessage(message: string, kind: "image" | "audio"): str
   return message;
 }
 
+const SPEU_TERMS_URL = "https://speu.by";
+
 export default function ArtistSubmissionPage() {
   const params = useParams();
   const artistId = typeof params.artistId === "string" ? params.artistId : "";
@@ -65,6 +74,8 @@ export default function ArtistSubmissionPage() {
   const [title, setTitle] = useState("");
   const [releaseKind, setReleaseKind] = useState<ReleaseKind>("single");
   const [artistNote, setArtistNote] = useState("");
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [confirmedRights, setConfirmedRights] = useState(false);
 
   const editable = submission ? submissionIsEditable(submission.status) : false;
 
@@ -74,13 +85,20 @@ export default function ArtistSubmissionPage() {
       release_kind: releaseKind,
       title,
       cover_url: submission.cover_url,
+      accepted_terms: acceptedTerms,
+      confirmed_rights: confirmedRights,
       tracks: tracks.map((t) => ({
         title: t.title,
         audio_url: t.audio_url,
         cover_url: t.cover_url ?? null,
+        genres: t.genres ?? [],
+        work_kind: t.work_kind,
+        is_explicit: t.is_explicit,
+        is_ai: t.is_ai,
+        language: t.language,
       })),
     });
-  }, [submission, editable, releaseKind, title, tracks]);
+  }, [submission, editable, releaseKind, title, tracks, acceptedTerms, confirmedRights]);
 
   const load = useCallback(async () => {
     if (!submissionId || !artistId) return;
@@ -100,7 +118,7 @@ export default function ArtistSubmissionPage() {
       .schema("speu")
       .from("release_submissions")
       .select(
-        "id, artist_id, user_id, release_kind, status, title, cover_url, cover_storage_path, artist_note, moderator_message, archived_at, created_at, updated_at",
+        "id, artist_id, user_id, release_kind, status, title, cover_url, cover_storage_path, artist_note, moderator_message, archived_at, accepted_terms, confirmed_rights, rights_attested_at, terms_version, created_at, updated_at",
       )
       .eq("id", submissionId)
       .maybeSingle();
@@ -111,20 +129,19 @@ export default function ArtistSubmissionPage() {
       return;
     }
 
-    const row = {
-      ...(sub as ReleaseSubmissionRow),
-      archived_at: (sub as { archived_at?: string | null }).archived_at ?? null,
-    };
+    const row = normalizeReleaseSubmissionRow(sub as Record<string, unknown>);
     setSubmission(row);
     setTitle(row.title ?? "");
     setReleaseKind(row.release_kind);
     setArtistNote(row.artist_note ?? "");
+    setAcceptedTerms(row.accepted_terms);
+    setConfirmedRights(row.confirmed_rights);
 
     const { data: tr, error: tErr } = await supabase
       .schema("speu")
       .from("release_submission_tracks")
       .select(
-        "id, submission_id, sort_order, title, audio_url, audio_storage_path, cover_url, cover_storage_path, duration_sec, notes, lyrics, artist_track_id, created_at, updated_at",
+        "id, submission_id, sort_order, title, audio_url, audio_storage_path, cover_url, cover_storage_path, duration_sec, notes, lyrics, artist_track_id, genres, work_kind, is_explicit, is_ai, language, created_at, updated_at",
       )
       .eq("submission_id", submissionId)
       .order("sort_order", { ascending: true });
@@ -133,13 +150,7 @@ export default function ArtistSubmissionPage() {
       setError(tErr.message);
       setTracks([]);
     } else {
-      setTracks(
-        (tr ?? []).map((t) => ({
-          ...(t as ReleaseSubmissionTrackRow),
-          cover_url: (t as { cover_url?: string | null }).cover_url ?? null,
-          cover_storage_path: (t as { cover_storage_path?: string | null }).cover_storage_path ?? null,
-        })),
-      );
+      setTracks((tr ?? []).map((t) => normalizeReleaseSubmissionTrackRow(t as Record<string, unknown>)));
     }
     setLoading(false);
   }, [artistId, submissionId, router, supabase]);
@@ -186,6 +197,8 @@ export default function ArtistSubmissionPage() {
         title: title.trim(),
         release_kind: releaseKind,
         artist_note: artistNote.trim() || null,
+        accepted_terms: acceptedTerms,
+        confirmed_rights: confirmedRights,
       });
       for (const t of trackRows) {
         const { error: e } = await supabase
@@ -200,6 +213,11 @@ export default function ArtistSubmissionPage() {
             cover_url: t.cover_url,
             cover_storage_path: t.cover_storage_path,
             duration_sec: t.duration_sec ?? null,
+            genres: t.genres ?? [],
+            work_kind: t.work_kind,
+            is_explicit: t.is_explicit,
+            is_ai: t.is_ai,
+            language: t.language,
           })
           .eq("id", t.id);
         if (e) throw new Error(e.message);
@@ -342,22 +360,15 @@ export default function ArtistSubmissionPage() {
       .from("release_submission_tracks")
       .insert({ submission_id: submission.id, sort_order: nextOrder, title: "" })
       .select(
-        "id, submission_id, sort_order, title, audio_url, audio_storage_path, cover_url, cover_storage_path, duration_sec, notes, lyrics, artist_track_id, created_at, updated_at",
+        "id, submission_id, sort_order, title, audio_url, audio_storage_path, cover_url, cover_storage_path, duration_sec, notes, lyrics, artist_track_id, genres, work_kind, is_explicit, is_ai, language, created_at, updated_at",
       )
       .single();
     if (insErr || !data) {
       setError(insErr?.message ?? "Не ўдалося дадаць трэк");
       return;
     }
-    const tr = data as ReleaseSubmissionTrackRow;
-    setTracks((prev) => [
-      ...prev,
-      {
-        ...tr,
-        cover_url: tr.cover_url ?? null,
-        cover_storage_path: tr.cover_storage_path ?? null,
-      },
-    ]);
+    const tr = normalizeReleaseSubmissionTrackRow(data as Record<string, unknown>);
+    setTracks((prev) => [...prev, tr]);
   };
 
   const removeTrack = async (trackId: string) => {
@@ -376,10 +387,17 @@ export default function ArtistSubmissionPage() {
       release_kind: releaseKind,
       title,
       cover_url: submission.cover_url,
+      accepted_terms: acceptedTerms,
+      confirmed_rights: confirmedRights,
       tracks: tracks.map((t) => ({
         title: t.title,
         audio_url: t.audio_url,
         cover_url: t.cover_url ?? null,
+        genres: t.genres ?? [],
+        work_kind: t.work_kind,
+        is_explicit: t.is_explicit,
+        is_ai: t.is_ai,
+        language: t.language,
       })),
     });
     if (msg) {
@@ -391,7 +409,13 @@ export default function ArtistSubmissionPage() {
     try {
       const saved = await saveAll();
       if (!saved) return;
-      await persistSubmission({ status: "submitted" });
+      await persistSubmission({
+        status: "submitted",
+        rights_attested_at: new Date().toISOString(),
+        terms_version: RELEASE_SUBMISSION_TERMS_VERSION,
+        accepted_terms: true,
+        confirmed_rights: true,
+      });
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Памылка адпраўкі");
@@ -689,6 +713,102 @@ export default function ArtistSubmissionPage() {
                     className="w-full px-3 py-2 rounded-xl bg-muted/40 border border-border text-sm outline-none focus:border-primary/40 disabled:opacity-60 font-mono text-xs resize-y"
                   />
                 </div>
+
+                <div>
+                  <span className="block text-xs text-muted-foreground mb-2">Тып запісу</span>
+                  <div className="flex flex-wrap gap-2">
+                    {(["track", "beat", "podcast", "audiobook"] as const).map((k) => (
+                      <button
+                        key={k}
+                        type="button"
+                        disabled={!editable}
+                        onClick={() => updateTrackLocal(t.id, { work_kind: k })}
+                        className={cn(
+                          "min-h-9 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                          t.work_kind === k
+                            ? "bg-primary/12 border-primary/35 text-primary"
+                            : "bg-muted/30 border-border text-muted-foreground hover:border-primary/20",
+                        )}
+                      >
+                        {WORK_KIND_LABELS[k]}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-1.5">
+                    Адрознівае песню, біт, падкаст або аўдыякнігу — для мадэрацыі і каталогу.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs text-muted-foreground mb-1.5">Жанры</label>
+                  <SubmissionGenrePicker
+                    value={t.genres ?? []}
+                    disabled={!editable}
+                    onChange={(genres) => updateTrackLocal(t.id, { genres })}
+                  />
+                </div>
+
+                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+                  <label className="inline-flex items-center gap-2 text-xs text-foreground cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={t.language === "instrumental"}
+                      disabled={!editable}
+                      onChange={(e) =>
+                        updateTrackLocal(t.id, {
+                          language: (e.target.checked ? "instrumental" : "bel") as TrackVocalLanguage,
+                        })
+                      }
+                      className="rounded border-border"
+                    />
+                    Інструментал (без вакалу)
+                  </label>
+                  {t.language !== "instrumental" ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs text-muted-foreground">Мова вакалу:</span>
+                      {(["bel", "ru", "en"] as const).map((lang) => (
+                        <button
+                          key={lang}
+                          type="button"
+                          disabled={!editable}
+                          onClick={() => updateTrackLocal(t.id, { language: lang })}
+                          className={cn(
+                            "min-h-8 px-2.5 py-1 rounded-md text-xs font-medium border transition-colors disabled:opacity-50",
+                            t.language === lang
+                              ? "bg-primary/12 border-primary/35 text-primary"
+                              : "bg-muted/30 border-border text-muted-foreground hover:border-primary/20",
+                          )}
+                        >
+                          {TRACK_VOCAL_LANGUAGE_LABELS[lang]}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <label className="inline-flex items-center gap-2 text-xs text-foreground cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={t.is_explicit}
+                      disabled={!editable}
+                      onChange={(e) => updateTrackLocal(t.id, { is_explicit: e.target.checked })}
+                      className="rounded border-border"
+                    />
+                    18+ / ненарматыўная лексіка
+                  </label>
+                  <label className="inline-flex items-center gap-2 text-xs text-foreground cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={t.is_ai}
+                      disabled={!editable}
+                      onChange={(e) => updateTrackLocal(t.id, { is_ai: e.target.checked })}
+                      className="rounded border-border"
+                    />
+                    Удзел штучнага інтэлекту (ІІ) у стварэнні гуку / аранжыроўкі / вакалу
+                  </label>
+                </div>
+
                 <div>
                   <label className="block text-xs text-muted-foreground mb-1">Каментар да трэка</label>
                   <input
@@ -701,6 +821,60 @@ export default function ArtistSubmissionPage() {
               </li>
             ))}
           </ul>
+        )}
+      </div>
+
+      <div className="glass rounded-2xl border border-border p-6 space-y-4">
+        <h2 className="text-sm font-semibold text-foreground">Прававыя заявы</h2>
+        {editable ? (
+          <div className="space-y-3 text-sm">
+            <label className="flex items-start gap-3 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={acceptedTerms}
+                onChange={(e) => setAcceptedTerms(e.target.checked)}
+                className="mt-0.5 rounded border-border shrink-0"
+              />
+              <span className="text-foreground/90 leading-snug">
+                Пагаджаюся з{" "}
+                <a
+                  href={SPEU_TERMS_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-primary underline underline-offset-2"
+                >
+                  агульнымі правіламі
+                </a>{" "}
+                падачы матэрыялаў на разгляд лэйблу Speu.
+              </span>
+            </label>
+            <label className="flex items-start gap-3 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={confirmedRights}
+                onChange={(e) => setConfirmedRights(e.target.checked)}
+                className="mt-0.5 rounded border-border shrink-0"
+              />
+              <span className="text-foreground/90 leading-snug">
+                Пацвярджаю, што валодаю неабходнымі правамі на гэты аўдыё- і візуальны кантэнт і што ён не парушае
+                правы трэціх асоб.
+              </span>
+            </label>
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            {submission.accepted_terms && submission.confirmed_rights ? (
+              <>
+                Заявы пацверджаны
+                {submission.rights_attested_at
+                  ? ` (${new Intl.DateTimeFormat("be-BY", { dateStyle: "medium", timeStyle: "short" }).format(new Date(submission.rights_attested_at))})`
+                  : ""}
+                {submission.terms_version ? ` · версія ўмоваў: ${submission.terms_version}` : ""}
+              </>
+            ) : (
+              "Заявы не былі зафіксаваны ў гэтай версіі заяўкі."
+            )}
+          </p>
         )}
       </div>
 

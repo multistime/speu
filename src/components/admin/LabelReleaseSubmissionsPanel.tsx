@@ -4,11 +4,16 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 import Link from "next/link";
 import { Trash2 } from "lucide-react";
 import { formatTrackDuration } from "@/components/speu/speu-format-duration";
+import { getGenreLabelBe } from "@/lib/speu/genre-taxonomy";
 import {
   RELEASE_KIND_LABELS,
   RELEASE_STATUS_LABELS,
+  TRACK_VOCAL_LANGUAGE_LABELS,
+  WORK_KIND_LABELS,
   type ReleaseKind,
   type ReleaseSubmissionStatus,
+  type TrackVocalLanguage,
+  type WorkKind,
 } from "@/lib/speu/release-submissions";
 
 const releaseStatuses: ReleaseSubmissionStatus[] = [
@@ -31,6 +36,10 @@ type ReleaseSubmissionAdminItem = {
   artist_note: string | null;
   moderator_message: string | null;
   archived_at: string | null;
+  accepted_terms: boolean;
+  confirmed_rights: boolean;
+  rights_attested_at: string | null;
+  terms_version: string | null;
   created_at: string;
   updated_at: string;
   artist: { id: string; name: string; slug: string } | null;
@@ -45,6 +54,11 @@ type ReleaseSubmissionAdminItem = {
     artist_track_id: string | null;
     cover_url: string | null;
     cover_storage_path: string | null;
+    genres: string[] | null;
+    work_kind: string | null;
+    is_explicit: boolean | null;
+    is_ai: boolean | null;
+    language: string | null;
   }>;
 };
 
@@ -108,11 +122,20 @@ export function LabelReleaseSubmissionsPanel() {
     const list = raw.map((it) => ({
       ...it,
       archived_at: it.archived_at ?? null,
+      accepted_terms: Boolean(it.accepted_terms),
+      confirmed_rights: Boolean(it.confirmed_rights),
+      rights_attested_at: it.rights_attested_at ?? null,
+      terms_version: it.terms_version ?? null,
       tracks: (it.tracks ?? []).map((t) => ({
         ...t,
         cover_url: t.cover_url ?? null,
         cover_storage_path: t.cover_storage_path ?? null,
         lyrics: t.lyrics ?? null,
+        genres: t.genres ?? null,
+        work_kind: t.work_kind ?? null,
+        is_explicit: t.is_explicit ?? null,
+        is_ai: t.is_ai ?? null,
+        language: t.language ?? null,
       })),
     }));
     setItems(list);
@@ -368,6 +391,23 @@ export function LabelReleaseSubmissionsPanel() {
                     </div>
                   </div>
 
+                  <div className="text-xs border-t border-border pt-3 text-muted-foreground space-y-1">
+                    <p>
+                      <span className="font-medium text-foreground/80">Прававыя заявы: </span>
+                      {item.accepted_terms && item.confirmed_rights ? (
+                        <>
+                          пацверджаны
+                          {item.rights_attested_at
+                            ? ` · ${formatDateTime(item.rights_attested_at)}`
+                            : ""}
+                          {item.terms_version ? ` · v${item.terms_version}` : ""}
+                        </>
+                      ) : (
+                        "не пацверджаны або незапоўнены"
+                      )}
+                    </p>
+                  </div>
+
                   {item.artist_note ? (
                     <div className="text-sm border-t border-border pt-3">
                       <p className="text-xs text-muted-foreground mb-1">Заўвага артыста</p>
@@ -415,6 +455,40 @@ export function LabelReleaseSubmissionsPanel() {
                               ) : (
                                 <p className="text-xs text-muted-foreground">Няма аўдыё</p>
                               )}
+                              <div className="flex flex-wrap gap-1.5 text-[11px]">
+                                {t.work_kind && WORK_KIND_LABELS[t.work_kind as WorkKind] ? (
+                                  <span className="rounded-md border border-border bg-muted/40 px-1.5 py-0.5 text-muted-foreground">
+                                    {WORK_KIND_LABELS[t.work_kind as WorkKind]}
+                                  </span>
+                                ) : null}
+                                {t.is_explicit ? (
+                                  <span className="rounded-md border border-amber-500/35 bg-amber-500/10 px-1.5 py-0.5 text-amber-800 dark:text-amber-200">
+                                    18+
+                                  </span>
+                                ) : null}
+                                {t.is_ai ? (
+                                  <span className="rounded-md border border-violet-500/30 bg-violet-500/10 px-1.5 py-0.5 text-violet-800 dark:text-violet-200">
+                                    ІІ
+                                  </span>
+                                ) : null}
+                                {t.language &&
+                                (t.language === "bel" ||
+                                  t.language === "ru" ||
+                                  t.language === "en" ||
+                                  t.language === "instrumental") ? (
+                                  <span className="rounded-md border border-border bg-muted/30 px-1.5 py-0.5 text-muted-foreground">
+                                    {TRACK_VOCAL_LANGUAGE_LABELS[t.language as TrackVocalLanguage]}
+                                  </span>
+                                ) : null}
+                                {(t.genres ?? []).map((g) => (
+                                  <span
+                                    key={g}
+                                    className="rounded-md border border-border bg-primary/5 px-1.5 py-0.5 text-foreground/80"
+                                  >
+                                    {getGenreLabelBe(g)}
+                                  </span>
+                                ))}
+                              </div>
                               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                                 {t.duration_sec != null && t.duration_sec > 0 ? (
                                   <span className="font-mono tabular-nums">{formatTrackDuration(t.duration_sec)}</span>

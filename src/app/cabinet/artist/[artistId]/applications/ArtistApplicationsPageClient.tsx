@@ -9,6 +9,7 @@ import { getSpeuProfile, type SpeuProfile } from "@/lib/supabase/speu";
 import {
   RELEASE_KIND_LABELS,
   RELEASE_STATUS_LABELS,
+  normalizeReleaseSubmissionRow,
   type ReleaseSubmissionRow,
 } from "@/lib/speu/release-submissions";
 import { cn } from "@/lib/utils";
@@ -42,10 +43,7 @@ const SECTIONS: {
 ];
 
 function normalizeRow(raw: Record<string, unknown>): ReleaseSubmissionRow {
-  return {
-    ...(raw as ReleaseSubmissionRow),
-    archived_at: (raw.archived_at as string | null | undefined) ?? null,
-  };
+  return normalizeReleaseSubmissionRow(raw);
 }
 
 type SubmissionTrackCover = { cover_url: string | null; sort_order: number };

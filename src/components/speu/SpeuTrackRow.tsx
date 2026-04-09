@@ -7,6 +7,8 @@ import { Menu } from "@base-ui/react/menu";
 import { MoreHorizontal, Music, Pause, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePlayer, type PlayerTrack } from "@/contexts/PlayerContext";
+import { getGenreLabelBe } from "@/lib/speu/genre-taxonomy";
+import { WORK_KIND_LABELS, type WorkKind } from "@/lib/speu/release-submissions";
 import type { SpeuChartMovement, SpeuPublicTrack } from "@/lib/speu/types";
 import { speuPublicTrackToPlayerTrack } from "@/lib/speu/player-map";
 import { formatTrackDuration } from "@/components/speu/speu-format-duration";
@@ -102,6 +104,42 @@ function SpeuTrackRowMobileMenu({ track }: { track: SpeuPublicTrack }) {
   );
 }
 
+function SpeuTrackPublicMeta({ track }: { track: SpeuPublicTrack }) {
+  const { genres, workKind, isExplicit, isAi } = track;
+  const showKind = workKind !== "track";
+  if (!isExplicit && !isAi && !showKind && genres.length === 0) return null;
+  return (
+    <div className="mt-1 flex flex-wrap gap-1 max-w-full">
+      {showKind ? (
+        <span className="rounded border border-border/70 bg-muted/50 px-1 py-px text-[10px] text-muted-foreground uppercase tracking-wide">
+          {WORK_KIND_LABELS[workKind as WorkKind]}
+        </span>
+      ) : null}
+      {isExplicit ? (
+        <span className="rounded border border-amber-500/30 bg-amber-500/10 px-1 py-px text-[10px] text-amber-700 dark:text-amber-300">
+          18+
+        </span>
+      ) : null}
+      {isAi ? (
+        <span className="rounded border border-violet-500/25 bg-violet-500/10 px-1 py-px text-[10px] text-violet-700 dark:text-violet-300">
+          ІІ
+        </span>
+      ) : null}
+      {genres.slice(0, 3).map((g) => (
+        <span
+          key={g}
+          className="rounded border border-border/60 bg-primary/[0.06] px-1 py-px text-[10px] text-muted-foreground max-w-[7rem] truncate"
+        >
+          {getGenreLabelBe(g)}
+        </span>
+      ))}
+      {genres.length > 3 ? (
+        <span className="text-[10px] text-muted-foreground/80">+{genres.length - 3}</span>
+      ) : null}
+    </div>
+  );
+}
+
 function ChartMovementBadge({
   movement,
   delta,
@@ -184,24 +222,11 @@ export function SpeuTrackRow({
     }
   };
 
-  const mobilePlayKeyDown = (e: React.KeyboardEvent) => {
+  const playOverlayKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       playActivate();
     }
-  };
-
-  const desktopPlayHit = (e: React.MouseEvent | React.KeyboardEvent) => {
-    if (typeof window === "undefined" || !window.matchMedia("(min-width: 768px)").matches) {
-      return;
-    }
-    if ("key" in e) {
-      if (e.key !== "Enter" && e.key !== " ") return;
-      e.preventDefault();
-    } else {
-      e.stopPropagation();
-    }
-    playActivate();
   };
 
   return (
@@ -213,21 +238,19 @@ export function SpeuTrackRow({
       )}
       style={active ? { background: `rgba(${accentRgb}, 0.08)` } : undefined}
     >
-      <div className="relative z-[1] flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2 md:gap-2.5">
-        <button
-          type="button"
-          aria-label={playing ? "Паўза" : "Прайграць"}
-          onClick={playActivate}
-          onKeyDown={mobilePlayKeyDown}
-          className={cn(
-            "absolute inset-0 z-0 rounded-lg border-0 bg-transparent p-0 outline-none",
-            "focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-            "md:hidden"
-          )}
-        />
+      <button
+        type="button"
+        aria-label={playing ? "Паўза" : "Прайграць"}
+        onClick={playActivate}
+        onKeyDown={playOverlayKeyDown}
+        className={cn(
+          "absolute inset-0 z-0 cursor-pointer rounded-lg border-0 bg-transparent p-0 outline-none",
+          "focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        )}
+      />
 
-        <div className="relative z-[1] flex min-w-0 flex-1 items-center gap-1.5 max-md:gap-1.5 sm:gap-2 md:gap-2.5 max-md:pointer-events-none md:pointer-events-auto">
-          {/* Мабільны: вузкая калонка, нумар прыціснуты да вокладкі; дэсктоп: фіксаваная калонка з клікам */}
+      <div className="relative z-[1] flex min-w-0 flex-1 items-center gap-1.5 max-md:gap-1.5 sm:gap-2 md:gap-2.5 pointer-events-none">
+          {/* Мабільны: вузкая калонка, нумар прыціснуты да вокладкі; дэсктоп: фіксаваная калонка */}
           <div
             className={cn(
               "flex h-10 min-h-10 flex-col items-center justify-center gap-0.5",
@@ -243,16 +266,7 @@ export function SpeuTrackRow({
                 <ChartMovementBadge movement={chartMovement} delta={chartDelta} />
               </span>
             ) : null}
-            <span
-              role="button"
-              tabIndex={0}
-              onClick={desktopPlayHit}
-              onKeyDown={desktopPlayHit}
-              className={cn(
-                "hidden min-h-[1.25rem] w-full cursor-pointer flex-col items-center justify-center gap-0.5 rounded-md outline-none md:flex",
-                "focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-              )}
-            >
+            <span className="hidden min-h-[1.25rem] w-full flex-col items-center justify-center gap-0.5 md:flex">
               <span className="font-mono tabular-nums text-xs text-muted-foreground/40">{displayRank}</span>
               {chartMovement ? (
                 <ChartMovementBadge movement={chartMovement} delta={chartDelta} />
@@ -262,9 +276,7 @@ export function SpeuTrackRow({
 
           {showCover && (
             <div
-              role="presentation"
-              onClick={desktopPlayHit}
-              className="size-10 shrink-0 cursor-default overflow-hidden rounded-md border border-border/60 bg-muted md:cursor-pointer"
+              className="size-10 shrink-0 overflow-hidden rounded-md border border-border/60 bg-muted"
               style={
                 !track.coverUrl
                   ? {
@@ -285,11 +297,7 @@ export function SpeuTrackRow({
           )}
 
           {playing ? (
-            <div
-              role="presentation"
-              onClick={desktopPlayHit}
-              className="relative flex w-4 shrink-0 cursor-default items-center justify-center md:cursor-pointer"
-            >
+            <div className="relative flex w-4 shrink-0 items-center justify-center">
               <Pause
                 className="h-3.5 w-3.5"
                 style={{ color: accentColor }}
@@ -298,11 +306,7 @@ export function SpeuTrackRow({
               />
             </div>
           ) : (
-            <div
-              role="presentation"
-              onClick={desktopPlayHit}
-              className="relative hidden w-4 shrink-0 cursor-default items-center justify-center md:flex md:cursor-pointer"
-            >
+            <div className="relative hidden w-4 shrink-0 items-center justify-center md:flex">
               <Music
                 className="h-3 w-3 text-muted-foreground/40 transition-opacity group-hover/track:opacity-0"
                 strokeWidth={1.5}
@@ -320,7 +324,7 @@ export function SpeuTrackRow({
             <Link
               href={`/speu/tracks/${track.slug}`}
               className={cn(
-                "hidden w-full min-w-0 max-w-full truncate text-sm hover:underline md:block",
+                "relative z-[1] hidden w-full min-w-0 max-w-full truncate text-sm hover:underline pointer-events-auto md:block",
                 active ? "font-medium" : "text-foreground/80"
               )}
               style={active ? { color: accentColor } : undefined}
@@ -336,13 +340,14 @@ export function SpeuTrackRow({
             >
               {track.title}
             </span>
+            <SpeuTrackPublicMeta track={track} />
             <div className="mt-0.5 flex flex-wrap items-center text-xs text-muted-foreground">
               {track.artists.map((a, i) => (
                 <span key={a.id} className="inline-flex min-w-0 items-center">
                   {i > 0 ? <span className="text-muted-foreground/40">,&nbsp;</span> : null}
                   <Link
                     href={`/speu/artists/${a.slug}`}
-                    className="hidden max-w-[10rem] truncate transition-colors hover:text-foreground md:inline lg:max-w-none"
+                    className="relative z-[1] hidden max-w-[10rem] truncate transition-colors hover:text-foreground pointer-events-auto md:inline lg:max-w-none"
                   >
                     {a.name}
                   </Link>
@@ -353,11 +358,7 @@ export function SpeuTrackRow({
           </div>
 
           {!active ? (
-            <span
-              role="presentation"
-              onClick={desktopPlayHit}
-              className="w-10 shrink-0 cursor-default text-right font-mono text-[11px] tabular-nums text-muted-foreground/70 md:cursor-pointer"
-            >
+            <span className="w-10 shrink-0 text-right font-mono text-[11px] tabular-nums text-muted-foreground/70">
               {formatTrackDuration(track.durationSec)}
             </span>
           ) : null}
@@ -365,15 +366,10 @@ export function SpeuTrackRow({
           {playing && <TrackPlayingEqualizer color={accentColor} />}
 
           {!playing && (
-            <span
-              role="presentation"
-              onClick={desktopPlayHit}
-              className="hidden shrink-0 cursor-default sm:block md:cursor-pointer"
-            >
+            <span className="hidden shrink-0 sm:block">
               <Play className="h-3 w-3 opacity-0 transition-opacity group-hover/track:opacity-60" style={{ color: accentColor }} strokeWidth={2} />
             </span>
           )}
-        </div>
       </div>
 
       <TrackLikeButton trackId={track.id} accentColor={accentColor} className="relative z-[2] shrink-0" />

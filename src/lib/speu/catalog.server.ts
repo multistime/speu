@@ -13,6 +13,8 @@ import type {
   SpeuHubArtistCard,
   SpeuPublicTrack,
   SpeuTrackPageData,
+  SpeuTrackVocalLanguage,
+  SpeuTrackWorkKind,
 } from "@/lib/speu/types";
 
 const UUID_RE =
@@ -59,9 +61,26 @@ type RawTrackRow = {
   created_at: string;
   lyrics?: string | null;
   like_count?: number | null;
+  genres?: string[] | null;
+  work_kind?: string | null;
+  is_explicit?: boolean | null;
+  is_ai?: boolean | null;
+  language?: string | null;
   albums: RawAlbum | RawAlbum[];
   track_artists: RawCreditRow[] | null;
 };
+
+function parseWorkKindCatalog(raw: unknown): SpeuTrackWorkKind {
+  const s = typeof raw === "string" ? raw : "track";
+  if (s === "beat" || s === "podcast" || s === "audiobook" || s === "track") return s;
+  return "track";
+}
+
+function parseVocalLanguageCatalog(raw: unknown): SpeuTrackVocalLanguage {
+  const s = typeof raw === "string" ? raw : "bel";
+  if (s === "bel" || s === "ru" || s === "en" || s === "instrumental") return s;
+  return "bel";
+}
 
 /** Embedded `artist_tracks` select for playable / liked lists (keep in sync with mappers). */
 const SPEU_PLAYABLE_TRACK_EMBED = `
@@ -77,6 +96,11 @@ const SPEU_PLAYABLE_TRACK_EMBED = `
       play_on_radio,
       created_at,
       like_count,
+      genres,
+      work_kind,
+      is_explicit,
+      is_ai,
+      language,
       albums ( id, slug, title, cover_url, is_published ),
       track_artists (
         sort_order,
@@ -130,6 +154,7 @@ function mapRawTrackToPublic(row: RawTrackRow): SpeuPublicTrack | null {
   const artistLine = artists.map((x) => x.name).join(", ");
 
   const lc = row.like_count;
+  const genres = Array.isArray(row.genres) ? row.genres.filter((g): g is string => typeof g === "string") : [];
   const base: SpeuPublicTrack = {
     id: row.id,
     slug: (row.slug?.trim() || row.id) as string,
@@ -145,6 +170,11 @@ function mapRawTrackToPublic(row: RawTrackRow): SpeuPublicTrack | null {
     playOnRadio: row.play_on_radio === true,
     sortOrder: row.sort_order,
     createdAt: row.created_at,
+    genres,
+    workKind: parseWorkKindCatalog(row.work_kind),
+    isExplicit: row.is_explicit === true,
+    isAi: row.is_ai === true,
+    vocalLanguage: parseVocalLanguageCatalog(row.language),
   };
   return typeof lc === "number" && Number.isFinite(lc) ? { ...base, likeCount: lc } : base;
 }
@@ -348,6 +378,11 @@ export async function fetchSpeuArtistBySlug(slug: string): Promise<SpeuArtistPag
       sort_order,
       play_on_radio,
       created_at,
+      genres,
+      work_kind,
+      is_explicit,
+      is_ai,
+      language,
       albums ( id, slug, title, cover_url, is_published ),
       track_artists (
         sort_order,
@@ -495,6 +530,11 @@ export async function fetchSpeuAlbumBySlugOrId(param: string): Promise<SpeuAlbum
       sort_order,
       play_on_radio,
       created_at,
+      genres,
+      work_kind,
+      is_explicit,
+      is_ai,
+      language,
       albums ( id, slug, title, cover_url, is_published ),
       track_artists (
         sort_order,
@@ -537,6 +577,11 @@ const SPEU_TRACK_PAGE_TRACK_SELECT = `
       created_at,
       lyrics,
       like_count,
+      genres,
+      work_kind,
+      is_explicit,
+      is_ai,
+      language,
       albums ( id, slug, title, cover_url, is_published ),
       track_artists (
         sort_order,

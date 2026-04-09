@@ -44,10 +44,14 @@ export async function GET() {
       artist_note,
       moderator_message,
       archived_at,
+      accepted_terms,
+      confirmed_rights,
+      rights_attested_at,
+      terms_version,
       created_at,
       updated_at,
       artists ( id, name, slug ),
-      release_submission_tracks ( id, title, sort_order, audio_url, duration_sec, notes, lyrics, artist_track_id, cover_url, cover_storage_path )
+      release_submission_tracks ( id, title, sort_order, audio_url, duration_sec, notes, lyrics, artist_track_id, cover_url, cover_storage_path, genres, work_kind, is_explicit, is_ai, language )
     `,
     )
     .order("updated_at", { ascending: false });
@@ -69,6 +73,11 @@ export async function GET() {
     artist_track_id: string | null;
     cover_url: string | null;
     cover_storage_path: string | null;
+    genres: string[] | null;
+    work_kind: string | null;
+    is_explicit: boolean | null;
+    is_ai: boolean | null;
+    language: string | null;
   };
   type Row = {
     id: string;
@@ -82,6 +91,10 @@ export async function GET() {
     artist_note: string | null;
     moderator_message: string | null;
     archived_at: string | null;
+    accepted_terms: boolean | null;
+    confirmed_rights: boolean | null;
+    rights_attested_at: string | null;
+    terms_version: string | null;
     created_at: string;
     updated_at: string;
     artists: ArtistEmbed | ArtistEmbed[] | null;
