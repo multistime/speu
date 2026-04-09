@@ -7,8 +7,8 @@ import { useTrackLikes } from "@/contexts/TrackLikesContext";
 type TrackLikeButtonProps = {
   trackId: string;
   className?: string;
-  /** sm — у радку трэка; md — на старонцы трэка / плэеры */
-  size?: "sm" | "md";
+  /** sm — у радку трэка; md — на старонцы трэка; lg — плэер (крупнае сэрца, без рамкі з боку className) */
+  size?: "sm" | "md" | "lg";
   accentColor?: string | null;
   /** Бягучы агульны лік (для аптымістычнага +1 / −1 на старонцы трэка) */
   likeCount?: number;
@@ -27,8 +27,9 @@ export function TrackLikeButton({
   const { isLiked, toggleLike, authReady, user, isLikeRequestInFlight } = useTrackLikes();
   const liked = isLiked(trackId);
 
-  const iconClass = size === "md" ? "size-[1.15rem]" : "size-3.5";
-  const pad = size === "md" ? "p-3" : "p-1.5";
+  const iconClass =
+    size === "lg" ? "size-[1.45rem]" : size === "md" ? "size-[1.15rem]" : "size-3.5";
+  const pad = size === "lg" ? "p-0" : size === "md" ? "p-3" : "p-1.5";
 
   return (
     <button
@@ -61,7 +62,7 @@ export function TrackLikeButton({
       aria-pressed={liked}
       aria-label={liked ? "Зняць лайк" : "Паставіць лайк"}
       className={cn(
-        "box-border inline-flex shrink-0 items-center justify-center overflow-hidden rounded-lg border border-transparent transition-colors",
+        "box-border inline-flex shrink-0 items-center justify-center overflow-hidden rounded-lg border-0 border-transparent transition-colors",
         "hover:bg-muted/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary/40",
         liked && !accentColor && "text-rose-500",
         !liked && "text-muted-foreground hover:text-foreground",
@@ -72,7 +73,7 @@ export function TrackLikeButton({
     >
       <Heart
         className={cn("pointer-events-none shrink-0", iconClass, liked && "fill-current")}
-        strokeWidth={liked ? 0 : 1.5}
+        strokeWidth={liked ? 0 : size === "lg" ? 1.75 : 1.5}
       />
     </button>
   );

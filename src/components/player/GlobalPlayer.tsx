@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { Menu } from "@base-ui/react/menu";
 import {
   animate,
   AnimatePresence,
@@ -13,7 +12,6 @@ import {
 } from "framer-motion";
 import {
   Music,
-  MoreHorizontal,
   Pause,
   Play,
   Repeat,
@@ -25,7 +23,7 @@ import {
 } from "lucide-react";
 import { TrackLikeButton } from "@/components/speu/TrackLikeButton";
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
-import { usePlayer, type PlayerRepeatMode, type PlayerTrack } from "@/contexts/PlayerContext";
+import { usePlayer, type PlayerTrack } from "@/contexts/PlayerContext";
 import { formatPlayerTime } from "@/lib/format-player-time";
 import { clientXToSeekRatio } from "@/lib/player-progress";
 import { cn } from "@/lib/utils";
@@ -248,13 +246,13 @@ function GlobalPlayerCoverEqualizer({ accentColor }: { accentColor: string | nul
   const color = accentColor ?? "rgba(255,255,255,0.92)";
   return (
     <div
-      className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] flex h-[48%] items-end justify-center gap-0.5 bg-gradient-to-t from-black/45 to-transparent pb-1 pt-5"
+      className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] flex h-[48%] items-end justify-center gap-[3px] bg-gradient-to-t from-black/45 to-transparent pb-1 pt-5"
       aria-hidden
     >
       {[1, 2, 3].map((i) => (
         <motion.span
           key={i}
-          className="w-0.5 rounded-full"
+          className="w-[3px] min-w-[3px] rounded-full"
           style={{ background: color }}
           animate={{ height: ["35%", "100%", "45%", "85%", "35%"] }}
           transition={{
@@ -265,93 +263,6 @@ function GlobalPlayerCoverEqualizer({ accentColor }: { accentColor: string | nul
           }}
         />
       ))}
-    </div>
-  );
-}
-
-const overflowItemClass =
-  "flex cursor-pointer items-center rounded-md px-3 py-2.5 text-sm text-foreground outline-none select-none data-highlighted:bg-muted";
-
-function GlobalPlayerOverflowMenu({
-  canShuffle,
-  shuffleEnabled,
-  toggleShuffle,
-  skipNext,
-  canSkipNext,
-  skipPrevious,
-  cycleRepeatMode,
-  repeatMode,
-  queueNav,
-  stop,
-}: {
-  canShuffle: boolean;
-  shuffleEnabled: boolean;
-  toggleShuffle: () => void;
-  skipNext: () => void;
-  canSkipNext: boolean;
-  skipPrevious: () => void;
-  cycleRepeatMode: () => void;
-  repeatMode: PlayerRepeatMode;
-  queueNav: boolean;
-  stop: () => void;
-}) {
-  const repeatLine =
-    !queueNav
-      ? repeatMode === "off"
-        ? "Паўтар аднаго: выкл"
-        : "Паўтар аднаго: укл"
-      : repeatMode === "off"
-        ? "Паўтар: выкл"
-        : repeatMode === "all"
-          ? "Паўтар: уся чарга"
-          : "Паўтар: адзін трэк";
-
-  return (
-    <div className="relative shrink-0" onPointerDown={(e) => e.stopPropagation()}>
-      <Menu.Root modal={false}>
-        <Menu.Trigger
-          type="button"
-          aria-label="Дадаткова"
-          className={cn(
-            "flex size-9 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors",
-            "hover:border-foreground/30 hover:text-foreground",
-            "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary/40"
-          )}
-        >
-          <MoreHorizontal className="size-4" strokeWidth={2} />
-        </Menu.Trigger>
-        <Menu.Portal>
-          <Menu.Positioner side="top" sideOffset={8} align="end" className="z-[60]">
-            <Menu.Popup className="min-w-[13rem] rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-md outline-none">
-              <Menu.Item className={overflowItemClass} onClick={skipPrevious}>
-                Папярэдні трэк
-              </Menu.Item>
-              <Menu.Item
-                className={cn(overflowItemClass, !canSkipNext && "pointer-events-none opacity-40")}
-                onClick={() => {
-                  if (canSkipNext) skipNext();
-                }}
-              >
-                Наступны трэк
-              </Menu.Item>
-              <Menu.Item
-                className={cn(overflowItemClass, !canShuffle && "pointer-events-none opacity-40")}
-                onClick={() => {
-                  if (canShuffle) toggleShuffle();
-                }}
-              >
-                {shuffleEnabled ? "Выпадковы парадак (уваход)" : "Выпадковы парадак"}
-              </Menu.Item>
-              <Menu.Item className={overflowItemClass} onClick={cycleRepeatMode}>
-                {repeatLine}
-              </Menu.Item>
-              <Menu.Item className={overflowItemClass} onClick={stop}>
-                Спыніць плэер
-              </Menu.Item>
-            </Menu.Popup>
-          </Menu.Positioner>
-        </Menu.Portal>
-      </Menu.Root>
     </div>
   );
 }
@@ -424,16 +335,15 @@ function MobileSheetEqBadge({
     <div
       aria-hidden
       className={cn(
-        mobileSheetCtrlBtn,
-        "pointer-events-none border-border/55 bg-muted/25 text-muted-foreground"
+        "pointer-events-none flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full border-0 bg-transparent text-muted-foreground"
       )}
     >
       {isPlaying ? (
-        <div className="flex h-[18px] items-end justify-center gap-0.5">
+        <div className="flex h-[22px] min-w-[30px] items-end justify-center gap-[3px]">
           {[1, 2, 3].map((i) => (
             <motion.span
               key={i}
-              className="w-0.5 rounded-full"
+              className="w-[3px] min-w-[3px] rounded-full"
               style={{ background: color }}
               animate={{ height: ["32%", "100%", "38%", "88%", "32%"] }}
               transition={{
@@ -446,7 +356,7 @@ function MobileSheetEqBadge({
           ))}
         </div>
       ) : (
-        <Music className="size-[1.05rem] opacity-45" strokeWidth={1.5} />
+        <Music className="size-[1.12rem] opacity-50" strokeWidth={1.5} />
       )}
     </div>
   );
@@ -483,6 +393,9 @@ function MobileSheetCoverArt({ t, className }: { t: PlayerTrack; className?: str
 const CF_SIDE_SCALE = 0.76;
 const CF_GAP_PX = 12;
 const CF_DRAG_PARALLAX = 0.14;
+/** Пасля адпуску — кароткі «докрут» перад skip, каб відаць праезд карты (~150–200ms) */
+const CF_COMMIT_MS = 195;
+const CF_COMMIT_EASE = [0.22, 1, 0.36, 1] as const;
 
 /** Бакавая квадратная вокладка (cover flow); тап — папярэдні/наступны */
 function MobileSheetCoverFlowSide({
@@ -497,7 +410,7 @@ function MobileSheetCoverFlowSide({
   className?: string;
 }) {
   const box =
-    "relative aspect-square size-[min(54vw,200px)] max-h-[200px] max-w-[200px] overflow-hidden rounded-2xl shadow-md ring-1 ring-border/35";
+    "relative aspect-square size-[min(54vw,200px)] max-h-[200px] max-w-[200px] overflow-hidden rounded-2xl ring-1 ring-border/35";
 
   if (!neighbor) {
     return (
@@ -582,22 +495,44 @@ function MobileSheetCoverCarousel({
     x.set(0);
   }, [skipToNext, x]);
 
+  const commitDistanceX = useCallback(() => {
+    if (typeof window === "undefined") return 200;
+    return Math.min(240, window.innerWidth * 0.34);
+  }, []);
+
   const onDragEnd = (_: unknown, info: PanInfo) => {
-    const th = 48;
+    const th = 52;
     const vx = info.velocity.x;
     const ox = info.offset.x;
+    const vTh = 260;
 
-    if (ox <= -th || vx < -280) {
-      if (nextTrack) goNext();
-      else animate(x, 0, { type: "spring", stiffness: 460, damping: 38 });
+    const springBack = () =>
+      animate(x, 0, { type: "spring", stiffness: 320, damping: 34 });
+
+    const commitDur =
+      reduceMotion ? 0.08 : Math.abs(vx) > 420 ? 0.14 : CF_COMMIT_MS / 1000;
+
+    if (ox <= -th || vx < -vTh) {
+      if (nextTrack) {
+        const target = -commitDistanceX();
+        animate(x, target, {
+          duration: commitDur,
+          ease: CF_COMMIT_EASE,
+        }).then(() => goNext());
+      } else springBack();
       return;
     }
-    if (ox >= th || vx > 280) {
-      if (prevTrack) goPrev();
-      else animate(x, 0, { type: "spring", stiffness: 460, damping: 38 });
+    if (ox >= th || vx > vTh) {
+      if (prevTrack) {
+        const target = commitDistanceX();
+        animate(x, target, {
+          duration: commitDur,
+          ease: CF_COMMIT_EASE,
+        }).then(() => goPrev());
+      } else springBack();
       return;
     }
-    animate(x, 0, { type: "spring", stiffness: 460, damping: 36 });
+    springBack();
   };
 
   const sideOffset = coverPx * (1 + CF_SIDE_SCALE) * 0.5 + CF_GAP_PX;
@@ -625,25 +560,31 @@ function MobileSheetCoverCarousel({
   const leftRotateY = useTransform(x, (d) => (reduceMotion ? 0 : 8 + d * 0.02));
   const rightRotateY = useTransform(x, (d) => (reduceMotion ? 0 : -8 + d * 0.02));
 
-  const centerBoxShadow = useTransform(x, (d) => {
-    const o = 0.38 + Math.min(0.22, Math.abs(d) / 400);
-    return `0 18px 40px rgba(0,0,0,${o}), 0 6px 16px rgba(0,0,0,${o * 0.55})`;
-  });
-
   return (
     <div
-      className="relative mx-auto mt-2 w-full max-w-[min(100vw-1rem,380px)] px-1"
+      className="relative mx-auto mt-2 w-full max-w-[min(100vw-1rem,380px)] overflow-visible px-1"
       data-sheet-no-gesture
     >
-      {/* Віньетка па краях сцэны */}
+      {/* Затуханне ў колер фону (светлая/цёмная тэма) — на ўсю шырыню экрана, без абрэзу па вертыкалі */}
       <div
-        className="pointer-events-none absolute inset-0 z-[24] rounded-[inherit]"
+        className="pointer-events-none absolute -top-4 -bottom-4 left-1/2 z-[24] w-screen -translate-x-1/2"
         aria-hidden
-        style={{
-          boxShadow:
-            "inset 40px 0 48px -28px rgba(0,0,0,0.45), inset -40px 0 48px -28px rgba(0,0,0,0.45)",
-        }}
-      />
+      >
+        <div
+          className="absolute inset-y-0 left-0 w-[min(45%,168px)]"
+          style={{
+            background:
+              "linear-gradient(to right, var(--background) 0%, color-mix(in srgb, var(--background) 72%, transparent) 38%, transparent 100%)",
+          }}
+        />
+        <div
+          className="absolute inset-y-0 right-0 w-[min(45%,168px)]"
+          style={{
+            background:
+              "linear-gradient(to left, var(--background) 0%, color-mix(in srgb, var(--background) 72%, transparent) 38%, transparent 100%)",
+          }}
+        />
+      </div>
 
       <div
         className="relative mx-auto w-full [perspective:1100px]"
@@ -661,7 +602,7 @@ function MobileSheetCoverCarousel({
           drag={canDrag ? "x" : false}
           dragConstraints={{ left: 0, right: 0 }}
           dragElastic={0.18}
-          dragTransition={{ bounceStiffness: 400, bounceDamping: 24 }}
+          dragTransition={{ bounceStiffness: 340, bounceDamping: 28 }}
           onDragEnd={onDragEnd}
         >
           <div className="absolute left-1/2 top-1/2 z-[8] -translate-x-1/2 -translate-y-1/2">
@@ -687,18 +628,17 @@ function MobileSheetCoverCarousel({
                 background: track.accentColor
                   ? `rgba(${track.accentRgb ?? "125,191,158"}, 0.1)`
                   : "var(--muted)",
-                boxShadow: centerBoxShadow,
               }}
             >
               <motion.div
                 key={track.id}
                 className="size-full"
-                initial={reduceMotion ? false : { opacity: 0.88, scale: 0.97 }}
+                initial={reduceMotion ? false : { opacity: 0.88, scale: 0.96 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={
                   reduceMotion
-                    ? { duration: 0.15 }
-                    : { type: "spring", stiffness: 360, damping: 30 }
+                    ? { duration: 0.18 }
+                    : { type: "spring", stiffness: 300, damping: 28 }
                 }
               >
                 <MobileSheetCoverArt t={track} className="rounded-2xl" />
@@ -1018,12 +958,15 @@ function MobileNowPlayingSheet({
                 {track.trackHref?.startsWith("/speu/tracks/") ? (
                   <TrackLikeButton
                     trackId={track.id}
-                    size="sm"
+                    size="lg"
                     accentColor={track.accentColor ?? null}
-                    className="border-border/60 min-h-11 min-w-11 !max-h-11 !max-w-11 !min-h-11 !min-w-11 shrink-0 rounded-full !p-0 hover:bg-muted/50"
+                    className="min-h-11 min-w-11 !max-h-11 !max-w-11 shrink-0 rounded-full !p-0 hover:bg-muted/45 active:bg-muted/55"
                   />
                 ) : (
-                  <div className={cn(mobileSheetCtrlBtn, "pointer-events-none border-transparent opacity-0")} aria-hidden />
+                  <div
+                    className="pointer-events-none min-h-11 min-w-11 shrink-0 opacity-0"
+                    aria-hidden
+                  />
                 )}
               </div>
             </div>
@@ -1092,84 +1035,62 @@ export function GlobalPlayer() {
           <GlobalPlayerProgress track={track} />
 
           <div className="max-w-7xl mx-auto px-2 sm:px-6 py-2.5 sm:py-3 min-h-[3.25rem]">
-            {/* Мабільны плэер: націск на радок (акрамя спасылак і кнопак) — шторка «зараз гуляе» */}
-            <div
-              className="flex md:hidden flex-row items-center gap-1.5 min-w-0 cursor-pointer"
-              onClick={(e) => {
-                if ((e.target as HTMLElement).closest("a, button")) return;
-                setMobileSheetOpen(true);
-              }}
-            >
-              <div
-                className="relative w-10 h-10 shrink-0 overflow-hidden rounded-lg flex items-center justify-center"
-                style={{
-                  background: track.accentColor
-                    ? `rgba(${track.accentRgb ?? "125,191,158"}, 0.15)`
-                    : "var(--muted)",
-                  border: track.accentColor
-                    ? `1px solid rgba(${track.accentRgb ?? "125,191,158"}, 0.25)`
-                    : "1px solid var(--border)",
-                }}
+            {/* Мабільны плэер: націск на мініяцюру / тэкст / час — шторка; Play і лайк асобна; меню «⋯» толькі на md+ */}
+            <div className="flex md:hidden flex-row items-center gap-1.5 min-w-0">
+              <button
+                type="button"
+                className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 rounded-lg py-0.5 text-left outline-none transition-colors hover:bg-muted/35 focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                aria-label="Адкрыць плэер"
+                onClick={() => setMobileSheetOpen(true)}
               >
-                {track.coverUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={track.coverUrl} alt="" className="size-full object-cover" />
-                ) : (
-                  <Music
-                    className="w-4 h-4"
-                    style={{ color: track.accentColor ?? "var(--primary)" }}
-                    strokeWidth={1.5}
-                  />
-                )}
-                {isPlaying ? <GlobalPlayerCoverEqualizer accentColor={track.accentColor} /> : null}
-              </div>
-
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-foreground leading-tight truncate">
-                  {track.trackHref ? (
-                    <Link
-                      href={track.trackHref}
-                      className="hover:underline underline-offset-2"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {track.title}
-                    </Link>
+                <div
+                  className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg"
+                  style={{
+                    background: track.accentColor
+                      ? `rgba(${track.accentRgb ?? "125,191,158"}, 0.15)`
+                      : "var(--muted)",
+                  }}
+                >
+                  {track.coverUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={track.coverUrl} alt="" className="size-full object-cover" draggable={false} />
                   ) : (
-                    track.title
+                    <Music
+                      className="w-4 h-4"
+                      style={{ color: track.accentColor ?? "var(--primary)" }}
+                      strokeWidth={1.5}
+                    />
                   )}
-                </p>
-                <div className="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-muted-foreground tabular-nums">
+                  {isPlaying ? <GlobalPlayerCoverEqualizer accentColor={track.accentColor} /> : null}
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium leading-tight text-foreground">
+                    {track.title}
+                  </p>
                   {track.artistName ? (
-                    track.artistSlug ? (
-                      <Link
-                        href={`/speu/artists/${track.artistSlug}`}
-                        className="min-w-0 truncate hover:text-foreground transition-colors"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {track.artistName}
-                      </Link>
-                    ) : (
-                      <span className="min-w-0 truncate">{track.artistName}</span>
-                    )
+                    <p className="mt-0.5 truncate text-xs text-muted-foreground tabular-nums">
+                      {track.artistName}
+                    </p>
                   ) : null}
                 </div>
-              </div>
 
-              <span
-                className="shrink-0 font-mono text-[10px] tracking-tight text-muted-foreground/90 tabular-nums whitespace-nowrap"
-                aria-live="polite"
-              >
-                {formatPlayerTime(currentTime)}
-                <span className="text-muted-foreground/50"> / </span>
-                {duration > 0 ? formatPlayerTime(duration) : "—:—"}
-              </span>
+                <span
+                  className="shrink-0 font-mono text-[10px] tracking-tight text-muted-foreground/90 tabular-nums whitespace-nowrap"
+                  aria-live="polite"
+                >
+                  {formatPlayerTime(currentTime)}
+                  <span className="text-muted-foreground/50"> / </span>
+                  {duration > 0 ? formatPlayerTime(duration) : "—:—"}
+                </span>
+              </button>
 
               {track.trackHref?.startsWith("/speu/tracks/") ? (
                 <TrackLikeButton
                   trackId={track.id}
-                  size="sm"
+                  size="lg"
                   accentColor={track.accentColor ?? null}
-                  className="border-border/60 size-9 !min-h-9 !min-w-9 !max-h-9 !max-w-9 shrink-0 rounded-full !p-0 hover:bg-muted/50"
+                  className="size-10 !min-h-10 !min-w-10 !max-h-10 !max-w-10 shrink-0 rounded-full !p-0 hover:bg-muted/45 active:bg-muted/55"
                 />
               ) : null}
 
@@ -1189,19 +1110,6 @@ export function GlobalPlayer() {
                   <Play className="size-[17px] ml-0.5" fill="currentColor" strokeWidth={0} />
                 )}
               </button>
-
-              <GlobalPlayerOverflowMenu
-                canShuffle={canShuffle}
-                shuffleEnabled={shuffleEnabled}
-                toggleShuffle={toggleShuffle}
-                skipNext={skipNext}
-                canSkipNext={canSkipNext}
-                skipPrevious={skipPrevious}
-                cycleRepeatMode={cycleRepeatMode}
-                repeatMode={repeatMode}
-                queueNav={queueNav}
-                stop={stop}
-              />
             </div>
 
             <div className="hidden md:flex flex-row items-center gap-4 min-h-[3.25rem] w-full">
@@ -1345,13 +1253,13 @@ export function GlobalPlayer() {
                 )}
               </button>
 
-              <span className="inline-flex size-9 shrink-0 items-center justify-center">
+              <span className="inline-flex size-10 shrink-0 items-center justify-center">
                 {track.trackHref?.startsWith("/speu/tracks/") ? (
                   <TrackLikeButton
                     trackId={track.id}
-                    size="sm"
+                    size="lg"
                     accentColor={track.accentColor ?? null}
-                    className="border-border/60 size-9 !min-h-9 !min-w-9 !max-h-9 !max-w-9 rounded-full !p-0 hover:bg-muted/50"
+                    className="size-10 !min-h-10 !min-w-10 !max-h-10 !max-w-10 rounded-full !p-0 hover:bg-muted/45 active:bg-muted/55"
                   />
                 ) : null}
               </span>
@@ -1368,13 +1276,13 @@ export function GlobalPlayer() {
 
               {isPlaying ? (
                 <span
-                  className="inline-flex h-4 shrink-0 items-end gap-0.5"
+                  className="inline-flex h-[22px] shrink-0 items-end gap-[3px]"
                   aria-hidden
                 >
                   {[1, 2, 3].map((i) => (
                     <motion.span
                       key={i}
-                      className="w-0.5 rounded-full"
+                      className="w-[3px] min-w-[3px] rounded-full"
                       style={{ background: track.accentColor ?? "var(--primary)" }}
                       animate={{ height: ["35%", "100%", "45%", "85%", "35%"] }}
                       transition={{
