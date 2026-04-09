@@ -56,6 +56,7 @@ export type SpeuHubArtistCard = {
   slug: string;
   name: string;
   nameEn: string;
+  /** Top genre codes from published tracks (frequency, max 3). */
   genres: string[];
   tagline: string;
   location: string;
@@ -79,6 +80,7 @@ export type SpeuArtistPageData = {
   slug: string;
   name: string;
   nameEn: string;
+  /** Top genre codes from published tracks (frequency, max 3). */
   genres: string[];
   tagline: string;
   bio: string;

@@ -21,7 +21,6 @@ function mapArtistRowToPayload(row: {
   name_en: string | null;
   tagline: string | null;
   bio: string | null;
-  genres: string[] | null;
   location: string | null;
   year_started: number | null;
   initials: string | null;
@@ -40,7 +39,6 @@ function mapArtistRowToPayload(row: {
     nameEn: row.name_en ?? "",
     tagline: row.tagline ?? "",
     bio: row.bio ?? "",
-    genres: row.genres ?? [],
     location: row.location ?? "",
     yearStarted: row.year_started,
     initials: row.initials ?? "",
@@ -77,7 +75,7 @@ export async function GET(
     .schema("speu")
     .from("artists")
     .select(
-      "id, slug, name, name_en, tagline, bio, genres, location, year_started, initials, social_links, visual_json, photo_url, user_id, linked_user_can_edit_profile"
+      "id, slug, name, name_en, tagline, bio, location, year_started, initials, social_links, visual_json, photo_url, user_id, linked_user_can_edit_profile"
     )
     .eq("id", artistId)
     .maybeSingle();
@@ -159,7 +157,7 @@ export async function PATCH(
     .schema("speu")
     .from("artists")
     .select(
-      "id, slug, name, name_en, tagline, bio, genres, location, year_started, initials, social_links, visual_json, photo_url, linked_user_can_edit_profile"
+      "id, slug, name, name_en, tagline, bio, location, year_started, initials, social_links, visual_json, photo_url, linked_user_can_edit_profile"
     )
     .eq("id", artistId)
     .maybeSingle();

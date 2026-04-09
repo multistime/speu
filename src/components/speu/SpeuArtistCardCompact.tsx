@@ -4,6 +4,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { MapPin, Play } from "lucide-react";
 import { ArtistPattern } from "@/components/artists/artist-pattern";
+import { getGenreLabelBe } from "@/lib/speu/genre-taxonomy";
 import type { SpeuHubArtistCard } from "@/lib/speu/types";
 
 export function SpeuArtistCardCompact({
@@ -106,7 +107,7 @@ export function SpeuArtistCardCompact({
                     border: `1px solid rgba(${accentRgb}, 0.2)`,
                   }}
                 >
-                  {g}
+                  {getGenreLabelBe(g)}
                 </span>
               ))}
             </div>

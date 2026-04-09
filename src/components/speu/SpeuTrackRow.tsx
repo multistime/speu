@@ -330,22 +330,13 @@ export function SpeuTrackRow({
             <Link
               href={`/speu/tracks/${track.slug}`}
               className={cn(
-                "relative z-[1] hidden w-full min-w-0 max-w-full truncate text-sm hover:underline pointer-events-auto md:block",
+                "relative z-[1] inline-block max-w-full min-w-0 truncate text-sm hover:underline pointer-events-auto align-top",
                 active ? "font-medium" : "text-foreground/80"
               )}
               style={active ? { color: accentColor } : undefined}
             >
               {track.title}
             </Link>
-            <span
-              className={cn(
-                "block w-full min-w-0 max-w-full truncate text-sm md:hidden",
-                active ? "font-medium" : "text-foreground/80"
-              )}
-              style={active ? { color: accentColor } : undefined}
-            >
-              {track.title}
-            </span>
             <SpeuTrackPublicMeta track={track} />
             <div className="mt-0.5 flex flex-wrap items-center text-xs text-muted-foreground">
               {track.artists.map((a, i) => (

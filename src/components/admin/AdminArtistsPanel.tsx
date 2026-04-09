@@ -23,7 +23,6 @@ type Artist = {
   name_en: string | null;
   tagline: string | null;
   bio: string | null;
-  genres: string[];
   location: string | null;
   status: string;
   sort_order: number;
@@ -39,7 +38,6 @@ const emptyForm = {
   nameEn: "",
   tagline: "",
   bio: "",
-  genres: "",
   location: "",
   status: "draft",
   sortOrder: "0",
@@ -118,7 +116,6 @@ export function AdminArtistsPanel({
           a.name,
           a.slug,
           a.name_en ?? "",
-          ...(a.genres ?? []),
           a.tagline ?? "",
           a.location ?? "",
         ]
@@ -141,7 +138,6 @@ export function AdminArtistsPanel({
       nameEn: artist.name_en ?? "",
       tagline: artist.tagline ?? "",
       bio: artist.bio ?? "",
-      genres: (artist.genres ?? []).join(", "),
       location: artist.location ?? "",
       status: artist.status,
       sortOrder: String(artist.sort_order),
@@ -176,7 +172,6 @@ export function AdminArtistsPanel({
         nameEn: form.nameEn || undefined,
         tagline: form.tagline || undefined,
         bio: form.bio || undefined,
-        genres: form.genres.split(",").map((s) => s.trim()).filter(Boolean),
         location: form.location || undefined,
         status: form.status,
         sortOrder: Number(form.sortOrder),
@@ -330,15 +325,6 @@ export function AdminArtistsPanel({
               placeholder="Кароткі апісальны слоган"
               value={form.tagline}
               onChange={(e) => setForm({ ...form, tagline: e.target.value })}
-            />
-          </div>
-          <div>
-            <label className={labelCls}>Жанры (праз коску)</label>
-            <input
-              className={inputCls}
-              placeholder="folk, electronic, pop"
-              value={form.genres}
-              onChange={(e) => setForm({ ...form, genres: e.target.value })}
             />
           </div>
           <div className="md:col-span-2">
@@ -615,10 +601,7 @@ export function AdminArtistsPanel({
                 )}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{artist.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {artist.slug}
-                    {artist.genres?.length ? ` · ${artist.genres.join(", ")}` : ""}
-                  </p>
+                  <p className="text-xs text-muted-foreground">{artist.slug}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <span

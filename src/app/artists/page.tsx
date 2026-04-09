@@ -8,6 +8,7 @@ import { usePlayer } from "@/contexts/PlayerContext";
 import type { PlayerTrack } from "@/contexts/PlayerContext";
 import { ArtistPattern } from "@/components/artists/artist-pattern";
 import { parsePatternFromVisual, type ArtistPatternId } from "@/lib/artists/visual-theme";
+import { getGenreLabelBe } from "@/lib/speu/genre-taxonomy";
 
 /* ── Artist data ─────────────────────────────────────────────────────── */
 
@@ -372,7 +373,7 @@ function ArtistCard({ artist, onClick, index }: { artist: Artist; onClick: (a: A
                   border: `1px solid rgba(${artist.accentRgb}, 0.2)`,
                 }}
               >
-                {g}
+                {getGenreLabelBe(g)}
               </span>
             ))}
           </motion.div>
@@ -585,7 +586,7 @@ function ArtistModal({ artist, onClose }: { artist: Artist; onClose: () => void 
                         border: `1px solid rgba(${artist.accentRgb}, 0.4)`,
                       }}
                     >
-                      {g}
+                      {getGenreLabelBe(g)}
                     </span>
                   ))}
                 </motion.div>
@@ -843,7 +844,7 @@ export default function ArtistsPage() {
                       : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
                   )}
                 >
-                  {genre}
+                  {genre === "Усе" ? "Усе" : getGenreLabelBe(genre)}
                 </button>
               ))}
             </motion.div>

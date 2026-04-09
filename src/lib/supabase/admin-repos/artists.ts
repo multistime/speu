@@ -7,7 +7,6 @@ export type ArtistRecord = {
   name_en: string | null;
   tagline: string | null;
   bio: string | null;
-  genres: string[];
   location: string | null;
   year_started: number | null;
   initials: string | null;

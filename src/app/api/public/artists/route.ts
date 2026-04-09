@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { topGenreCodesFromTrackLists } from "@/lib/speu/artist-genres";
 import { createClient } from "@/lib/supabase/server";
 
 type TrackRow = {
@@ -8,6 +9,7 @@ type TrackRow = {
   external_url: string | null;
   sort_order: number;
   is_published: boolean;
+  genres: string[] | null;
 };
 
 export async function GET() {
@@ -17,7 +19,7 @@ export async function GET() {
     .schema("speu")
     .from("artists")
     .select(
-      "id, slug, name, name_en, genres, tagline, bio, location, year_started, initials, photo_url, social_links, visual_json"
+      "id, slug, name, name_en, tagline, bio, location, year_started, initials, photo_url, social_links, visual_json"
     )
     .eq("status", "published")
     .order("sort_order", { ascending: true });
@@ -42,7 +44,8 @@ export async function GET() {
         audio_url,
         external_url,
         sort_order,
-        is_published
+        is_published,
+        genres
       )
     `
     )
@@ -59,7 +62,19 @@ export async function GET() {
     artist_tracks: TrackRow | TrackRow[] | null;
   };
 
-  const byArtist = new Map<string, Map<string, { title: string; audio_url: string | null; external_url: string | null; sort_order: number }>>();
+  const byArtist = new Map<
+    string,
+    Map<
+      string,
+      {
+        title: string;
+        audio_url: string | null;
+        external_url: string | null;
+        sort_order: number;
+        genres: string[];
+      }
+    >
+  >();
 
   for (const row of (creditRows ?? []) as CreditApiRow[]) {
     const tr = row.artist_tracks;
@@ -73,6 +88,9 @@ export async function GET() {
       audio_url: track.audio_url,
       external_url: track.external_url,
       sort_order: track.sort_order,
+      genres: Array.isArray(track.genres)
+        ? track.genres.filter((g): g is string => typeof g === "string")
+        : [],
     });
     byArtist.set(row.artist_id, inner);
   }
@@ -84,6 +102,7 @@ export async function GET() {
       : [];
     return {
       ...a,
+      genres: topGenreCodesFromTrackLists(tracks.map((t) => t.genres)),
       artist_tracks: tracks.map((t) => ({
         title: t.title,
         audio_url: t.audio_url,

@@ -17,6 +17,7 @@ import {
   SpeuYoutubeIcon,
 } from "@/components/speu/speu-social-icons";
 import { cn } from "@/lib/utils";
+import { getGenreLabelBe } from "@/lib/speu/genre-taxonomy";
 
 function speuTrackCountLabel(n: number): string {
   const mod10 = n % 10;
@@ -153,7 +154,7 @@ function SpeuArtistProfileCard({
                   borderColor: `rgba(${accentRgb}, 0.35)`,
                 }}
               >
-                {g}
+                {getGenreLabelBe(g)}
               </span>
             ))}
           </div>

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2, Upload } from "lucide-react";
+import { ImageIcon, Loader2, Palette, Share2, Upload, UserRound } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { getSpeuProfile } from "@/lib/supabase/speu";
 import { linkedArtistCanEditProfile, profileOwnsArtist } from "@/lib/cabinet/artist-access";
@@ -25,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type ProfilePayload = {
   slug: string;
@@ -32,7 +33,6 @@ type ProfilePayload = {
   nameEn: string;
   tagline: string;
   bio: string;
-  genres: string[];
   location: string;
   yearStarted: number | null;
   initials: string;
@@ -127,7 +127,6 @@ export function ArtistProfileEditClient({ artistId }: { artistId: string }) {
       nameEn: data.nameEn ?? "",
       tagline: data.tagline ?? "",
       bio: data.bio ?? "",
-      genres: Array.isArray(data.genres) ? data.genres : [],
       location: data.location ?? "",
       yearStarted: typeof data.yearStarted === "number" ? data.yearStarted : null,
       initials: data.initials ?? "",
@@ -162,7 +161,6 @@ export function ArtistProfileEditClient({ artistId }: { artistId: string }) {
         nameEn: form.nameEn || undefined,
         tagline: form.tagline || undefined,
         bio: form.bio || undefined,
-        genres: form.genres,
         location: form.location || undefined,
         yearStarted: form.yearStarted,
         initials: form.initials || undefined,
@@ -205,7 +203,6 @@ export function ArtistProfileEditClient({ artistId }: { artistId: string }) {
               nameEn: d.nameEn ?? prev.nameEn,
               tagline: d.tagline ?? prev.tagline,
               bio: d.bio ?? prev.bio,
-              genres: Array.isArray(d.genres) ? d.genres : prev.genres,
               location: d.location ?? prev.location,
               yearStarted: d.yearStarted ?? prev.yearStarted,
               initials: d.initials ?? prev.initials,
@@ -287,7 +284,7 @@ export function ArtistProfileEditClient({ artistId }: { artistId: string }) {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-2xl italic text-foreground">Картачка на сайце</h1>
+        <h1 className="font-display text-2xl italic text-foreground">Наладкі</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Гэта публічная старонка артыста ў каталогу. Slug у URL (
           <span className="font-mono text-xs">{form.slug}</span>) змяняе толькі лэйбл.
@@ -300,230 +297,251 @@ export function ArtistProfileEditClient({ artistId }: { artistId: string }) {
         </p>
       ) : null}
 
-      <div className="glass rounded-2xl border border-border p-6 space-y-5">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="ap-name">Назва *</Label>
-            <Input
-              id="ap-name"
-              value={form.name}
-              onChange={(e) => setForm((f) => (f ? { ...f, name: e.target.value } : f))}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="ap-name-en">Назва (EN)</Label>
-            <Input
-              id="ap-name-en"
-              value={form.nameEn}
-              onChange={(e) => setForm((f) => (f ? { ...f, nameEn: e.target.value } : f))}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="ap-tagline">Слоган</Label>
-            <Input
-              id="ap-tagline"
-              value={form.tagline}
-              onChange={(e) => setForm((f) => (f ? { ...f, tagline: e.target.value } : f))}
-            />
-          </div>
-          <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="ap-bio">Біяграфія</Label>
-            <Textarea
-              id="ap-bio"
-              rows={5}
-              value={form.bio}
-              onChange={(e) => setForm((f) => (f ? { ...f, bio: e.target.value } : f))}
-              className="resize-y min-h-[120px]"
-            />
-          </div>
-          <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="ap-genres">Жанры (праз коску)</Label>
-            <Input
-              id="ap-genres"
-              value={form.genres.join(", ")}
-              onChange={(e) =>
-                setForm((f) =>
-                  f
-                    ? {
-                        ...f,
-                        genres: e.target.value
-                          .split(",")
-                          .map((s) => s.trim())
-                          .filter(Boolean),
-                      }
-                    : f,
-                )
-              }
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="ap-loc">Лакацыя</Label>
-            <Input
-              id="ap-loc"
-              value={form.location}
-              onChange={(e) => setForm((f) => (f ? { ...f, location: e.target.value } : f))}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="ap-year">Год пачатку</Label>
-            <Input
-              id="ap-year"
-              type="number"
-              value={form.yearStarted ?? ""}
-              onChange={(e) =>
-                setForm((f) => {
-                  if (!f) return f;
-                  const t = e.target.value;
-                  if (t === "") return { ...f, yearStarted: null };
-                  const n = Number.parseInt(t, 10);
-                  return { ...f, yearStarted: Number.isFinite(n) ? n : null };
-                })
-              }
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="ap-ini">Ініцыялы</Label>
-            <Input
-              id="ap-ini"
-              value={form.initials}
-              onChange={(e) => setForm((f) => (f ? { ...f, initials: e.target.value } : f))}
-            />
-          </div>
-        </div>
+      <Tabs defaultValue="basics" className="gap-0">
+        <TabsList
+          variant="line"
+          className="mb-4 h-auto min-h-9 w-full max-w-full flex-wrap justify-start gap-x-1 gap-y-1 rounded-none border-b border-border bg-transparent p-0"
+        >
+          <TabsTrigger value="basics" className="gap-1.5 rounded-none px-3 py-2 after:bottom-0">
+            <UserRound className="size-4 opacity-70" strokeWidth={1.75} />
+            Асноўнае
+          </TabsTrigger>
+          <TabsTrigger value="photo" className="gap-1.5 rounded-none px-3 py-2 after:bottom-0">
+            <ImageIcon className="size-4 opacity-70" strokeWidth={1.75} />
+            Фота
+          </TabsTrigger>
+          <TabsTrigger value="social" className="gap-1.5 rounded-none px-3 py-2 after:bottom-0">
+            <Share2 className="size-4 opacity-70" strokeWidth={1.75} />
+            Сацсеткі
+          </TabsTrigger>
+          <TabsTrigger value="visual" className="gap-1.5 rounded-none px-3 py-2 after:bottom-0">
+            <Palette className="size-4 opacity-70" strokeWidth={1.75} />
+            Візуал
+          </TabsTrigger>
+        </TabsList>
 
-        <div className="border-t border-border pt-5 space-y-3">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Фота</p>
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="space-y-2 flex-1 min-w-[200px]">
-              <Label htmlFor="ap-photo-url">URL або загрузіце файл</Label>
-              <Input
-                id="ap-photo-url"
-                value={form.photoUrl}
-                onChange={(e) => setForm((f) => (f ? { ...f, photoUrl: e.target.value } : f))}
-                placeholder="https://..."
-              />
-            </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif"
-              className="sr-only"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                e.target.value = "";
-                if (file) void uploadPhoto(file);
-              }}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <Upload className="h-4 w-4 mr-2" strokeWidth={1.5} />
-              Загрузіць
-            </Button>
-          </div>
-        </div>
-
-        <div className="border-t border-border pt-5 space-y-3">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Сацсеткі</p>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {(
-              [
-                ["instagram", "Instagram"],
-                ["youtube", "YouTube"],
-                ["spotify", "Spotify"],
-                ["telegram", "Telegram"],
-              ] as const
-            ).map(([key, label]) => (
-              <div key={key} className="space-y-1.5">
-                <Label htmlFor={`ap-${key}`}>{label}</Label>
+        <TabsContent value="basics" className="mt-0">
+          <div className="glass rounded-2xl border border-border p-6 space-y-1">
+            <p className="text-sm text-muted-foreground pb-4">
+              Назва, апісанне і даныя, якія бачныя ў каталозе.
+            </p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="ap-name">Назва *</Label>
                 <Input
-                  id={`ap-${key}`}
-                  value={form[key]}
-                  onChange={(e) => setForm((f) => (f ? { ...f, [key]: e.target.value } : f))}
-                  placeholder="https://…"
+                  id="ap-name"
+                  value={form.name}
+                  onChange={(e) => setForm((f) => (f ? { ...f, name: e.target.value } : f))}
                 />
               </div>
-            ))}
+              <div className="space-y-2">
+                <Label htmlFor="ap-name-en">Назва (EN)</Label>
+                <Input
+                  id="ap-name-en"
+                  value={form.nameEn}
+                  onChange={(e) => setForm((f) => (f ? { ...f, nameEn: e.target.value } : f))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="ap-tagline">Слоган</Label>
+                <Input
+                  id="ap-tagline"
+                  value={form.tagline}
+                  onChange={(e) => setForm((f) => (f ? { ...f, tagline: e.target.value } : f))}
+                />
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="ap-bio">Біяграфія</Label>
+                <Textarea
+                  id="ap-bio"
+                  rows={5}
+                  value={form.bio}
+                  onChange={(e) => setForm((f) => (f ? { ...f, bio: e.target.value } : f))}
+                  className="resize-y min-h-[120px]"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="ap-loc">Лакацыя</Label>
+                <Input
+                  id="ap-loc"
+                  value={form.location}
+                  onChange={(e) => setForm((f) => (f ? { ...f, location: e.target.value } : f))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="ap-year">Год пачатку</Label>
+                <Input
+                  id="ap-year"
+                  type="number"
+                  value={form.yearStarted ?? ""}
+                  onChange={(e) =>
+                    setForm((f) => {
+                      if (!f) return f;
+                      const t = e.target.value;
+                      if (t === "") return { ...f, yearStarted: null };
+                      const n = Number.parseInt(t, 10);
+                      return { ...f, yearStarted: Number.isFinite(n) ? n : null };
+                    })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="ap-ini">Ініцыялы</Label>
+                <Input
+                  id="ap-ini"
+                  value={form.initials}
+                  onChange={(e) => setForm((f) => (f ? { ...f, initials: e.target.value } : f))}
+                />
+              </div>
+            </div>
           </div>
-        </div>
+        </TabsContent>
 
-        <div className="border-t border-border pt-5 space-y-4">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Візуал старонкі</p>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Колеравая схема</Label>
-              <Select
-                value={form.colorPreset}
-                onValueChange={(v) =>
-                  setForm((f) => (f ? { ...f, colorPreset: v as ArtistColorPresetId | "custom" } : f))
-                }
+        <TabsContent value="photo" className="mt-0">
+          <div className="glass rounded-2xl border border-border p-6 space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Партрэт у каталозе: укажыце спасылку або загрузіце файл (да ~5 МБ).
+            </p>
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="space-y-2 flex-1 min-w-[200px]">
+                <Label htmlFor="ap-photo-url">URL або загрузіце файл</Label>
+                <Input
+                  id="ap-photo-url"
+                  value={form.photoUrl}
+                  onChange={(e) => setForm((f) => (f ? { ...f, photoUrl: e.target.value } : f))}
+                  placeholder="https://..."
+                />
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif"
+                className="sr-only"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (file) void uploadPhoto(file);
+                }}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
               >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ARTIST_COLOR_PRESETS.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.label}
-                    </SelectItem>
-                  ))}
-                  <SelectItem value="custom">Свой градыент</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Узор фону</Label>
-              <Select
-                value={form.pattern}
-                onValueChange={(v) =>
-                  setForm((f) => (f ? { ...f, pattern: v as ArtistPatternId } : f))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(ARTIST_PATTERN_LABELS).map(([id, lab]) => (
-                    <SelectItem key={id} value={id}>
-                      {lab}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                <Upload className="h-4 w-4 mr-2" strokeWidth={1.5} />
+                Загрузіць
+              </Button>
             </div>
           </div>
-          {form.colorPreset === "custom" ? (
-            <div className="grid gap-3 sm:grid-cols-3">
+        </TabsContent>
+
+        <TabsContent value="social" className="mt-0">
+          <div className="glass rounded-2xl border border-border p-6 space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Спасылкі на профілі ў сацыяльных сетках і стрымінгу.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
               {(
                 [
-                  ["customGradientFrom", "Градыент ад"],
-                  ["customGradientTo", "Градыент да"],
-                  ["customAccent", "Акцэнт"],
+                  ["instagram", "Instagram"],
+                  ["youtube", "YouTube"],
+                  ["spotify", "Spotify"],
+                  ["telegram", "Telegram"],
                 ] as const
-              ).map(([key, lab]) => (
+              ).map(([key, label]) => (
                 <div key={key} className="space-y-1.5">
-                  <Label htmlFor={`ap-${key}`}>{lab}</Label>
+                  <Label htmlFor={`ap-${key}`}>{label}</Label>
                   <Input
                     id={`ap-${key}`}
                     value={form[key]}
                     onChange={(e) => setForm((f) => (f ? { ...f, [key]: e.target.value } : f))}
-                    placeholder="#RRGGBB"
-                    className="font-mono text-sm"
+                    placeholder="https://…"
                   />
                 </div>
               ))}
             </div>
-          ) : null}
-        </div>
+          </div>
+        </TabsContent>
 
-        <div className="flex flex-wrap gap-2 pt-2">
-          <Button type="button" onClick={() => void save()} disabled={saving || !form.name.trim()}>
-            {saving ? "Захаванне…" : "Захаваць"}
-          </Button>
-        </div>
+        <TabsContent value="visual" className="mt-0">
+          <div className="glass rounded-2xl border border-border p-6 space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Колер, узор фону і ўласны градыент для старонкі артыста ў каталозе.
+            </p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Колеравая схема</Label>
+                <Select
+                  value={form.colorPreset}
+                  onValueChange={(v) =>
+                    setForm((f) => (f ? { ...f, colorPreset: v as ArtistColorPresetId | "custom" } : f))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ARTIST_COLOR_PRESETS.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.label}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="custom">Свой градыент</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Узор фону</Label>
+                <Select
+                  value={form.pattern}
+                  onValueChange={(v) =>
+                    setForm((f) => (f ? { ...f, pattern: v as ArtistPatternId } : f))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(ARTIST_PATTERN_LABELS).map(([id, lab]) => (
+                      <SelectItem key={id} value={id}>
+                        {lab}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            {form.colorPreset === "custom" ? (
+              <div className="grid gap-3 sm:grid-cols-3">
+                {(
+                  [
+                    ["customGradientFrom", "Градыент ад"],
+                    ["customGradientTo", "Градыент да"],
+                    ["customAccent", "Акцэнт"],
+                  ] as const
+                ).map(([key, lab]) => (
+                  <div key={key} className="space-y-1.5">
+                    <Label htmlFor={`ap-${key}`}>{lab}</Label>
+                    <Input
+                      id={`ap-${key}`}
+                      value={form[key]}
+                      onChange={(e) => setForm((f) => (f ? { ...f, [key]: e.target.value } : f))}
+                      placeholder="#RRGGBB"
+                      className="font-mono text-sm"
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      <div className="flex flex-wrap gap-2 pt-1">
+        <Button type="button" onClick={() => void save()} disabled={saving || !form.name.trim()}>
+          {saving ? "Захаванне…" : "Захаваць"}
+        </Button>
       </div>
     </div>
   );

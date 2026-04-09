@@ -48,7 +48,7 @@ export function ArtistCabinetSidebar() {
           { href: `/cabinet/artist/${artistId}/analytics`, label: "Аналітыка", icon: BarChart3 },
           { href: `/cabinet/artist/${artistId}/applications`, label: "Заяўкі", icon: Inbox },
           ...(showProfileNav
-            ? [{ href: `/cabinet/artist/${artistId}/profile`, label: "Картачка на сайце", icon: UserRound }]
+            ? [{ href: `/cabinet/artist/${artistId}/profile`, label: "Наладкі", icon: UserRound }]
             : []),
         ]
       : [];

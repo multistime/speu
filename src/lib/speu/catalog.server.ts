@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import { topGenreCodesFromTrackLists } from "@/lib/speu/artist-genres";
 import { pickAudioUrl } from "@/lib/speu/audio";
 import { themeFromVisualJson } from "@/lib/speu/theme";
 import type {
@@ -275,20 +276,59 @@ export async function fetchSpeuHubArtists(limit = 20): Promise<SpeuHubArtistCard
   const { data, error } = await supabase
     .schema("speu")
     .from("artists")
-    .select("slug, name, name_en, genres, tagline, location, year_started, initials, photo_url, visual_json")
+    .select("id, slug, name, name_en, tagline, location, year_started, initials, photo_url, visual_json")
     .eq("status", "published")
     .order("sort_order", { ascending: true })
     .limit(limit);
 
   if (error || !data) return [];
 
+  const artistIds = data.map((a) => a.id);
+  const { data: creditRows } = await supabase
+    .schema("speu")
+    .from("track_artists")
+    .select(
+      `
+      artist_id,
+      artist_tracks (
+        id,
+        genres,
+        is_published
+      )
+    `
+    )
+    .in("artist_id", artistIds);
+
+  type CreditHubRow = {
+    artist_id: string;
+    artist_tracks:
+      | { id: string; genres: string[] | null; is_published: boolean }
+      | { id: string; genres: string[] | null; is_published: boolean }[]
+      | null;
+  };
+
+  const trackGenresByArtist = new Map<string, Map<string, string[]>>();
+  for (const row of (creditRows ?? []) as CreditHubRow[]) {
+    const tr = row.artist_tracks;
+    const track = Array.isArray(tr) ? tr[0] : tr;
+    if (!track?.id || !track.is_published) continue;
+    const genres = Array.isArray(track.genres)
+      ? track.genres.filter((g): g is string => typeof g === "string")
+      : [];
+    const byTrack = trackGenresByArtist.get(row.artist_id) ?? new Map();
+    if (byTrack.has(track.id)) continue;
+    byTrack.set(track.id, genres);
+    trackGenresByArtist.set(row.artist_id, byTrack);
+  }
+
   return data.map((a) => {
     const theme = themeFromVisualJson(a.visual_json as Record<string, unknown> | null);
+    const lists = [...(trackGenresByArtist.get(a.id)?.values() ?? [])];
     return {
       slug: a.slug,
       name: a.name,
       nameEn: a.name_en ?? a.name,
-      genres: a.genres ?? [],
+      genres: topGenreCodesFromTrackLists(lists),
       tagline: a.tagline ?? "",
       location: a.location ?? "Беларусь",
       year: a.year_started ? String(a.year_started) : "—",
@@ -305,7 +345,7 @@ export async function fetchSpeuArtistBySlug(slug: string): Promise<SpeuArtistPag
     .schema("speu")
     .from("artists")
     .select(
-      "id, slug, name, name_en, genres, tagline, bio, location, year_started, initials, photo_url, social_links, visual_json"
+      "id, slug, name, name_en, tagline, bio, location, year_started, initials, photo_url, social_links, visual_json"
     )
     .eq("slug", slug)
     .eq("status", "published")
@@ -361,7 +401,7 @@ export async function fetchSpeuArtistBySlug(slug: string): Promise<SpeuArtistPag
       slug: artist.slug,
       name: artist.name,
       nameEn: artist.name_en ?? artist.name,
-      genres: artist.genres ?? [],
+      genres: [],
       tagline: artist.tagline ?? "",
       bio: artist.bio ?? "",
       location: artist.location ?? "Беларусь",
@@ -423,7 +463,7 @@ export async function fetchSpeuArtistBySlug(slug: string): Promise<SpeuArtistPag
     slug: artist.slug,
     name: artist.name,
     nameEn: artist.name_en ?? artist.name,
-    genres: artist.genres ?? [],
+    genres: topGenreCodesFromTrackLists(mapped.map((t) => t.genres)),
     tagline: artist.tagline ?? "",
     bio: artist.bio ?? "",
     location: artist.location ?? "Беларусь",
