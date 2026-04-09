@@ -56,12 +56,24 @@ export function setMediaSessionPlaybackState(
   }
 }
 
+/** Safari на iPhone часта дае (pointer: fine) — толькі UA / touch, інакш застаюцца ±15 с на lock screen. */
+function isAppleTouchDevice(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent;
+  if (/iPhone|iPod/i.test(ua)) return true;
+  if (/iPad/i.test(ua)) return true;
+  // iPadOS 13+ у Safari: «Macintosh», але гэта планшэт
+  if (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1) return true;
+  return false;
+}
+
 /**
- * На тэлефонах з touch lock screen часта паказвае ±N с замест previoustrack/nexttrack,
- * калі ёсць MediaSession position state. Без setPositionState застаюцца кнопкі трэкаў.
+ * На touch lock screen (iOS, часта Android) замест трэкаў паказваюцца ±N с,
+ * калі ёсць MediaSession position state. Без setPositionState — previoustrack/nexttrack.
  */
-function lockScreenPrefersTrackSkipOverSeek(): boolean {
+export function mediaSessionPrefersTrackButtonsOnLockScreen(): boolean {
   if (typeof window === "undefined") return false;
+  if (isAppleTouchDevice()) return true;
   try {
     return window.matchMedia("(pointer: coarse)").matches;
   } catch {
@@ -71,7 +83,7 @@ function lockScreenPrefersTrackSkipOverSeek(): boolean {
 
 export function updateMediaSessionPositionState(audio: HTMLAudioElement): void {
   if (typeof window === "undefined") return;
-  if (lockScreenPrefersTrackSkipOverSeek()) {
+  if (mediaSessionPrefersTrackButtonsOnLockScreen()) {
     clearMediaSessionPositionState();
     return;
   }

@@ -11,6 +11,7 @@ import React, {
 } from "react";
 import {
   clearMediaSessionPositionState,
+  mediaSessionPrefersTrackButtonsOnLockScreen,
   setMediaSessionPlaybackState,
   setTrackMediaMetadata,
   updateMediaSessionPositionState,
@@ -298,6 +299,16 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     } catch {
       /* duplicate registration etc. */
     }
+    // iOS: нельга сумяшчаць seek± і трэкі — здымаем seek, каб на lock screen былі |◀ ▶|
+    if (mediaSessionPrefersTrackButtonsOnLockScreen()) {
+      for (const action of ["seekbackward", "seekforward", "seekto"] as const) {
+        try {
+          navigator.mediaSession.setActionHandler(action, null);
+        } catch {
+          /* action не падтрымліваецца */
+        }
+      }
+    }
     return () => {
       try {
         navigator.mediaSession.setActionHandler("play", null);
@@ -307,6 +318,15 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         navigator.mediaSession.setActionHandler("nexttrack", null);
       } catch {
         /* ignore */
+      }
+      if (mediaSessionPrefersTrackButtonsOnLockScreen()) {
+        for (const action of ["seekbackward", "seekforward", "seekto"] as const) {
+          try {
+            navigator.mediaSession.setActionHandler(action, null);
+          } catch {
+            /* ignore */
+          }
+        }
       }
     };
   }, []);
