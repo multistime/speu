@@ -49,7 +49,8 @@ function storageUploadUserMessage(message: string, kind: "image" | "audio"): str
 
 export default function ArtistSubmissionPage() {
   const params = useParams();
-  const id = typeof params.id === "string" ? params.id : "";
+  const artistId = typeof params.artistId === "string" ? params.artistId : "";
+  const submissionId = typeof params.submissionId === "string" ? params.submissionId : "";
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
 
@@ -82,7 +83,7 @@ export default function ArtistSubmissionPage() {
   }, [submission, editable, releaseKind, title, tracks]);
 
   const load = useCallback(async () => {
-    if (!id) return;
+    if (!submissionId || !artistId) return;
     setError(null);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -101,10 +102,10 @@ export default function ArtistSubmissionPage() {
       .select(
         "id, artist_id, user_id, release_kind, status, title, cover_url, cover_storage_path, artist_note, moderator_message, archived_at, created_at, updated_at",
       )
-      .eq("id", id)
+      .eq("id", submissionId)
       .maybeSingle();
 
-    if (sErr || !sub || sub.user_id !== user.id) {
+    if (sErr || !sub || sub.user_id !== user.id || sub.artist_id !== artistId) {
       setSubmission(null);
       setLoading(false);
       return;
@@ -125,7 +126,7 @@ export default function ArtistSubmissionPage() {
       .select(
         "id, submission_id, sort_order, title, audio_url, audio_storage_path, cover_url, cover_storage_path, duration_sec, notes, lyrics, artist_track_id, created_at, updated_at",
       )
-      .eq("submission_id", id)
+      .eq("submission_id", submissionId)
       .order("sort_order", { ascending: true });
 
     if (tErr) {
@@ -141,7 +142,7 @@ export default function ArtistSubmissionPage() {
       );
     }
     setLoading(false);
-  }, [id, router, supabase]);
+  }, [artistId, submissionId, router, supabase]);
 
   useEffect(() => {
     void load();
@@ -410,7 +411,7 @@ export default function ArtistSubmissionPage() {
       setDeleting(false);
       return;
     }
-    router.replace("/cabinet/artist");
+    router.replace(`/cabinet/artist/${artistId}/applications`);
   };
 
   const updateTrackLocal = (trackId: string, patch: Partial<ReleaseSubmissionTrackRow>) => {
@@ -429,7 +430,10 @@ export default function ArtistSubmissionPage() {
     return (
       <div className="glass rounded-2xl border border-border p-8 text-center space-y-3">
         <p className="text-sm text-muted-foreground">Заяўка не знойдзена або няма доступу.</p>
-        <Link href="/cabinet/artist" className="text-sm text-primary hover:underline inline-block">
+        <Link
+          href={`/cabinet/artist/${artistId}/applications`}
+          className="text-sm text-primary hover:underline inline-block"
+        >
           Да спісу заявак
         </Link>
       </div>
@@ -441,7 +445,7 @@ export default function ArtistSubmissionPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <Link
-            href="/cabinet/artist"
+            href={`/cabinet/artist/${artistId}/applications`}
             className="text-xs text-muted-foreground hover:text-foreground transition-colors mb-2 inline-block"
           >
             ← Усе заяўкі

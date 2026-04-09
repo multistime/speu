@@ -52,8 +52,8 @@ export type AdminUserListItem = {
   role_codes: string[];
   /** Subset managed in admin UI */
   product_role_codes: AdminUiRoleCode[];
-  /** Label artist linked to this user (1:1), when column artists.user_id is set */
-  linked_artist: { id: string; name: string; slug: string } | null;
+  /** Label artist cards linked to this user (speu.artists.user_id) */
+  linked_artists: { id: string; name: string; slug: string }[];
 };
 
 export async function GET(request: Request) {
@@ -141,9 +141,13 @@ export async function GET(request: Request) {
           .in("user_id", ids)
       : { data: [] as { id: string; name: string; slug: string; user_id: string }[] };
 
-  const linkedByUserId = new Map(
-    (linkedRows ?? []).map((a) => [a.user_id, { id: a.id, name: a.name, slug: a.slug }])
-  );
+  const linkedByUserId = new Map<string, { id: string; name: string; slug: string }[]>();
+  for (const a of linkedRows ?? []) {
+    const uid = a.user_id as string;
+    const arr = linkedByUserId.get(uid) ?? [];
+    arr.push({ id: a.id, name: a.name, slug: a.slug });
+    linkedByUserId.set(uid, arr);
+  }
 
   const items: AdminUserListItem[] = users.map((u) => {
     const profile = profileById.get(u.id);
@@ -161,7 +165,7 @@ export async function GET(request: Request) {
       is_superadmin: isSuperadminEmail(u.email ?? null),
       role_codes,
       product_role_codes,
-      linked_artist: linkedByUserId.get(u.id) ?? null,
+      linked_artists: linkedByUserId.get(u.id) ?? [],
     };
   });
 

@@ -284,32 +284,40 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   }, [flushPersist]);
 
   useEffect(() => {
-    if (typeof navigator === "undefined" || !("mediaSession" in navigator)) return;
-    const play = () => void audioRef.current?.play();
-    const pause = () => audioRef.current?.pause();
-    const stopFromOs = () => stopRef.current();
-    const next = () => skipNextRef.current();
-    const prev = () => skipPreviousRef.current();
-    try {
-      navigator.mediaSession.setActionHandler("play", play);
-      navigator.mediaSession.setActionHandler("pause", pause);
-      navigator.mediaSession.setActionHandler("stop", stopFromOs);
-      navigator.mediaSession.setActionHandler("previoustrack", prev);
-      navigator.mediaSession.setActionHandler("nexttrack", next);
-    } catch {
-      /* duplicate registration etc. */
-    }
-    // iOS: нельга сумяшчаць seek± і трэкі — здымаем seek, каб на lock screen былі |◀ ▶|
-    if (mediaSessionPrefersTrackButtonsOnLockScreen()) {
-      for (const action of ["seekbackward", "seekforward", "seekto"] as const) {
-        try {
-          navigator.mediaSession.setActionHandler(action, null);
-        } catch {
-          /* action не падтрымліваецца */
-        }
+    const audio = new Audio();
+    audioRef.current = audio;
+
+    /** iOS: ранняя рэгістрацыя пры mount часта дае ±15 с; пасля «playing» — стрэлкі трэкаў (гл. SO 73993512). */
+    const applyMediaSessionActionHandlers = () => {
+      if (typeof navigator === "undefined" || !("mediaSession" in navigator)) return;
+      const play = () => void audio.play();
+      const pause = () => audio.pause();
+      const stopFromOs = () => stopRef.current();
+      const next = () => skipNextRef.current();
+      const prev = () => skipPreviousRef.current();
+      try {
+        navigator.mediaSession.setActionHandler("play", play);
+        navigator.mediaSession.setActionHandler("pause", pause);
+        navigator.mediaSession.setActionHandler("stop", stopFromOs);
+        navigator.mediaSession.setActionHandler("previoustrack", prev);
+        navigator.mediaSession.setActionHandler("nexttrack", next);
+      } catch {
+        /* duplicate registration etc. */
       }
-    }
-    return () => {
+      if (mediaSessionPrefersTrackButtonsOnLockScreen()) {
+        for (const action of ["seekbackward", "seekforward", "seekto"] as const) {
+          try {
+            navigator.mediaSession.setActionHandler(action, null);
+          } catch {
+            /* action не падтрымліваецца */
+          }
+        }
+        clearMediaSessionPositionState();
+      }
+    };
+
+    const clearMediaSessionActionHandlers = () => {
+      if (typeof navigator === "undefined" || !("mediaSession" in navigator)) return;
       try {
         navigator.mediaSession.setActionHandler("play", null);
         navigator.mediaSession.setActionHandler("pause", null);
@@ -329,11 +337,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         }
       }
     };
-  }, []);
-
-  useEffect(() => {
-    const audio = new Audio();
-    audioRef.current = audio;
 
     const onPlay = () => {
       ignoreNextPauseRef.current = false;
@@ -427,7 +430,12 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       ignoreNextPauseRef.current = false;
     };
 
+    const onPlaying = () => {
+      applyMediaSessionActionHandlers();
+    };
+
     audio.addEventListener("play", onPlay);
+    audio.addEventListener("playing", onPlaying);
     audio.addEventListener("pause", onPause);
     audio.addEventListener("ended", onEnded);
     audio.addEventListener("timeupdate", onTimeUpdate);
@@ -438,6 +446,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       audio.removeEventListener("play", onPlay);
+      audio.removeEventListener("playing", onPlaying);
       audio.removeEventListener("pause", onPause);
       audio.removeEventListener("ended", onEnded);
       audio.removeEventListener("timeupdate", onTimeUpdate);
@@ -445,6 +454,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       audio.removeEventListener("loadedmetadata", onLoadedMetadata);
       audio.removeEventListener("waiting", onWaiting);
       audio.removeEventListener("error", onError);
+      clearMediaSessionActionHandlers();
       audio.pause();
       audio.src = "";
       setTrackMediaMetadata(null);

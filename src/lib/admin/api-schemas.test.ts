@@ -49,20 +49,28 @@ describe("adminSongPayloadSchema", () => {
 });
 
 describe("adminUserRolesPatchSchema", () => {
-  it("accepts listener without linkedArtistId", () => {
+  it("accepts listener without linkedArtistIds", () => {
     const r = adminUserRolesPatchSchema.safeParse({ codes: ["listener"] });
     expect(r.success).toBe(true);
   });
 
-  it("requires linkedArtistId when artist role is set", () => {
+  it("requires linkedArtistIds when artist role is set", () => {
     const r = adminUserRolesPatchSchema.safeParse({ codes: ["artist"] });
     expect(r.success).toBe(false);
   });
 
-  it("accepts artist with linkedArtistId", () => {
+  it("accepts artist with linkedArtistIds", () => {
     const r = adminUserRolesPatchSchema.safeParse({
       codes: ["listener", "artist"],
-      linkedArtistId: sampleUuid,
+      linkedArtistIds: [sampleUuid],
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it("accepts multiple linked artists", () => {
+    const r = adminUserRolesPatchSchema.safeParse({
+      codes: ["artist"],
+      linkedArtistIds: [sampleUuid, otherUuid],
     });
     expect(r.success).toBe(true);
   });

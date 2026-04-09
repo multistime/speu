@@ -38,16 +38,19 @@ export type AdminSongPayload = z.infer<typeof adminSongPayloadSchema>;
 export const adminUserRolesPatchSchema = z
   .object({
     codes: z.array(uiRoleEnum),
-    /** Required when `artist` is in codes: label artist card (speu.artists.id) to bind 1:1 */
-    linkedArtistId: z.string().uuid().nullable().optional(),
+    /** Required when `artist` is in codes: one or more speu.artists.id bound via artists.user_id */
+    linkedArtistIds: z.array(z.string().uuid()).optional().nullable(),
   })
   .superRefine((data, ctx) => {
-    if (data.codes.includes("artist") && !data.linkedArtistId) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Пры ролі «артыст» абярыце карточку артыста лэйбла",
-        path: ["linkedArtistId"],
-      });
+    if (data.codes.includes("artist")) {
+      const ids = data.linkedArtistIds?.filter(Boolean) ?? [];
+      if (ids.length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Пры ролі «артыст» абярыце хаця б адну карточку артыста лэйбла",
+          path: ["linkedArtistIds"],
+        });
+      }
     }
   });
 

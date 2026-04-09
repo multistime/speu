@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Disc3, Loader2, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { getSpeuProfile } from "@/lib/supabase/speu";
+import { getSpeuProfile, type SpeuProfile } from "@/lib/supabase/speu";
 import {
   RELEASE_KIND_LABELS,
   RELEASE_STATUS_LABELS,
@@ -50,7 +50,6 @@ function normalizeRow(raw: Record<string, unknown>): ReleaseSubmissionRow {
 
 type SubmissionTrackCover = { cover_url: string | null; sort_order: number };
 
-/** Абкладка для спісу: рэліз або (для сінгла) першая вокладка трэка. */
 function listThumbnailUrl(
   row: ReleaseSubmissionRow,
   trackCovers: SubmissionTrackCover[] | undefined,
@@ -77,12 +76,12 @@ function toListItem(raw: Record<string, unknown>): ReleaseSubmissionRow & { list
 
 type ApplicationListRow = ReleaseSubmissionRow & { listThumbnailUrl: string | null };
 
-function SubmissionListRow({ row }: { row: ApplicationListRow }) {
+function SubmissionListRow({ row, artistId }: { row: ApplicationListRow; artistId: string }) {
   const thumb = row.listThumbnailUrl;
   return (
     <li>
       <Link
-        href={`/cabinet/artist/${row.id}`}
+        href={`/cabinet/artist/${artistId}/submission/${row.id}`}
         className="group flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-4 glass rounded-2xl border border-border p-4 sm:p-5 hover:border-emerald-500/30 hover:bg-emerald-500/[0.03] transition-all min-w-0 focus-within:ring-2 focus-within:ring-primary/25 focus-within:ring-offset-2 focus-within:ring-offset-background"
       >
         <div className="shrink-0 min-w-[4.5rem] w-[4.5rem] h-[4.5rem] rounded-xl border border-border bg-muted/40 overflow-hidden flex items-center justify-center aspect-square">
@@ -126,7 +125,16 @@ function SubmissionListRow({ row }: { row: ApplicationListRow }) {
   );
 }
 
-export default function ArtistApplicationsPage() {
+function profileOwnsArtist(profile: SpeuProfile | null, artistId: string): boolean {
+  if (!profile?.is_artist) return false;
+  const linked = profile.linked_artists;
+  if (Array.isArray(linked) && linked.length > 0) {
+    return linked.some((a) => a && typeof a === "object" && "id" in a && (a as { id: string }).id === artistId);
+  }
+  return profile.artist_id === artistId;
+}
+
+export default function ArtistApplicationsPageClient({ artistId }: { artistId: string }) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -145,7 +153,7 @@ export default function ArtistApplicationsPage() {
       return;
     }
     const profile = await getSpeuProfile(supabase, user.id);
-    if (!profile?.is_artist || !profile.artist_id) {
+    if (!profileOwnsArtist(profile, artistId)) {
       setAllowed(false);
       setLoading(false);
       return;
@@ -158,6 +166,7 @@ export default function ArtistApplicationsPage() {
         "id, artist_id, user_id, release_kind, status, title, cover_url, cover_storage_path, artist_note, moderator_message, archived_at, created_at, updated_at, release_submission_tracks ( cover_url, sort_order )",
       )
       .eq("user_id", user.id)
+      .eq("artist_id", artistId)
       .order("updated_at", { ascending: false });
     if (qErr) {
       setError(qErr.message);
@@ -166,10 +175,9 @@ export default function ArtistApplicationsPage() {
       setItems((data ?? []).map((r) => toListItem(r as Record<string, unknown>)));
     }
     setLoading(false);
-  }, [router, supabase]);
+  }, [artistId, router, supabase]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial list fetch
     void load();
   }, [load]);
 
@@ -191,8 +199,8 @@ export default function ArtistApplicationsPage() {
       return;
     }
     const profile = await getSpeuProfile(supabase, user.id);
-    if (!profile?.artist_id) {
-      setError("Профіль артыста не прывязаны.");
+    if (!profileOwnsArtist(profile, artistId)) {
+      setError("Няма доступу да гэтай картачкі артыста.");
       setCreating(false);
       return;
     }
@@ -200,7 +208,7 @@ export default function ArtistApplicationsPage() {
       .schema("speu")
       .from("release_submissions")
       .insert({
-        artist_id: profile.artist_id,
+        artist_id: artistId,
         user_id: user.id,
         release_kind: "single",
         status: "draft",
@@ -224,7 +232,7 @@ export default function ArtistApplicationsPage() {
       return;
     }
     setCreating(false);
-    router.push(`/cabinet/artist/${sub.id}`);
+    router.push(`/cabinet/artist/${artistId}/submission/${sub.id}`);
   };
 
   if (loading) {
@@ -239,10 +247,10 @@ export default function ArtistApplicationsPage() {
     return (
       <div className="glass rounded-2xl border border-border p-8 text-center">
         <p className="text-sm text-muted-foreground">
-          Кабінет артыста даступны пасля прывязкі вашага акаўнта да карточкі артыста на лэйбле.
+          Няма доступу да кабінета гэтага артыста. Выберыце картачку ў спісе або звярніцеся да лэйбла.
         </p>
-        <Link href="/cabinet" className="inline-block mt-4 text-sm text-primary hover:underline">
-          Вярнуцца ў кабінет
+        <Link href="/cabinet/artist" className="inline-block mt-4 text-sm text-primary hover:underline">
+          Да выбару артыста
         </Link>
       </div>
     );
@@ -296,7 +304,7 @@ export default function ArtistApplicationsPage() {
               </h2>
               <ul className="space-y-3">
                 {sec.rows.map((row) => (
-                  <SubmissionListRow key={row.id} row={row} />
+                  <SubmissionListRow key={row.id} row={row} artistId={artistId} />
                 ))}
               </ul>
             </section>

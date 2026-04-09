@@ -1,24 +1,27 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useParams, usePathname } from "next/navigation";
 import { BarChart3, Inbox, Disc3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const navItems = [
-  { href: "/cabinet/artist/analytics", label: "Аналітыка", icon: BarChart3 },
-  { href: "/cabinet/artist/applications", label: "Заяўкі", icon: Inbox },
-];
-
-function isArtistSubmissionPath(pathname: string): boolean {
-  if (!pathname.startsWith("/cabinet/artist/")) return false;
-  const rest = pathname.slice("/cabinet/artist/".length);
-  if (!rest || rest.includes("/")) return false;
-  return rest !== "analytics" && rest !== "applications";
+function isArtistSubmissionPath(pathname: string, artistId: string): boolean {
+  const prefix = `/cabinet/artist/${artistId}/submission/`;
+  return pathname.startsWith(prefix);
 }
 
 export function ArtistCabinetSidebar() {
   const pathname = usePathname();
+  const params = useParams();
+  const artistId = typeof params.artistId === "string" ? params.artistId : "";
+
+  const navItems =
+    artistId.length > 0
+      ? [
+          { href: `/cabinet/artist/${artistId}/analytics`, label: "Аналітыка", icon: BarChart3 },
+          { href: `/cabinet/artist/${artistId}/applications`, label: "Заяўкі", icon: Inbox },
+        ]
+      : [];
 
   const linkClass = (active: boolean) =>
     cn(
@@ -40,7 +43,7 @@ export function ArtistCabinetSidebar() {
             const active =
               item.href.endsWith("/analytics")
                 ? pathname === item.href
-                : pathname === item.href || isArtistSubmissionPath(pathname);
+                : pathname === item.href || (artistId ? isArtistSubmissionPath(pathname, artistId) : false);
             return (
               <Link key={item.href} href={item.href} className={linkClass(active)}>
                 <item.icon className="w-4 h-4 shrink-0" strokeWidth={1.75} />

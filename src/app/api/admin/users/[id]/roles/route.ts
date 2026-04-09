@@ -125,40 +125,42 @@ export async function PATCH(
     return NextResponse.json({ error: "update_failed", details: clearLinkErr.message }, { status: 500 });
   }
 
-  if (codes.includes("artist") && parsed.data.linkedArtistId) {
-    const aid = parsed.data.linkedArtistId;
-    const { data: prev, error: prevErr } = await adminDb
-      .schema("speu")
-      .from("artists")
-      .select("id, user_id")
-      .eq("id", aid)
-      .maybeSingle();
-    if (prevErr || !prev) {
-      return NextResponse.json({ error: "artist_not_found" }, { status: 400 });
-    }
-    const other = prev.user_id as string | null;
-    if (other && other !== targetId) {
-      return NextResponse.json(
-        {
-          error: "artist_already_linked",
-          message: "Гэтая карточка артыста ўжо прывязана да іншага карыстальніка",
-        },
-        { status: 409 }
-      );
-    }
-    const { error: linkErr } = await adminDb
-      .schema("speu")
-      .from("artists")
-      .update({ user_id: targetId })
-      .eq("id", aid);
-    if (linkErr) {
-      return NextResponse.json({ error: "update_failed", details: linkErr.message }, { status: 500 });
+  if (codes.includes("artist") && parsed.data.linkedArtistIds?.length) {
+    const uniqueIds = [...new Set(parsed.data.linkedArtistIds)];
+    for (const aid of uniqueIds) {
+      const { data: prev, error: prevErr } = await adminDb
+        .schema("speu")
+        .from("artists")
+        .select("id, user_id")
+        .eq("id", aid)
+        .maybeSingle();
+      if (prevErr || !prev) {
+        return NextResponse.json({ error: "artist_not_found" }, { status: 400 });
+      }
+      const other = prev.user_id as string | null;
+      if (other && other !== targetId) {
+        return NextResponse.json(
+          {
+            error: "artist_already_linked",
+            message: "Адна з картачак артыстаў ужо прывязана да іншага карыстальніка",
+          },
+          { status: 409 }
+        );
+      }
+      const { error: linkErr } = await adminDb
+        .schema("speu")
+        .from("artists")
+        .update({ user_id: targetId })
+        .eq("id", aid);
+      if (linkErr) {
+        return NextResponse.json({ error: "update_failed", details: linkErr.message }, { status: 500 });
+      }
     }
   }
 
   await writeAdminAuditLog(adminDb, user.id, "user.roles_set", "auth.users", targetId, {
     codes,
-    linkedArtistId: parsed.data.linkedArtistId ?? null,
+    linkedArtistIds: parsed.data.linkedArtistIds ?? null,
   });
 
   return NextResponse.json({ ok: true, codes });

@@ -56,14 +56,17 @@ export function setMediaSessionPlaybackState(
   }
 }
 
-/** Safari на iPhone часта дае (pointer: fine) — толькі UA / touch, інакш застаюцца ±15 с на lock screen. */
+/** Safari на iPhone часта дае (pointer: fine) — UA, platform, touch. */
 function isAppleTouchDevice(): boolean {
   if (typeof navigator === "undefined") return false;
   const ua = navigator.userAgent;
+  const platform = navigator.platform ?? "";
   if (/iPhone|iPod/i.test(ua)) return true;
   if (/iPad/i.test(ua)) return true;
-  // iPadOS 13+ у Safari: «Macintosh», але гэта планшэт
-  if (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1) return true;
+  if (/^iPhone|^iPad|^iPod/i.test(platform)) return true;
+  // «Запытаць сайт для Mac» / iPadOS: Macintosh + touch
+  if (/Mac/i.test(platform) && navigator.maxTouchPoints > 1) return true;
+  if (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1) return true;
   return false;
 }
 

@@ -1,12 +1,17 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+export type SpeuLinkedArtist = { id: string; name: string; slug: string };
+
 export type SpeuProfile = {
   id: string;
   display_name: string | null;
   is_admin: boolean;
-  /** true when speu.artists.user_id = this profile (заяўкі на рэліз у кабінеце артыста) */
+  /** true when at least one speu.artists row has user_id = this profile */
   is_artist?: boolean;
+  /** Першы артыст па назве (сумяшчальнасць); для спісу глядзіце linked_artists */
   artist_id?: string | null;
+  /** Усе картачкі артыстаў, прывязаныя да акаўнта */
+  linked_artists?: SpeuLinkedArtist[];
   /** Перавагі глабальнага плэера (захоўваюцца ў speu.profiles) */
   player_queue_repeat_mode?: "off" | "all" | "one";
   player_queue_shuffle?: boolean;

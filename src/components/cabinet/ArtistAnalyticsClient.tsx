@@ -13,7 +13,7 @@ import {
   Users,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { getSpeuProfile } from "@/lib/supabase/speu";
+import { getSpeuProfile, type SpeuProfile } from "@/lib/supabase/speu";
 import {
   type ArtistListenDashboardOk,
   deltaPct,
@@ -285,7 +285,16 @@ function TopTracksBars({ tracks }: { tracks: ArtistListenDashboardOk["tracks"] }
   );
 }
 
-export function ArtistAnalyticsClient() {
+function profileOwnsArtist(profile: SpeuProfile | null, artistId: string): boolean {
+  if (!profile?.is_artist) return false;
+  const linked = profile.linked_artists;
+  if (Array.isArray(linked) && linked.length > 0) {
+    return linked.some((a) => a && typeof a === "object" && "id" in a && (a as { id: string }).id === artistId);
+  }
+  return profile.artist_id === artistId;
+}
+
+export function ArtistAnalyticsClient({ artistId }: { artistId: string }) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -296,6 +305,11 @@ export function ArtistAnalyticsClient() {
 
   const load = useCallback(async () => {
     setErr(null);
+    if (!artistId) {
+      setAllowed(false);
+      setLoading(false);
+      return;
+    }
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -304,7 +318,7 @@ export function ArtistAnalyticsClient() {
       return;
     }
     const profile = await getSpeuProfile(supabase, user.id);
-    if (!profile?.is_artist || !profile.artist_id) {
+    if (!profileOwnsArtist(profile, artistId)) {
       setAllowed(false);
       setLoading(false);
       return;
@@ -313,6 +327,7 @@ export function ArtistAnalyticsClient() {
 
     const { data: raw, error } = await supabase.schema("speu").rpc("artist_listen_dashboard", {
       p_period_days: period,
+      p_artist_id: artistId,
     });
     if (error) {
       setErr(error.message);
@@ -322,13 +337,22 @@ export function ArtistAnalyticsClient() {
     }
     const parsed = parseArtistListenDashboard(raw);
     if (!parsed || !parsed.ok) {
-      setErr(parsed?.error === "not_artist" ? "Не знойдзены профіль артыста." : "Не ўдалося загрузіць даныя.");
+      const code = parsed?.error;
+      const msg =
+        code === "not_artist"
+          ? "Не знойдзены профіль артыста."
+          : code === "forbidden"
+            ? "Няма доступу да гэтай картачкі артыста."
+            : code === "artist_required"
+              ? "Абярыце артыста ў кабінеце."
+              : "Не ўдалося загрузіць даныя.";
+      setErr(msg);
       setData(null);
     } else {
       setData(parsed);
     }
     setLoading(false);
-  }, [period, router, supabase]);
+  }, [artistId, period, router, supabase]);
 
   useEffect(() => {
     setLoading(true);
@@ -347,10 +371,10 @@ export function ArtistAnalyticsClient() {
     return (
       <div className="glass rounded-2xl border border-border p-8 text-center">
         <p className="text-sm text-muted-foreground">
-          Кабінет артыста даступны пасля прывязкі вашага акаўнта да карточкі артыста на лэйбле.
+          Няма доступу да кабінета гэтага артыста. Выберыце картачку ў спісе або звярніцеся да лэйбла.
         </p>
-        <Link href="/cabinet" className="inline-block mt-4 text-sm text-primary hover:underline">
-          Вярнуцца ў кабінет
+        <Link href="/cabinet/artist" className="inline-block mt-4 text-sm text-primary hover:underline">
+          Да выбару артыста
         </Link>
       </div>
     );

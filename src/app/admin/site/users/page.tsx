@@ -25,7 +25,7 @@ type AdminUserListItem = {
   is_superadmin?: boolean;
   role_codes: string[];
   product_role_codes: AdminUiRoleCode[];
-  linked_artist: { id: string; name: string; slug: string } | null;
+  linked_artists: { id: string; name: string; slug: string }[];
 };
 
 type CatalogArtist = { id: string; name: string; slug: string };
@@ -57,7 +57,7 @@ export default function AdminUsersPage() {
   const [searchDraft, setSearchDraft] = useState("");
   const [selected, setSelected] = useState<AdminUserListItem | null>(null);
   const [editCodes, setEditCodes] = useState<AdminUiRoleCode[]>([]);
-  const [linkedArtistId, setLinkedArtistId] = useState("");
+  const [linkedArtistIds, setLinkedArtistIds] = useState<string[]>([]);
   const [catalogArtists, setCatalogArtists] = useState<CatalogArtist[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -127,7 +127,7 @@ export default function AdminUsersPage() {
     const base = [...u.product_role_codes];
     if (u.is_superadmin && !base.includes("admin")) base.push("admin");
     setEditCodes(base);
-    setLinkedArtistId(u.linked_artist?.id ?? "");
+    setLinkedArtistIds((u.linked_artists ?? []).map((a) => a.id));
     setError(null);
   };
 
@@ -135,7 +135,7 @@ export default function AdminUsersPage() {
     if (selected?.is_superadmin && code === "admin") return;
     setEditCodes((prev) => {
       if (prev.includes(code)) {
-        if (code === "artist") setLinkedArtistId("");
+        if (code === "artist") setLinkedArtistIds([]);
         return prev.filter((c) => c !== code);
       }
       return [...prev, code];
@@ -144,8 +144,8 @@ export default function AdminUsersPage() {
 
   const saveRoles = async () => {
     if (!selected) return;
-    if (editCodes.includes("artist") && !linkedArtistId) {
-      setError("Пры ролі «артыст» абярыце карточку артыста лэйбла");
+    if (editCodes.includes("artist") && linkedArtistIds.length === 0) {
+      setError("Пры ролі «артыст» абярыце хаця б адну карточку артыста лэйбла");
       return;
     }
     setSaving(true);
@@ -155,7 +155,7 @@ export default function AdminUsersPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         codes: editCodes,
-        linkedArtistId: editCodes.includes("artist") ? linkedArtistId : null,
+        linkedArtistIds: editCodes.includes("artist") ? [...new Set(linkedArtistIds)] : null,
       }),
     });
     const data = await res.json().catch(() => ({}));
@@ -191,7 +191,7 @@ export default function AdminUsersPage() {
           <div className="min-w-0 flex-1">
             <h1 className="font-display text-2xl italic text-foreground">Карыстальнікі</h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Слухач — звычайны карыстальнік; артыст — прывязка 1:1 да карточкі артыста лэйбла (для будучага кабінета);
+              Слухач — звычайны карыстальнік; артыст — прывязка да адной або некалькіх картачак артыста лэйбла (кабінет артыста);
               адмін — доступ у адмінку.
             </p>
           </div>
@@ -278,7 +278,9 @@ export default function AdminUsersPage() {
                         {u.display_name ?? "—"}
                       </td>
                       <td className="p-3 align-top hidden lg:table-cell text-sm text-muted-foreground">
-                        {u.linked_artist?.name ?? "—"}
+                        {u.linked_artists?.length
+                          ? u.linked_artists.map((a) => a.name).join(", ")
+                          : "—"}
                       </td>
                       <td className="p-3 align-top">
                         <div className="flex flex-wrap gap-1">
@@ -381,8 +383,20 @@ export default function AdminUsersPage() {
                 </dd>
               </div>
               <div className="flex flex-col gap-0.5">
-                <dt className="text-muted-foreground">Карточка артыста лэйбла (1:1)</dt>
-                <dd>{selected.linked_artist ? `${selected.linked_artist.name} (${selected.linked_artist.slug})` : "—"}</dd>
+                <dt className="text-muted-foreground">Картачкі артыста лэйбла</dt>
+                <dd>
+                  {selected.linked_artists?.length ? (
+                    <ul className="list-disc pl-4 space-y-0.5">
+                      {selected.linked_artists.map((a) => (
+                        <li key={a.id}>
+                          {a.name} <span className="font-mono text-xs">({a.slug})</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    "—"
+                  )}
+                </dd>
               </div>
             </dl>
 
@@ -430,26 +444,41 @@ export default function AdminUsersPage() {
               </ul>
               <p className="text-xs text-muted-foreground mt-3">
                 «Адмін» — доступ у адмінку. «Слухач» / «Артыст» — радкі ў{" "}
-                <span className="font-mono">speu.user_roles</span>. Для «артыст» абавязкова выберыце карточку —
-                захоўваецца ў <span className="font-mono">speu.artists.user_id</span>.
+                <span className="font-mono">speu.user_roles</span>. Для «артыст» абярыце адну або некалькі картачак —
+                захоўваецца ў <span className="font-mono">speu.artists.user_id</span> (не некалькі карыстальнікаў на
+                адну картачку).
               </p>
             </div>
 
             {editCodes.includes("artist") ? (
               <div>
-                <label className="block text-xs text-muted-foreground mb-1.5">Карточка артыста лэйбла *</label>
-                <select
-                  className="w-full px-3 py-2 rounded-lg bg-muted border border-border text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-                  value={linkedArtistId}
-                  onChange={(e) => setLinkedArtistId(e.target.value)}
-                >
-                  <option value="">— абярыце артыста —</option>
-                  {catalogArtists.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name} ({a.slug})
-                    </option>
-                  ))}
-                </select>
+                <label className="block text-xs text-muted-foreground mb-1.5">
+                  Картачкі артыстаў лэйбла * <span className="font-normal">(можна некалькі)</span>
+                </label>
+                <div className="max-h-52 overflow-y-auto rounded-lg border border-border bg-muted/30 p-3 space-y-2">
+                  {catalogArtists.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">Каталог артыстаў пусты або не загрузіўся.</p>
+                  ) : (
+                    catalogArtists.map((a) => (
+                      <label key={a.id} className="flex items-start gap-2.5 cursor-pointer select-none text-sm">
+                        <input
+                          type="checkbox"
+                          className="mt-0.5 size-4 rounded border-border accent-primary shrink-0"
+                          checked={linkedArtistIds.includes(a.id)}
+                          onChange={() => {
+                            setLinkedArtistIds((prev) =>
+                              prev.includes(a.id) ? prev.filter((id) => id !== a.id) : [...prev, a.id],
+                            );
+                          }}
+                        />
+                        <span>
+                          <span className="font-medium text-foreground">{a.name}</span>{" "}
+                          <span className="text-xs text-muted-foreground font-mono">({a.slug})</span>
+                        </span>
+                      </label>
+                    ))
+                  )}
+                </div>
               </div>
             ) : null}
 

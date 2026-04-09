@@ -22,11 +22,23 @@ export async function POST(
   const { data: sub, error: subErr } = await supabase
     .schema("speu")
     .from("release_submissions")
-    .select("id, user_id")
+    .select("id, user_id, artist_id")
     .eq("id", submissionId)
     .maybeSingle();
 
   if (subErr || !sub || sub.user_id !== user.id) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
+
+  const { data: ownedArtist } = await supabase
+    .schema("speu")
+    .from("artists")
+    .select("id")
+    .eq("id", sub.artist_id as string)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (!ownedArtist) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 

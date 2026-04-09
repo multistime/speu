@@ -1,7 +1,7 @@
 /**
  * Product roles in admin UI (staff codes owner/editor/… stay DB-only).
  * - listener: звычайны карыстальнік (па змаўчанні — без асобай радка ролі).
- * - artist: уліковы запіс звязаны 1:1 з карточкай артыста лэйбла (`speu.artists.user_id`) — пад будучы кабінет і аналітыку.
+ * - artist: уліковы запіс можа быць звязаны з адной або некалькімі картачкамі артыстаў лэйбла (`speu.artists.user_id`) — кабінет артыста і аналітыка.
  * - admin: доступ у адмінку (`profiles.is_admin` праз `user_roles`).
  */
 export const ADMIN_UI_ROLE_CODES = ["listener", "artist", "admin"] as const;
