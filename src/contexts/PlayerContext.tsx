@@ -6,7 +6,6 @@ import React, {
   useContext,
   useEffect,
   useLayoutEffect,
-  useMemo,
   useRef,
   useState,
 } from "react";
@@ -583,8 +582,14 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const skipNext = useCallback(() => {
     const audio = audioRef.current;
     if (!audio || !nonStopRef.current || poolRef.current.length === 0) return;
+    const len = queueRef.current.length;
     let idx = queueIndexRef.current + 1;
-    if (idx >= queueRef.current.length) {
+    if (idx >= len) {
+      if (repeatOneRef.current && len === 1) {
+        seekRatioRef.current(0);
+        void audio.play();
+        return;
+      }
       if (!repeatAllRef.current) {
         audio.pause();
         return;
@@ -680,21 +685,50 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const canSeek = duration > 0;
 
-  /** Суседзі ў парадку чаргі (без увагі на рэжым паўтора) — як у спісе плэйліста */
-  const queueNeighborTracks = useMemo((): {
+  /** Суседзі для каруселі вокладак: пры паўторы ўсёй чаргі — цыклічна; пры паўторы аднаго і адным трэку — той жа трэк з бакоў */
+  const [queueNeighborTracks, setQueueNeighborTracks] = useState<{
     prev: PlayerTrack | null;
     next: PlayerTrack | null;
-  } => {
-    if (!nonStopActive || queueSize < 2) return { prev: null, next: null };
+  }>({ prev: null, next: null });
+
+  /* eslint-disable react-hooks/set-state-in-effect -- суседзі з queueRef у refs; публікуем у state для бяспечнага кантэксту */
+  useLayoutEffect(() => {
+    if (!nonStopActive || queueSize < 1) {
+      setQueueNeighborTracks({ prev: null, next: null });
+      return;
+    }
     const q = queueRef.current;
     const idx = queueIndexRef.current;
     const len = q.length;
-    if (len < 2) return { prev: null, next: null };
-    return {
+    if (len < 1) {
+      setQueueNeighborTracks({ prev: null, next: null });
+      return;
+    }
+
+    if (repeatMode === "all" && len >= 2) {
+      setQueueNeighborTracks({
+        prev: q[(idx - 1 + len) % len] ?? null,
+        next: q[(idx + 1) % len] ?? null,
+      });
+      return;
+    }
+
+    if (repeatMode === "one" && len === 1) {
+      const only = q[0] ?? null;
+      setQueueNeighborTracks({ prev: only, next: only });
+      return;
+    }
+
+    if (len < 2) {
+      setQueueNeighborTracks({ prev: null, next: null });
+      return;
+    }
+    setQueueNeighborTracks({
       prev: idx > 0 ? (q[idx - 1] ?? null) : null,
       next: idx < len - 1 ? (q[idx + 1] ?? null) : null,
-    };
-  }, [nonStopActive, queueSize, track?.id, shuffleEnabled]);
+    });
+  }, [nonStopActive, queueSize, track?.id, shuffleEnabled, repeatMode]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   return (
     <PlayerContext.Provider

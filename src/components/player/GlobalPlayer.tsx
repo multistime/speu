@@ -39,10 +39,7 @@ function GlobalPlayerProgress({
   /** dock — тонкая рэйка ўнізе бару; sheet — высокая зона дотыку, скраб па свайпе */
   layout?: "dock" | "sheet";
 }) {
-  const { currentTime, duration, canSeek, seekRatio, isPlaying, repeatMode } = usePlayer();
-
-  /** Пры паўторзе (адзін / уся чарга) — візуал бесканечнай стужкі; скраб адключаем */
-  const showSeekableTrack = canSeek && repeatMode === "off";
+  const { currentTime, duration, canSeek, seekRatio, isPlaying } = usePlayer();
 
   const railRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef(false);
@@ -67,14 +64,14 @@ function GlobalPlayerProgress({
   const applyFromClientX = useCallback(
     (clientX: number) => {
       const el = railRef.current;
-      if (!el || !showSeekableTrack) return;
+      if (!el || !canSeek) return;
       applyRatio(clientXToSeekRatio(el.getBoundingClientRect(), clientX));
     },
-    [showSeekableTrack, applyRatio]
+    [canSeek, applyRatio]
   );
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!showSeekableTrack) return;
+    if (!canSeek) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     draggingRef.current = true;
     setIsDragging(true);
@@ -82,7 +79,7 @@ function GlobalPlayerProgress({
   };
 
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!draggingRef.current || !showSeekableTrack) return;
+    if (!draggingRef.current || !canSeek) return;
     applyFromClientX(e.clientX);
   };
 
@@ -96,7 +93,7 @@ function GlobalPlayerProgress({
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (!showSeekableTrack || duration <= 0) return;
+    if (!canSeek || duration <= 0) return;
     const step = e.shiftKey ? 30 : 5;
     if (e.key === "ArrowLeft" || e.key === "ArrowDown") {
       e.preventDefault();
@@ -135,30 +132,20 @@ function GlobalPlayerProgress({
   return (
     <div
       ref={railRef}
-      role={showSeekableTrack ? "slider" : "presentation"}
-      tabIndex={showSeekableTrack ? 0 : -1}
-      aria-label={
-        showSeekableTrack
-          ? "Пазіцыя прайгравання"
-          : repeatMode !== "off"
-            ? "Прайграванне з паўторам"
-            : "Пазіцыя прайгравання"
-      }
-      aria-valuemin={showSeekableTrack ? 0 : undefined}
-      aria-valuemax={showSeekableTrack ? Math.round(duration) : undefined}
-      aria-valuenow={showSeekableTrack ? Math.round(currentTime) : undefined}
+      role="slider"
+      tabIndex={canSeek ? 0 : -1}
+      aria-label="Пазіцыя прайгравання"
+      aria-valuemin={0}
+      aria-valuemax={canSeek ? Math.round(duration) : 0}
+      aria-valuenow={canSeek ? Math.round(currentTime) : 0}
       aria-valuetext={
-        showSeekableTrack
+        canSeek
           ? `${formatPlayerTime(currentTime)} з ${formatPlayerTime(duration)}`
-          : !canSeek && isPlaying
+          : isPlaying
             ? "Жывы струмень"
-            : !canSeek
-              ? "Даўжыня невядомая"
-              : repeatMode !== "off" && isPlaying
-                ? "Прайграецца, паўтор уключаны"
-                : undefined
+            : "Даўжыня невядомая"
       }
-      aria-disabled={!showSeekableTrack}
+      aria-disabled={!canSeek}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
@@ -171,11 +158,11 @@ function GlobalPlayerProgress({
           ? "relative min-h-12 w-full rounded-lg"
           : "h-3 absolute inset-x-0 top-0",
         "focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary/45 focus-visible:outline-offset-2 focus-visible:rounded-sm",
-        !showSeekableTrack && "cursor-default",
+        !canSeek && "cursor-not-allowed",
         className
       )}
     >
-      {showSeekableTrack ? (
+      {canSeek ? (
         isSheet ? (
           <div
             className="pointer-events-none absolute inset-x-0 top-1/2 h-7 -translate-y-1/2 px-0.5"

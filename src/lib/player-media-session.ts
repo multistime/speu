@@ -56,8 +56,25 @@ export function setMediaSessionPlaybackState(
   }
 }
 
+/**
+ * На тэлефонах з touch lock screen часта паказвае ±N с замест previoustrack/nexttrack,
+ * калі ёсць MediaSession position state. Без setPositionState застаюцца кнопкі трэкаў.
+ */
+function lockScreenPrefersTrackSkipOverSeek(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.matchMedia("(pointer: coarse)").matches;
+  } catch {
+    return false;
+  }
+}
+
 export function updateMediaSessionPositionState(audio: HTMLAudioElement): void {
   if (typeof window === "undefined") return;
+  if (lockScreenPrefersTrackSkipOverSeek()) {
+    clearMediaSessionPositionState();
+    return;
+  }
   const ms = navigator.mediaSession;
   if (!ms || !("setPositionState" in ms)) return;
   const d = audio.duration;
