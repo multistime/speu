@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FileText, Heart, Inbox, LayoutDashboard, Radio, Users } from "lucide-react";
+import { FileText, Heart, Inbox, LayoutDashboard, Radio, Settings, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SITE_NAV_SECTIONS, siteNavPath, type SiteNavSectionKey } from "@/lib/admin/site-nav-data";
 
@@ -13,22 +13,27 @@ const ICONS: Record<SiteNavSectionKey, typeof LayoutDashboard> = {
   serviceRequests: Inbox,
   users: Users,
   radio: Radio,
+  settings: Settings,
 };
 
 export function SiteSectionNav() {
   const pathname = usePathname();
   const base = "/admin/site";
+  const inSiteSection =
+    pathname.startsWith(base) || pathname.startsWith("/admin/settings");
 
-  if (!pathname.startsWith(base)) return null;
+  if (!inSiteSection) return null;
 
   return (
     <nav className="space-y-0.5" aria-label="Раздзелы сайту">
-      {SITE_NAV_SECTIONS.map(({ key, label, pathSuffix, blurb }) => {
+      {SITE_NAV_SECTIONS.map(({ key, label, blurb }) => {
         const href = siteNavPath(key);
         const active =
           key === "overview"
             ? pathname === base || pathname === `${base}/`
-            : pathname === href || pathname.startsWith(`${href}/`);
+            : key === "settings"
+              ? pathname.startsWith("/admin/settings")
+              : pathname === href || pathname.startsWith(`${href}/`);
         const Icon = ICONS[key];
         return (
           <Link

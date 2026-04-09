@@ -7,12 +7,14 @@ export const SITE_NAV_SEGMENTS = {
   serviceRequests: "service-requests",
   users: "users",
   radio: "radio",
+  settings: "settings",
 } as const;
 
 export type SiteNavSectionKey = keyof typeof SITE_NAV_SEGMENTS;
 
 export function siteNavPath(key: SiteNavSectionKey): string {
   if (key === "overview") return "/admin/site";
+  if (key === "settings") return "/admin/settings";
   return `/admin/site/${SITE_NAV_SEGMENTS[key]}`;
 }
 
@@ -57,5 +59,11 @@ export const SITE_NAV_SECTIONS: {
     label: "Радыё",
     pathSuffix: SITE_NAV_SEGMENTS.radio,
     blurb: "Налады радыё",
+  },
+  {
+    key: "settings",
+    label: "Наладкі",
+    pathSuffix: SITE_NAV_SEGMENTS.settings,
+    blurb: "Налады адмінкі і інтэграцый",
   },
 ];

@@ -450,7 +450,7 @@ function MobileSheetEqBadge({
   );
 }
 
-/** Мінімалістычная вокладка без 3D-галерэі */
+/** Абкладка для каруселі (цэнтр і бакі) */
 function MobileSheetCoverArt({ t, className }: { t: PlayerTrack; className?: string }) {
   const rgb = t.accentRgb ?? "125,191,158";
   return (
@@ -478,96 +478,53 @@ function MobileSheetCoverArt({ t, className }: { t: PlayerTrack; className?: str
   );
 }
 
-/** 3×3 — толькі transform/opacity, стабільныя зрухі (без Math.random у кадры) */
-const CRUMBLE_CELLS = 9;
-const CRUMBLE_EXIT: { x: number; y: number; r: number }[] = [
-  { x: -10, y: 16, r: -8 },
-  { x: 4, y: 20, r: 5 },
-  { x: 12, y: 14, r: 7 },
-  { x: -14, y: 8, r: -5 },
-  { x: 0, y: 22, r: 0 },
-  { x: 10, y: 6, r: -9 },
-  { x: -8, y: -4, r: 6 },
-  { x: 6, y: -8, r: -4 },
-  { x: 14, y: -6, r: 8 },
-];
-
-function MobileSheetCoverCrumble({
-  track,
+function MobileSheetSideCoverPeek({
+  neighbor,
+  side,
+  onTap,
 }: {
-  track: PlayerTrack;
+  neighbor: PlayerTrack | null;
+  side: "left" | "right";
+  onTap: () => void;
 }) {
-  const cols = 3;
+  const box =
+    "relative h-[min(42vw,158px)] w-[17%] max-w-[76px] shrink-0 overflow-hidden rounded-xl shadow-sm ring-1 ring-border/40";
+  const fade =
+    side === "left"
+      ? "bg-gradient-to-r from-transparent via-background/30 to-background/88"
+      : "bg-gradient-to-l from-transparent via-background/30 to-background/88";
+
+  if (!neighbor) {
+    return <div className={cn(box, "border border-dashed border-border/30 bg-muted/20 opacity-40")} aria-hidden />;
+  }
+
+  const label =
+    side === "left"
+      ? `Папярэдні трэк: ${neighbor.title}`
+      : `Наступны трэк: ${neighbor.title}`;
+
   return (
-    <div
-      className="absolute inset-0 grid grid-cols-3 grid-rows-3 gap-0 overflow-hidden rounded-2xl shadow-lg ring-1 ring-border/30"
-      aria-hidden
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onTap();
+      }}
+      aria-label={label}
+      className={cn(
+        box,
+        "cursor-pointer touch-manipulation opacity-[0.52] transition-opacity hover:opacity-[0.72] active:opacity-90"
+      )}
+      style={side === "left" ? { transformOrigin: "100% 50%" } : { transformOrigin: "0% 50%" }}
     >
-      {Array.from({ length: CRUMBLE_CELLS }, (_, i) => {
-        const col = i % cols;
-        const row = Math.floor(i / cols);
-        const exit = CRUMBLE_EXIT[i] ?? { x: 0, y: 12, r: 0 };
-        return (
-          <motion.div
-            key={`${track.id}-c-${i}`}
-            className="relative overflow-hidden will-change-[transform,opacity]"
-            initial={{ opacity: 1, x: 0, y: 0, rotate: 0 }}
-            animate={{
-              opacity: 0,
-              x: exit.x,
-              y: exit.y,
-              rotate: exit.r,
-            }}
-            transition={{
-              duration: 0.27,
-              ease: [0.22, 1, 0.36, 1],
-              delay: (col + row) * 0.016,
-            }}
-          >
-            {track.coverUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={track.coverUrl}
-                alt=""
-                className="absolute max-w-none object-cover"
-                draggable={false}
-                style={{
-                  width: `${cols * 100}%`,
-                  height: `${(CRUMBLE_CELLS / cols) * 100}%`,
-                  left: `${-col * 100}%`,
-                  top: `${-row * 100}%`,
-                }}
-              />
-            ) : (
-              <div
-                className="flex size-full items-center justify-center bg-muted"
-                style={
-                  track.accentColor
-                    ? {
-                        background: `rgba(${track.accentRgb ?? "125,191,158"}, 0.14)`,
-                      }
-                    : undefined
-                }
-              >
-                <Music
-                  className="size-[22%] max-w-8 opacity-50"
-                  style={{ color: track.accentColor ?? "var(--primary)" }}
-                  strokeWidth={1.25}
-                />
-              </div>
-            )}
-          </motion.div>
-        );
-      })}
-    </div>
+      <div className={cn("pointer-events-none absolute inset-0 z-[1]", fade)} aria-hidden />
+      <MobileSheetCoverArt t={neighbor} className="rounded-xl" />
+    </button>
   );
 }
 
-/**
- * Цэнтральная вокладка + свайп; пад фейдам/свячэннем — перамотка.
- * Выход: «крошка» 3×3 (як рассыпанне ў месенджары), без canvas; пры reduced motion і частым skip — мгнаванне.
- */
-function MobileSheetCoverHero({
+/** Цэнтр + бакавыя вокладкі з фейдам; тап па баку — папярэдні/наступны; свайп: улева наступны, управа папярэдні */
+function MobileSheetCoverCarousel({
   track,
   prevTrack,
   nextTrack,
@@ -581,53 +538,12 @@ function MobileSheetCoverHero({
   skipToPreviousInQueue: () => void;
 }) {
   const x = useMotionValue(0);
-  const pendingRef = useRef(track);
-  const lastNavAtRef = useRef(0);
-  const [displayTrack, setDisplayTrack] = useState(track);
-  const [exitPhase, setExitPhase] = useState(false);
-
-  useEffect(() => {
-    pendingRef.current = track;
-  }, [track]);
 
   useEffect(() => {
     x.set(0);
-  }, [displayTrack.id, x]);
+  }, [track.id, x]);
 
-  useEffect(() => {
-    if (track.id === displayTrack.id) {
-      if (exitPhase) setExitPhase(false);
-      return;
-    }
-    if (exitPhase) return;
-
-    const now = Date.now();
-    const rapid = now - lastNavAtRef.current < 400;
-    lastNavAtRef.current = now;
-
-    const reduceMotion =
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-    if (reduceMotion || rapid) {
-      setDisplayTrack(track);
-      setExitPhase(false);
-      return;
-    }
-
-    setExitPhase(true);
-  }, [track.id, track, displayTrack.id, exitPhase]);
-
-  useEffect(() => {
-    if (!exitPhase) return;
-    const t = window.setTimeout(() => {
-      setDisplayTrack(pendingRef.current);
-      setExitPhase(false);
-    }, 300);
-    return () => window.clearTimeout(t);
-  }, [exitPhase, displayTrack.id]);
-
-  const canDrag = Boolean(prevTrack || nextTrack) && !exitPhase;
+  const canDrag = Boolean(prevTrack || nextTrack);
 
   const goPrev = useCallback(() => {
     skipToPreviousInQueue();
@@ -657,82 +573,71 @@ function MobileSheetCoverHero({
     animate(x, 0, { type: "spring", stiffness: 460, damping: 36 });
   };
 
-  const prevLabel = prevTrack
-    ? `Папярэдні трэк: ${prevTrack.title}`
-    : "Папярэдні трэк";
-  const nextLabel = nextTrack
-    ? `Наступны трэк: ${nextTrack.title}`
-    : "Наступны трэк";
-
   return (
-    <div className="mx-auto mt-2 w-full max-w-[min(100vw-1.5rem,360px)] px-1">
+    <div
+      className="mx-auto mt-2 w-full max-w-[min(100vw-1rem,380px)] px-1 [perspective:880px]"
+      data-sheet-no-gesture
+    >
       <motion.div
-        style={{ x }}
+        style={{ x, transformStyle: "preserve-3d" }}
         drag={canDrag ? "x" : false}
         dragConstraints={{ left: 0, right: 0 }}
-        dragElastic={0.16}
-        dragTransition={{ bounceStiffness: 400, bounceDamping: 26 }}
+        dragElastic={0.18}
+        dragTransition={{ bounceStiffness: 400, bounceDamping: 24 }}
         onDragEnd={onDragEnd}
-        className="relative mx-auto aspect-square w-[min(76vw,320px)] touch-pan-y"
+        className="relative flex items-center justify-center gap-0"
       >
-        <div className="relative size-full overflow-hidden rounded-2xl shadow-xl ring-1 ring-border/40">
-          {exitPhase ? (
-            <MobileSheetCoverCrumble track={displayTrack} />
-          ) : (
-            <motion.div
-              key={displayTrack.id}
-              className="size-full"
-              initial={{ opacity: 0.88, scale: 0.985 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ type: "spring", stiffness: 380, damping: 32 }}
-            >
-              <MobileSheetCoverArt t={displayTrack} className="rounded-2xl" />
-            </motion.div>
-          )}
-        </div>
-      </motion.div>
+        <motion.div
+          className="relative z-0 shrink-0 [transform-style:preserve-3d]"
+          style={{
+            rotateY: 56,
+            scale: 0.88,
+            transformOrigin: "100% 50%",
+          }}
+        >
+          <MobileSheetSideCoverPeek
+            neighbor={prevTrack}
+            side="left"
+            onTap={goPrev}
+          />
+        </motion.div>
 
-      <div className="relative -mt-5 w-full pt-7 pb-1">
-        <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 top-0 bg-gradient-to-b from-primary/18 via-primary/[0.06] to-transparent"
-          aria-hidden
-        />
-        <div
-          className="pointer-events-none absolute inset-x-2 bottom-0 top-3 rounded-2xl bg-gradient-to-b from-transparent via-background/50 to-background/95"
-          aria-hidden
-        />
-        <div className="pointer-events-none absolute inset-x-4 bottom-0 h-16 rounded-full bg-primary/8 blur-2xl" aria-hidden />
-        <div className="relative flex items-center justify-center gap-14 px-4 pt-1">
-          <button
-            type="button"
-            onClick={goPrev}
-            disabled={!prevTrack}
-            aria-label={prevLabel}
-            className={cn(
-              mobileSheetCtrlBtn,
-              "border-border/60 bg-background/55 shadow-sm backdrop-blur-md",
-              "text-muted-foreground hover:border-foreground/25 hover:bg-background/80 hover:text-foreground",
-              "disabled:pointer-events-none disabled:opacity-35"
-            )}
+        <motion.div
+          className="relative z-10 mx-[-5px] aspect-square w-[min(54vw,200px)] max-w-[200px] shrink-0 overflow-hidden rounded-2xl shadow-xl ring-2 ring-background"
+          style={{
+            scale: 1.02,
+            background: track.accentColor
+              ? `rgba(${track.accentRgb ?? "125,191,158"}, 0.1)`
+              : "var(--muted)",
+            transformStyle: "preserve-3d",
+          }}
+        >
+          <motion.div
+            key={track.id}
+            className="size-full"
+            initial={{ opacity: 0.82, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ type: "spring", stiffness: 360, damping: 30 }}
           >
-            <SkipBack className="size-[1.15rem]" strokeWidth={2} />
-          </button>
-          <button
-            type="button"
-            onClick={goNext}
-            disabled={!nextTrack}
-            aria-label={nextLabel}
-            className={cn(
-              mobileSheetCtrlBtn,
-              "border-border/60 bg-background/55 shadow-sm backdrop-blur-md",
-              "text-muted-foreground hover:border-foreground/25 hover:bg-background/80 hover:text-foreground",
-              "disabled:pointer-events-none disabled:opacity-35"
-            )}
-          >
-            <SkipForward className="size-[1.15rem]" strokeWidth={2} />
-          </button>
-        </div>
-      </div>
+            <MobileSheetCoverArt t={track} className="rounded-2xl" />
+          </motion.div>
+        </motion.div>
+
+        <motion.div
+          className="relative z-0 shrink-0 [transform-style:preserve-3d]"
+          style={{
+            rotateY: -56,
+            scale: 0.88,
+            transformOrigin: "0% 50%",
+          }}
+        >
+          <MobileSheetSideCoverPeek
+            neighbor={nextTrack}
+            side="right"
+            onTap={goNext}
+          />
+        </motion.div>
+      </motion.div>
     </div>
   );
 }
@@ -921,7 +826,7 @@ function MobileNowPlayingSheet({
                   </span>
                 </div>
 
-                <MobileSheetCoverHero
+                <MobileSheetCoverCarousel
                   track={track}
                   prevTrack={queueNeighborTracks.prev}
                   nextTrack={queueNeighborTracks.next}
