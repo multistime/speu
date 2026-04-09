@@ -7,6 +7,8 @@ import {
   AnimatePresence,
   motion,
   useMotionValue,
+  useReducedMotion,
+  useTransform,
   type PanInfo,
 } from "framer-motion";
 import {
@@ -22,7 +24,7 @@ import {
   X,
 } from "lucide-react";
 import { TrackLikeButton } from "@/components/speu/TrackLikeButton";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { usePlayer, type PlayerRepeatMode, type PlayerTrack } from "@/contexts/PlayerContext";
 import { formatPlayerTime } from "@/lib/format-player-time";
 import { clientXToSeekRatio } from "@/lib/player-progress";
@@ -478,24 +480,32 @@ function MobileSheetCoverArt({ t, className }: { t: PlayerTrack; className?: str
   );
 }
 
-function MobileSheetSideCoverPeek({
+const CF_SIDE_SCALE = 0.76;
+const CF_GAP_PX = 12;
+const CF_DRAG_PARALLAX = 0.14;
+
+/** Бакавая квадратная вокладка (cover flow); тап — папярэдні/наступны */
+function MobileSheetCoverFlowSide({
   neighbor,
   side,
   onTap,
+  className,
 }: {
   neighbor: PlayerTrack | null;
   side: "left" | "right";
   onTap: () => void;
+  className?: string;
 }) {
   const box =
-    "relative h-[min(42vw,158px)] w-[17%] max-w-[76px] shrink-0 overflow-hidden rounded-xl shadow-sm ring-1 ring-border/40";
-  const fade =
-    side === "left"
-      ? "bg-gradient-to-r from-transparent via-background/30 to-background/88"
-      : "bg-gradient-to-l from-transparent via-background/30 to-background/88";
+    "relative aspect-square size-[min(54vw,200px)] max-h-[200px] max-w-[200px] overflow-hidden rounded-2xl shadow-md ring-1 ring-border/35";
 
   if (!neighbor) {
-    return <div className={cn(box, "border border-dashed border-border/30 bg-muted/20 opacity-40")} aria-hidden />;
+    return (
+      <div
+        className={cn(box, "border border-dashed border-border/30 bg-muted/25 opacity-45", className)}
+        aria-hidden
+      />
+    );
   }
 
   const label =
@@ -510,20 +520,21 @@ function MobileSheetSideCoverPeek({
         e.stopPropagation();
         onTap();
       }}
+      onPointerDown={(e) => e.stopPropagation()}
       aria-label={label}
       className={cn(
         box,
-        "cursor-pointer touch-manipulation opacity-[0.52] transition-opacity hover:opacity-[0.72] active:opacity-90"
+        "cursor-pointer touch-manipulation outline-none transition-[opacity,transform] hover:opacity-95 active:opacity-100",
+        className
       )}
-      style={side === "left" ? { transformOrigin: "100% 50%" } : { transformOrigin: "0% 50%" }}
     >
-      <div className={cn("pointer-events-none absolute inset-0 z-[1]", fade)} aria-hidden />
-      <MobileSheetCoverArt t={neighbor} className="rounded-xl" />
+      <div className="pointer-events-none absolute inset-0 z-[1] rounded-2xl bg-black/22" aria-hidden />
+      <MobileSheetCoverArt t={neighbor} className="rounded-2xl" />
     </button>
   );
 }
 
-/** Цэнтр + бакавыя вокладкі з фейдам; тап па баку — папярэдні/наступны; свайп: улева наступны, управа папярэдні */
+/** Cover flow: цэнтр наперадзе, квадратныя суседзі ззаду; свайп улева — наступны, управа — папярэдні */
 function MobileSheetCoverCarousel({
   track,
   prevTrack,
@@ -538,6 +549,22 @@ function MobileSheetCoverCarousel({
   skipToPreviousInQueue: () => void;
 }) {
   const x = useMotionValue(0);
+  const reduceMotion = useReducedMotion();
+  const coverMeasureRef = useRef<HTMLDivElement>(null);
+  const [coverPx, setCoverPx] = useState(200);
+
+  useLayoutEffect(() => {
+    const el = coverMeasureRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const update = () => {
+      const w = el.offsetWidth;
+      if (w > 0) setCoverPx(w);
+    };
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    queueMicrotask(update);
+    return () => ro.disconnect();
+  }, []);
 
   useEffect(() => {
     x.set(0);
@@ -573,71 +600,127 @@ function MobileSheetCoverCarousel({
     animate(x, 0, { type: "spring", stiffness: 460, damping: 36 });
   };
 
+  const sideOffset = coverPx * (1 + CF_SIDE_SCALE) * 0.5 + CF_GAP_PX;
+
+  /** Бацькоўскі drag рухае сцэну; бакі з паралаксам адносна цэнтра */
+  const leftCardX = useTransform(x, (d) => -sideOffset - d * CF_DRAG_PARALLAX);
+  const rightCardX = useTransform(x, (d) => sideOffset + d * CF_DRAG_PARALLAX);
+
+  const centerScale = useTransform(x, (d) => {
+    const t = Math.min(1, Math.abs(d) / 140);
+    return 1 - t * 0.06;
+  });
+  const leftScale = useTransform(x, (d) => {
+    if (d >= 0) return CF_SIDE_SCALE;
+    const t = Math.min(1, -d / 130);
+    return CF_SIDE_SCALE + t * (1 - CF_SIDE_SCALE);
+  });
+  const rightScale = useTransform(x, (d) => {
+    if (d <= 0) return CF_SIDE_SCALE;
+    const t = Math.min(1, d / 130);
+    return CF_SIDE_SCALE + t * (1 - CF_SIDE_SCALE);
+  });
+
+  const centerRotateY = useTransform(x, (d) => (reduceMotion ? 0 : d * -0.045));
+  const leftRotateY = useTransform(x, (d) => (reduceMotion ? 0 : 8 + d * 0.02));
+  const rightRotateY = useTransform(x, (d) => (reduceMotion ? 0 : -8 + d * 0.02));
+
+  const centerBoxShadow = useTransform(x, (d) => {
+    const o = 0.38 + Math.min(0.22, Math.abs(d) / 400);
+    return `0 18px 40px rgba(0,0,0,${o}), 0 6px 16px rgba(0,0,0,${o * 0.55})`;
+  });
+
   return (
     <div
-      className="mx-auto mt-2 w-full max-w-[min(100vw-1rem,380px)] px-1 [perspective:880px]"
+      className="relative mx-auto mt-2 w-full max-w-[min(100vw-1rem,380px)] px-1"
       data-sheet-no-gesture
     >
-      <motion.div
-        style={{ x, transformStyle: "preserve-3d" }}
-        drag={canDrag ? "x" : false}
-        dragConstraints={{ left: 0, right: 0 }}
-        dragElastic={0.18}
-        dragTransition={{ bounceStiffness: 400, bounceDamping: 24 }}
-        onDragEnd={onDragEnd}
-        className="relative flex items-center justify-center gap-0"
+      {/* Віньетка па краях сцэны */}
+      <div
+        className="pointer-events-none absolute inset-0 z-[24] rounded-[inherit]"
+        aria-hidden
+        style={{
+          boxShadow:
+            "inset 40px 0 48px -28px rgba(0,0,0,0.45), inset -40px 0 48px -28px rgba(0,0,0,0.45)",
+        }}
+      />
+
+      <div
+        className="relative mx-auto w-full [perspective:1100px]"
+        style={{ height: coverPx > 0 ? coverPx : undefined, minHeight: "min(54vw, 200px)" }}
       >
-        <motion.div
-          className="relative z-0 shrink-0 [transform-style:preserve-3d]"
-          style={{
-            rotateY: 56,
-            scale: 0.88,
-            transformOrigin: "100% 50%",
-          }}
-        >
-          <MobileSheetSideCoverPeek
-            neighbor={prevTrack}
-            side="left"
-            onTap={goPrev}
-          />
-        </motion.div>
+        <div
+          ref={coverMeasureRef}
+          className="pointer-events-none invisible absolute left-1/2 top-1/2 aspect-square w-[min(54vw,200px)] max-w-[200px] -translate-x-1/2 -translate-y-1/2"
+          aria-hidden
+        />
 
         <motion.div
-          className="relative z-10 mx-[-5px] aspect-square w-[min(54vw,200px)] max-w-[200px] shrink-0 overflow-hidden rounded-2xl shadow-xl ring-2 ring-background"
-          style={{
-            scale: 1.02,
-            background: track.accentColor
-              ? `rgba(${track.accentRgb ?? "125,191,158"}, 0.1)`
-              : "var(--muted)",
-            transformStyle: "preserve-3d",
-          }}
+          className="absolute inset-0 [transform-style:preserve-3d]"
+          style={{ x }}
+          drag={canDrag ? "x" : false}
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={0.18}
+          dragTransition={{ bounceStiffness: 400, bounceDamping: 24 }}
+          onDragEnd={onDragEnd}
         >
-          <motion.div
-            key={track.id}
-            className="size-full"
-            initial={{ opacity: 0.82, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ type: "spring", stiffness: 360, damping: 30 }}
-          >
-            <MobileSheetCoverArt t={track} className="rounded-2xl" />
-          </motion.div>
-        </motion.div>
+          <div className="absolute left-1/2 top-1/2 z-[8] -translate-x-1/2 -translate-y-1/2">
+            <motion.div
+              className="[transform-style:preserve-3d]"
+              style={{
+                x: leftCardX,
+                scale: leftScale,
+                rotateY: leftRotateY,
+                opacity: prevTrack ? 0.55 : 0.4,
+              }}
+            >
+              <MobileSheetCoverFlowSide neighbor={prevTrack} side="left" onTap={goPrev} />
+            </motion.div>
+          </div>
 
-        <motion.div
-          className="relative z-0 shrink-0 [transform-style:preserve-3d]"
-          style={{
-            rotateY: -56,
-            scale: 0.88,
-            transformOrigin: "0% 50%",
-          }}
-        >
-          <MobileSheetSideCoverPeek
-            neighbor={nextTrack}
-            side="right"
-            onTap={goNext}
-          />
+          <div className="pointer-events-none absolute left-1/2 top-1/2 z-[16] -translate-x-1/2 -translate-y-1/2">
+            <motion.div
+              className="aspect-square w-[min(54vw,200px)] max-w-[200px] overflow-hidden rounded-2xl ring-2 ring-background [transform-style:preserve-3d]"
+              style={{
+                scale: centerScale,
+                rotateY: centerRotateY,
+                background: track.accentColor
+                  ? `rgba(${track.accentRgb ?? "125,191,158"}, 0.1)`
+                  : "var(--muted)",
+                boxShadow: centerBoxShadow,
+              }}
+            >
+              <motion.div
+                key={track.id}
+                className="size-full"
+                initial={reduceMotion ? false : { opacity: 0.88, scale: 0.97 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={
+                  reduceMotion
+                    ? { duration: 0.15 }
+                    : { type: "spring", stiffness: 360, damping: 30 }
+                }
+              >
+                <MobileSheetCoverArt t={track} className="rounded-2xl" />
+              </motion.div>
+            </motion.div>
+          </div>
+
+          <div className="absolute left-1/2 top-1/2 z-[8] -translate-x-1/2 -translate-y-1/2">
+            <motion.div
+              className="[transform-style:preserve-3d]"
+              style={{
+                x: rightCardX,
+                scale: rightScale,
+                rotateY: rightRotateY,
+                opacity: nextTrack ? 0.55 : 0.4,
+              }}
+            >
+              <MobileSheetCoverFlowSide neighbor={nextTrack} side="right" onTap={goNext} />
+            </motion.div>
+          </div>
         </motion.div>
-      </motion.div>
+      </div>
     </div>
   );
 }
@@ -986,7 +1069,7 @@ export function GlobalPlayer() {
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
 
   useEffect(() => {
-    if (!track) setMobileSheetOpen(false);
+    if (!track) queueMicrotask(() => setMobileSheetOpen(false));
   }, [track]);
 
   return (
