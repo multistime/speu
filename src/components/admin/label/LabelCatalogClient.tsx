@@ -1,0 +1,1023 @@
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Trash2, Pencil, Plus, Upload, Music, Disc, X, Check, Search } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { AdminFormModal } from "@/components/admin/AdminFormModal";
+import { AdminArtistsPanel } from "@/components/admin/AdminArtistsPanel";
+import { AdminImageSourceField } from "@/components/admin/AdminImageSourceField";
+
+type Artist = { id: string; name: string; slug: string };
+type Album = {
+  id: string;
+  artist_id?: string;
+  artist_ids?: string[];
+  title: string;
+  slug?: string | null;
+  cover_url: string | null;
+  release_date: string | null;
+  description: string | null;
+  is_published: boolean;
+  sort_order: number;
+  artists?: { id: string; name: string; slug: string } | null;
+  artists_list?: { id: string; name: string; slug: string }[];
+};
+
+function albumCreditIds(album: Album): string[] {
+  if (album.artist_ids && album.artist_ids.length > 0) return album.artist_ids;
+  return album.artist_id ? [album.artist_id] : [];
+}
+
+function albumArtistsLabel(album: Album): string {
+  if (album.artists_list && album.artists_list.length > 0) {
+    return album.artists_list.map((a) => a.name).join(", ");
+  }
+  return album.artists?.name ?? "—";
+}
+type Song = {
+  id: string;
+  artist_id: string;
+  artist_ids?: string[];
+  album_id: string | null;
+  title: string;
+  slug?: string | null;
+  audio_url: string | null;
+  external_url: string | null;
+  cover_url: string | null;
+  duration_sec: number | null;
+  track_number: number | null;
+  sort_order: number;
+  is_published: boolean;
+  play_on_radio: boolean;
+  artists?: { id: string; name: string; slug: string };
+  artists_list?: { id: string; name: string; slug: string }[];
+  albums?: { id: string; title: string } | null;
+};
+
+const emptyAlbumForm = {
+  id: "",
+  artistIds: [] as string[],
+  title: "",
+  slug: "",
+  coverUrl: "",
+  releaseDate: "",
+  description: "",
+  isPublished: false,
+  sortOrder: 0,
+};
+
+const emptySongForm = {
+  id: "",
+  artistIds: [] as string[],
+  albumId: "",
+  title: "",
+  slug: "",
+  audioUrl: "",
+  externalUrl: "",
+  coverUrl: "",
+  durationSec: "",
+  trackNumber: "",
+  sortOrder: 0,
+  isPublished: true,
+  playOnRadio: false,
+};
+
+function formatDuration(sec: number | null) {
+  if (!sec) return "—";
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+type CatalogVisibilityFilter = "all" | "published" | "unpublished";
+
+async function fetchCatalogData() {
+  const [artistsRes, albumsRes, songsRes] = await Promise.all([
+    fetch("/api/admin/artists"),
+    fetch("/api/admin/albums"),
+    fetch("/api/admin/songs"),
+  ]);
+  const [ad, ald, sd] = await Promise.all([
+    artistsRes.json(),
+    albumsRes.json(),
+    songsRes.json(),
+  ]);
+  return {
+    artists: (ad.items ?? []) as Artist[],
+    albums: (ald.items ?? []) as Album[],
+    songs: (sd.items ?? []) as Song[],
+  };
+}
+
+export type LabelCatalogSection = "songs" | "albums" | "artists";
+
+export function LabelCatalogClient({ section }: { section: LabelCatalogSection }) {
+  const router = useRouter();
+  const [artists, setArtists] = useState<Artist[]>([]);
+  const [albums, setAlbums] = useState<Album[]>([]);
+  const [songs, setSongs] = useState<Song[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Song form state
+  const [songForm, setSongForm] = useState(emptySongForm);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<"idle" | "uploading" | "done" | "error">("idle");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Album form state
+  const [albumForm, setAlbumForm] = useState(emptyAlbumForm);
+  const [songFormOpen, setSongFormOpen] = useState(false);
+  const [albumFormOpen, setAlbumFormOpen] = useState(false);
+  const [listSearch, setListSearch] = useState("");
+  const [visibilityFilter, setVisibilityFilter] = useState<CatalogVisibilityFilter>("unpublished");
+
+  const loadAll = async () => {
+    setLoading(true);
+    const d = await fetchCatalogData();
+    setArtists(d.artists);
+    setAlbums(d.albums);
+    setSongs(d.songs);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    let active = true;
+    void Promise.resolve().then(async () => {
+      if (!active) return;
+      setLoading(true);
+      const d = await fetchCatalogData();
+      if (!active) return;
+      setArtists(d.artists);
+      setAlbums(d.albums);
+      setSongs(d.songs);
+      setLoading(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const albumsForSong = albums.filter((a) =>
+    albumCreditIds(a).some((id) => songForm.artistIds.includes(id))
+  );
+
+  const filteredSongs = useMemo(() => {
+    const q = listSearch.trim().toLowerCase();
+    return songs.filter((song) => {
+      if (visibilityFilter === "published" && !song.is_published) return false;
+      if (visibilityFilter === "unpublished" && song.is_published) return false;
+      if (!q) return true;
+      const hay = [
+        song.title,
+        song.slug ?? "",
+        ...(song.artists_list?.map((x) => x.name) ?? []),
+        song.artists?.name ?? "",
+        song.albums?.title ?? "",
+      ]
+        .join(" ")
+        .toLowerCase();
+      return hay.includes(q);
+    });
+  }, [songs, listSearch, visibilityFilter]);
+
+  const filteredAlbums = useMemo(() => {
+    const q = listSearch.trim().toLowerCase();
+    return albums.filter((album) => {
+      if (visibilityFilter === "published" && !album.is_published) return false;
+      if (visibilityFilter === "unpublished" && album.is_published) return false;
+      if (!q) return true;
+      const hay = [album.title, album.slug ?? "", albumArtistsLabel(album)].join(" ").toLowerCase();
+      return hay.includes(q);
+    });
+  }, [albums, listSearch, visibilityFilter]);
+
+  const filterChipCls = (active: boolean) =>
+    `min-h-9 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+      active
+        ? "bg-primary/15 border-primary/40 text-foreground"
+        : "bg-muted/40 border-border text-muted-foreground hover:text-foreground hover:border-border"
+    }`;
+
+  const toggleSongArtist = (artistId: string) => {
+    setSongForm((f) => {
+      const has = f.artistIds.includes(artistId);
+      const nextIds = has ? f.artistIds.filter((x) => x !== artistId) : [...f.artistIds, artistId];
+      const albumOk =
+        f.albumId &&
+        albums.some(
+          (al) => al.id === f.albumId && albumCreditIds(al).some((aid) => nextIds.includes(aid))
+        );
+      return { ...f, artistIds: nextIds, albumId: albumOk ? f.albumId : "" };
+    });
+  };
+
+  // Upload directly to Supabase Storage from browser (bypasses Vercel 4.5 MB limit)
+  const uploadAudio = async (file: File): Promise<string | null> => {
+    setUploadProgress("uploading");
+
+    const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+    if (ext !== "mp3") {
+      setUploadProgress("error");
+      setError("У першай версіі падтрымліваецца толькі MP3 (.mp3).");
+      return null;
+    }
+    const allowed = ["audio/mpeg", "audio/mp3", "audio/x-mp3"];
+    const mime = file.type || "audio/mpeg";
+    if (!allowed.includes(mime)) {
+      setUploadProgress("error");
+      setError(`Непадтрымоўваны фармат: ${mime}. Выкарыстоўвайце MP3.`);
+      return null;
+    }
+    const path = `songs/${Date.now()}-${Math.random().toString(36).slice(2)}.mp3`;
+
+    const supabase = createClient();
+    const { data, error } = await supabase.storage
+      .from("speu-audio")
+      .upload(path, file, { contentType: mime, upsert: false });
+
+    if (error) {
+      setUploadProgress("error");
+      setError(`Памылка загрузкі: ${error.message}`);
+      return null;
+    }
+
+    setUploadProgress("done");
+    const { data: { publicUrl } } = supabase.storage.from("speu-audio").getPublicUrl(data.path);
+    return publicUrl;
+  };
+
+  const saveSong = async () => {
+    if (!songForm.title || songForm.artistIds.length === 0) {
+      setError("Патрабуецца назва і хаця б адзін артыст");
+      return;
+    }
+    setSaving(true);
+    setError(null);
+
+    let audioUrl = songForm.audioUrl || null;
+
+    if (uploadFile) {
+      const url = await uploadAudio(uploadFile);
+      if (!url) {
+        setSaving(false);
+        return;
+      }
+      audioUrl = url;
+    }
+
+    const res = await fetch("/api/admin/songs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: songForm.id || undefined,
+        artistIds: songForm.artistIds,
+        albumId: songForm.albumId || null,
+        title: songForm.title,
+        slug: songForm.slug.trim() || undefined,
+        audioUrl,
+        externalUrl: songForm.externalUrl || null,
+        coverUrl: songForm.coverUrl || null,
+        durationSec: songForm.durationSec ? Number(songForm.durationSec) : null,
+        trackNumber: songForm.trackNumber ? Number(songForm.trackNumber) : null,
+        sortOrder: Number(songForm.sortOrder),
+        isPublished: songForm.isPublished,
+        playOnRadio: songForm.playOnRadio,
+      }),
+    });
+
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      setError(d.error ?? "Памылка захавання");
+    } else {
+      setSongForm(emptySongForm);
+      setSongFormOpen(false);
+      setUploadFile(null);
+      setUploadProgress("idle");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      await loadAll();
+    }
+    setSaving(false);
+  };
+
+  const deleteSong = async (id: string) => {
+    if (!confirm("Выдаліць песню?")) return;
+    setDeleting(id);
+    await fetch(`/api/admin/songs/${id}`, { method: "DELETE" });
+    setDeleting(null);
+    await loadAll();
+  };
+
+  const editSong = (song: Song) => {
+    const ids =
+      song.artist_ids && song.artist_ids.length > 0 ? song.artist_ids : [song.artist_id];
+    setSongForm({
+      id: song.id,
+      artistIds: ids,
+      albumId: song.album_id ?? "",
+      title: song.title,
+      slug: song.slug ?? "",
+      audioUrl: song.audio_url ?? "",
+      externalUrl: song.external_url ?? "",
+      coverUrl: song.cover_url ?? "",
+      durationSec: song.duration_sec?.toString() ?? "",
+      trackNumber: song.track_number?.toString() ?? "",
+      sortOrder: song.sort_order,
+      isPublished: song.is_published,
+      playOnRadio: song.play_on_radio ?? false,
+    });
+    setUploadFile(null);
+    setUploadProgress("idle");
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    router.replace("/admin/label/songs", { scroll: false });
+    setSongFormOpen(true);
+  };
+
+  const toggleAlbumArtist = (artistId: string) => {
+    setAlbumForm((f) => {
+      const has = f.artistIds.includes(artistId);
+      const nextIds = has ? f.artistIds.filter((x) => x !== artistId) : [...f.artistIds, artistId];
+      return { ...f, artistIds: nextIds };
+    });
+  };
+
+  const saveAlbum = async () => {
+    if (!albumForm.title || albumForm.artistIds.length === 0) {
+      setError("Патрабуецца назва і хаця б адзін артыст");
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    const res = await fetch("/api/admin/albums", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: albumForm.id || undefined,
+        artistIds: albumForm.artistIds,
+        title: albumForm.title,
+        slug: albumForm.slug.trim() || undefined,
+        coverUrl: albumForm.coverUrl || null,
+        releaseDate: albumForm.releaseDate || null,
+        description: albumForm.description || null,
+        isPublished: albumForm.isPublished,
+        sortOrder: Number(albumForm.sortOrder),
+      }),
+    });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      setError(
+        typeof d.details === "string"
+          ? `${d.error ?? "Памылка"}: ${d.details}`
+          : d.error ?? "Памылка захавання"
+      );
+    } else {
+      setAlbumForm(emptyAlbumForm);
+      setAlbumFormOpen(false);
+      await loadAll();
+    }
+    setSaving(false);
+  };
+
+  const deleteAlbum = async (id: string) => {
+    if (!confirm("Выдаліць альбом? Усе песні будуць адвязаны.")) return;
+    setDeleting(id);
+    await fetch(`/api/admin/albums/${id}`, { method: "DELETE" });
+    setDeleting(null);
+    await loadAll();
+  };
+
+  const editAlbum = (album: Album) => {
+    setAlbumForm({
+      id: album.id,
+      artistIds: albumCreditIds(album),
+      title: album.title,
+      slug: album.slug ?? "",
+      coverUrl: album.cover_url ?? "",
+      releaseDate: album.release_date ?? "",
+      description: album.description ?? "",
+      isPublished: album.is_published,
+      sortOrder: album.sort_order,
+    });
+    router.replace("/admin/label/albums", { scroll: false });
+    setAlbumFormOpen(true);
+  };
+
+  const closeSongModal = () => {
+    setSongFormOpen(false);
+    setSongForm(emptySongForm);
+    setUploadFile(null);
+    setUploadProgress("idle");
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    setError(null);
+  };
+
+  const openNewSong = () => {
+    setSongForm(emptySongForm);
+    setUploadFile(null);
+    setUploadProgress("idle");
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    setError(null);
+    setSongFormOpen(true);
+  };
+
+  const closeAlbumModal = () => {
+    setAlbumFormOpen(false);
+    setAlbumForm(emptyAlbumForm);
+    setError(null);
+  };
+
+  const openNewAlbum = () => {
+    setAlbumForm(emptyAlbumForm);
+    setError(null);
+    setAlbumFormOpen(true);
+  };
+
+  const inputCls = "px-3 py-2 rounded-lg bg-muted border border-border text-sm w-full focus:outline-none focus:ring-1 focus:ring-primary";
+  const labelCls = "text-xs text-muted-foreground mb-1 block";
+
+  return (
+    <div className="space-y-6">
+      <div className="glass rounded-2xl border border-border p-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="relative flex-1 min-w-0 lg:max-w-md">
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden
+          />
+          <input
+            type="search"
+            className={`${inputCls} pl-9`}
+            placeholder={
+              section === "songs"
+                ? "Пошук: назва, артыст, альбом…"
+                : section === "albums"
+                  ? "Пошук: альбом, артыст…"
+                  : "Пошук: назва, slug, жанры…"
+            }
+            value={listSearch}
+            onChange={(e) => setListSearch(e.target.value)}
+            autoComplete="off"
+          />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            className={filterChipCls(visibilityFilter === "all")}
+            onClick={() => setVisibilityFilter("all")}
+          >
+            Усе
+          </button>
+          <button
+            type="button"
+            className={filterChipCls(visibilityFilter === "published")}
+            onClick={() => setVisibilityFilter("published")}
+          >
+            Апублікаваныя
+          </button>
+          <button
+            type="button"
+            className={filterChipCls(visibilityFilter === "unpublished")}
+            onClick={() => setVisibilityFilter("unpublished")}
+          >
+            Неапублікаваныя
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive flex items-center justify-between">
+          {error}
+          <button onClick={() => setError(null)}><X className="w-4 h-4" /></button>
+        </div>
+      )}
+
+      {section === "songs" && (
+        <>
+          <AdminFormModal open={songFormOpen} onClose={closeSongModal} maxWidthClassName="max-w-2xl">
+            <h2 className="text-sm font-semibold pr-2">
+              {songForm.id ? "Рэдагаваць песню" : "Дадаць песню"}
+            </h2>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
+                <label className={labelCls}>Артысты на трэку *</label>
+                <p className="text-[11px] text-muted-foreground mb-2">
+                  Некалькі артыстаў (колабы). Парадак у спісе — парадак у крэдытах; першы лічыцца асноўным для сартавання.
+                </p>
+                <div className="max-h-44 overflow-y-auto rounded-lg border border-border bg-muted/30 p-3 space-y-2">
+                  {artists.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">Спачатку дадайце артыстаў на ўкладцы «Артысты».</p>
+                  ) : (
+                    artists.map((a) => (
+                      <label
+                        key={a.id}
+                        className="flex items-center gap-2.5 cursor-pointer select-none text-sm"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={songForm.artistIds.includes(a.id)}
+                          onChange={() => toggleSongArtist(a.id)}
+                          className="w-4 h-4 rounded border-border accent-primary shrink-0"
+                        />
+                        <span>{a.name}</span>
+                      </label>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className={labelCls}>Альбом (неабавязкова)</label>
+                <select
+                  className={inputCls}
+                  value={songForm.albumId}
+                  onChange={(e) => setSongForm({ ...songForm, albumId: e.target.value })}
+                  disabled={songForm.artistIds.length === 0}
+                >
+                  <option value="">— без альбома —</option>
+                  {albumsForSong.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.title} ({albumArtistsLabel(a)})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className={labelCls}>Назва *</label>
+                <input
+                  className={inputCls}
+                  placeholder="Назва песні"
+                  value={songForm.title}
+                  onChange={(e) => setSongForm({ ...songForm, title: e.target.value })}
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className={labelCls}>Slug у URL (неабавязкова)</label>
+                <input
+                  className={inputCls}
+                  placeholder="Аўта з назвы, калі пуста"
+                  value={songForm.slug}
+                  onChange={(e) => setSongForm({ ...songForm, slug: e.target.value })}
+                  spellCheck={false}
+                />
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Лацінка, лічбы, злучок. Кірыліца будзе транслітэравана. Пры зайнятасці дадасца суфікс (-2, -3…).
+                </p>
+              </div>
+
+              {/* Audio file upload */}
+              <div className="md:col-span-2">
+                <label className={labelCls}>MP3-файл</label>
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-2 cursor-pointer px-4 py-2 rounded-lg border border-dashed border-border bg-muted hover:border-primary text-sm text-foreground/70 hover:text-foreground transition-colors">
+                    <Upload className="w-4 h-4" />
+                    {uploadFile ? uploadFile.name : "Выбраць файл"}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="audio/mpeg,audio/mp3,audio/x-mp3,.mp3"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0] ?? null;
+                        setUploadFile(f);
+                        setUploadProgress("idle");
+                      }}
+                    />
+                  </label>
+                  {uploadProgress === "uploading" && (
+                    <span className="text-xs text-muted-foreground animate-pulse">Загружаецца…</span>
+                  )}
+                  {uploadProgress === "done" && (
+                    <span className="flex items-center gap-1 text-xs text-green-500"><Check className="w-3 h-3" /> Загружана</span>
+                  )}
+                  {uploadProgress === "error" && (
+                    <span className="text-xs text-destructive">Памылка</span>
+                  )}
+                  {uploadFile && (
+                    <button
+                      onClick={() => { setUploadFile(null); setUploadProgress("idle"); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+                {songForm.audioUrl && !uploadFile && (
+                  <p className="mt-1 text-xs text-muted-foreground truncate">
+                    Бягучы файл: <a href={songForm.audioUrl} target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">{songForm.audioUrl}</a>
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className={labelCls}>Знешні URL (апцыянальна)</label>
+                <input
+                  className={inputCls}
+                  placeholder="https://soundcloud.com/..."
+                  value={songForm.externalUrl}
+                  onChange={(e) => setSongForm({ ...songForm, externalUrl: e.target.value })}
+                />
+              </div>
+
+              <AdminImageSourceField
+                label="Вокладка трэка"
+                value={songForm.coverUrl}
+                onChange={(url) => setSongForm({ ...songForm, coverUrl: url })}
+                storageFolder="tracks"
+                previewShape="square"
+              />
+
+              <div>
+                <label className={labelCls}>Нумар трэка</label>
+                <input
+                  className={inputCls}
+                  type="number"
+                  min="1"
+                  placeholder="1"
+                  value={songForm.trackNumber}
+                  onChange={(e) => setSongForm({ ...songForm, trackNumber: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className={labelCls}>Доўгасць (сек)</label>
+                <input
+                  className={inputCls}
+                  type="number"
+                  min="0"
+                  placeholder="180"
+                  value={songForm.durationSec}
+                  onChange={(e) => setSongForm({ ...songForm, durationSec: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className={labelCls}>Парадак сартавання</label>
+                <input
+                  className={inputCls}
+                  type="number"
+                  value={songForm.sortOrder}
+                  onChange={(e) => setSongForm({ ...songForm, sortOrder: Number(e.target.value) })}
+                />
+              </div>
+
+              <div className="md:col-span-2 flex flex-wrap items-center gap-x-6 gap-y-2 pt-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    id="song-published"
+                    type="checkbox"
+                    checked={songForm.isPublished}
+                    onChange={(e) => setSongForm({ ...songForm, isPublished: e.target.checked })}
+                    className="w-4 h-4 rounded border-border"
+                  />
+                  <span className="text-sm">Апублікаваць</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    id="song-radio"
+                    type="checkbox"
+                    checked={songForm.playOnRadio}
+                    onChange={(e) => setSongForm({ ...songForm, playOnRadio: e.target.checked })}
+                    className="w-4 h-4 rounded border-border"
+                  />
+                  <span className="text-sm">На радыё (плэйліст на /radio)</span>
+                </label>
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={saveSong}
+                disabled={saving}
+                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium disabled:opacity-60"
+              >
+                {saving ? "Захаванне..." : songForm.id ? "Абнавіць" : "Дадаць"}
+              </button>
+              {songForm.id && (
+                <button
+                  type="button"
+                  onClick={closeSongModal}
+                  className="px-4 py-2 rounded-lg border border-border text-sm text-foreground/70 hover:text-foreground"
+                >
+                  Скасаваць
+                </button>
+              )}
+            </div>
+          </AdminFormModal>
+
+          {/* Songs list */}
+          <div className="glass rounded-2xl border border-border p-6">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <h2 className="text-sm font-semibold">
+                Спіс песень ({filteredSongs.length}
+                {filteredSongs.length !== songs.length ? ` з ${songs.length}` : ""})
+              </h2>
+              <button
+                type="button"
+                onClick={openNewSong}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
+              >
+                <Plus className="w-4 h-4" strokeWidth={2} />
+                Дадаць
+              </button>
+            </div>
+            {loading ? (
+              <p className="text-sm text-muted-foreground">Загружаецца…</p>
+              ) : songs.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Песні не знойдзены</p>
+            ) : filteredSongs.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Нічога не адпавядае пошуку або фільтру публікацыі.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {filteredSongs.map((song) => (
+                  <div key={song.id} className="rounded-lg border border-border p-3 flex items-center gap-3">
+                    {song.cover_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={song.cover_url}
+                        alt=""
+                        className="w-8 h-8 rounded object-cover shrink-0 border border-border"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded bg-muted flex items-center justify-center shrink-0">
+                        <Music className="w-4 h-4 text-muted-foreground" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{song.title}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {song.artists_list && song.artists_list.length > 0
+                          ? song.artists_list.map((x) => x.name).join(" · ")
+                          : (song.artists?.name ?? "—")}
+                        {song.albums ? ` · ${song.albums.title}` : ""}
+                        {song.duration_sec ? ` · ${formatDuration(song.duration_sec)}` : ""}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {song.audio_url && (
+                        <a
+                          href={song.audio_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="Прайграць"
+                          className="text-xs px-2 py-1 rounded bg-muted border border-border hover:border-primary transition-colors"
+                        >
+                          ▶
+                        </a>
+                      )}
+                      <span className={`text-xs px-2 py-1 rounded border ${song.is_published ? "border-green-500/30 text-green-600 bg-green-500/10" : "border-border text-muted-foreground bg-muted"}`}>
+                        {song.is_published ? "✓" : "чарнавік"}
+                      </span>
+                      {song.play_on_radio && (
+                        <span
+                          className="text-xs px-2 py-1 rounded border border-primary/30 text-primary bg-primary/10"
+                          title="У плэйлісце радыё"
+                        >
+                          📻
+                        </span>
+                      )}
+                      <button
+                        onClick={() => editSong(song)}
+                        className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                        title="Рэдагаваць"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => deleteSong(song.id)}
+                        disabled={deleting === song.id}
+                        className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors disabled:opacity-40"
+                        title="Выдаліць"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {section === "albums" && (
+        <>
+          <AdminFormModal open={albumFormOpen} onClose={closeAlbumModal} maxWidthClassName="max-w-2xl">
+            <h2 className="text-sm font-semibold pr-2">
+              {albumForm.id ? "Рэдагаваць альбом" : "Дадаць альбом"}
+            </h2>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
+                <label className={labelCls}>Артысты на альбоме *</label>
+                <p className="text-[11px] text-muted-foreground mb-2">
+                  Некалькі артыстаў (колабы). Парадак у спісе — парадак у крэдытах; першы лічыцца асноўным для акцэнту старонкі.
+                </p>
+                <div className="max-h-44 overflow-y-auto rounded-lg border border-border bg-muted/30 p-3 space-y-2">
+                  {artists.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">Спачатку дадайце артыстаў на ўкладцы «Артысты».</p>
+                  ) : (
+                    artists.map((a) => (
+                      <label
+                        key={a.id}
+                        className="flex items-center gap-2.5 cursor-pointer select-none text-sm"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={albumForm.artistIds.includes(a.id)}
+                          onChange={() => toggleAlbumArtist(a.id)}
+                          className="w-4 h-4 rounded border-border accent-primary shrink-0"
+                        />
+                        <span>{a.name}</span>
+                      </label>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className={labelCls}>Назва *</label>
+                <input
+                  className={inputCls}
+                  placeholder="Назва альбома"
+                  value={albumForm.title}
+                  onChange={(e) => setAlbumForm({ ...albumForm, title: e.target.value })}
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className={labelCls}>Slug у URL (неабавязкова)</label>
+                <input
+                  className={inputCls}
+                  placeholder="Аўта з назвы, калі пуста"
+                  value={albumForm.slug}
+                  onChange={(e) => setAlbumForm({ ...albumForm, slug: e.target.value })}
+                  spellCheck={false}
+                />
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Лацінка, лічбы, злучок. Кірыліца будзе транслітэравана. Пры зайнятасці дадасца суфікс.
+                </p>
+              </div>
+
+              <div>
+                <label className={labelCls}>Дата выхаду</label>
+                <input
+                  className={inputCls}
+                  type="date"
+                  value={albumForm.releaseDate}
+                  onChange={(e) => setAlbumForm({ ...albumForm, releaseDate: e.target.value })}
+                />
+              </div>
+
+              <AdminImageSourceField
+                label="Вокладка альбома"
+                value={albumForm.coverUrl}
+                onChange={(url) => setAlbumForm({ ...albumForm, coverUrl: url })}
+                storageFolder="albums"
+                previewShape="square"
+              />
+
+              <div className="md:col-span-2">
+                <label className={labelCls}>Апісанне</label>
+                <textarea
+                  className={`${inputCls} resize-none`}
+                  rows={3}
+                  placeholder="Апісанне альбома..."
+                  value={albumForm.description}
+                  onChange={(e) => setAlbumForm({ ...albumForm, description: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className={labelCls}>Парадак сартавання</label>
+                <input
+                  className={inputCls}
+                  type="number"
+                  value={albumForm.sortOrder}
+                  onChange={(e) => setAlbumForm({ ...albumForm, sortOrder: Number(e.target.value) })}
+                />
+              </div>
+
+              <div className="flex items-center gap-2 pt-6">
+                <input
+                  id="album-published"
+                  type="checkbox"
+                  checked={albumForm.isPublished}
+                  onChange={(e) => setAlbumForm({ ...albumForm, isPublished: e.target.checked })}
+                  className="w-4 h-4 rounded border-border"
+                />
+                <label htmlFor="album-published" className="text-sm">Апублікаваць</label>
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={saveAlbum}
+                disabled={saving}
+                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium disabled:opacity-60"
+              >
+                {saving ? "Захаванне..." : albumForm.id ? "Абнавіць" : "Дадаць"}
+              </button>
+              {albumForm.id && (
+                <button
+                  type="button"
+                  onClick={closeAlbumModal}
+                  className="px-4 py-2 rounded-lg border border-border text-sm text-foreground/70 hover:text-foreground"
+                >
+                  Скасаваць
+                </button>
+              )}
+            </div>
+          </AdminFormModal>
+
+          {/* Albums list */}
+          <div className="glass rounded-2xl border border-border p-6">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <h2 className="text-sm font-semibold">
+                Спіс альбомаў ({filteredAlbums.length}
+                {filteredAlbums.length !== albums.length ? ` з ${albums.length}` : ""})
+              </h2>
+              <button
+                type="button"
+                onClick={openNewAlbum}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
+              >
+                <Plus className="w-4 h-4" strokeWidth={2} />
+                Дадаць
+              </button>
+            </div>
+            {loading ? (
+              <p className="text-sm text-muted-foreground">Загружаецца…</p>
+            ) : albums.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Альбомы не знойдзены</p>
+            ) : filteredAlbums.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Нічога не адпавядае пошуку або фільтру публікацыі.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {filteredAlbums.map((album) => {
+                  const trackCount = songs.filter((s) => s.album_id === album.id).length;
+                  return (
+                    <div key={album.id} className="rounded-lg border border-border p-3 flex items-center gap-3">
+                      {album.cover_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={album.cover_url} alt={album.title} className="w-10 h-10 rounded object-cover shrink-0" />
+                      ) : (
+                        <div className="w-10 h-10 rounded bg-muted flex items-center justify-center shrink-0">
+                          <Disc className="w-5 h-5 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{album.title}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {albumArtistsLabel(album)}
+                          {album.release_date ? ` · ${album.release_date}` : ""}
+                          {` · ${trackCount} тр.`}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className={`text-xs px-2 py-1 rounded border ${album.is_published ? "border-green-500/30 text-green-600 bg-green-500/10" : "border-border text-muted-foreground bg-muted"}`}>
+                          {album.is_published ? "апубл." : "чарнавік"}
+                        </span>
+                        <button
+                          onClick={() => editAlbum(album)}
+                          className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                          title="Рэдагаваць"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => deleteAlbum(album.id)}
+                          disabled={deleting === album.id}
+                          className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors disabled:opacity-40"
+                          title="Выдаліць"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {section === "artists" && (
+        <AdminArtistsPanel
+          onCatalogChanged={() => void loadAll()}
+          listSearch={listSearch}
+          visibilityFilter={visibilityFilter}
+        />
+      )}
+    </div>
+  );
+}

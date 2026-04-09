@@ -7,6 +7,10 @@ export type SpeuProfile = {
   /** true when speu.artists.user_id = this profile (заяўкі на рэліз у кабінеце артыста) */
   is_artist?: boolean;
   artist_id?: string | null;
+  /** Перавагі глабальнага плэера (захоўваюцца ў speu.profiles) */
+  player_queue_repeat_mode?: "off" | "all" | "one";
+  player_queue_shuffle?: boolean;
+  player_single_repeat?: boolean;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars

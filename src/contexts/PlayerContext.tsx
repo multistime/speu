@@ -16,6 +16,7 @@ import {
   updateMediaSessionPositionState,
 } from "@/lib/player-media-session";
 import { submitListenTerminal } from "@/lib/listen-analytics/submit";
+import { createClient } from "@/lib/supabase/client";
 import { shuffleArray } from "@/lib/speu/shuffle";
 
 export type PlayerTrack = {
@@ -112,6 +113,36 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const listenShortGapRef = useRef(0);
   const finalizeListenSessionRef = useRef<(beacon: boolean) => void>(() => {});
 
+  /** Захаваныя перавагі (чарга / адзіночны трэк); па змаўчанні: паўтор чаргі ўкл, shuffle выкл */
+  const queueRepeatPrefRef = useRef<PlayerRepeatMode>("all");
+  const queueShufflePrefRef = useRef(false);
+  const singleRepeatPrefRef = useRef(false);
+  const authedRef = useRef(false);
+  const persistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const flushPersist = useCallback(() => {
+    if (!authedRef.current) return;
+    void fetch("/api/user/player-prefs", {
+      method: "PATCH",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        player_queue_repeat_mode: queueRepeatPrefRef.current,
+        player_queue_shuffle: queueShufflePrefRef.current,
+        player_single_repeat: singleRepeatPrefRef.current,
+      }),
+    });
+  }, []);
+
+  const schedulePersist = useCallback(() => {
+    if (!authedRef.current) return;
+    if (persistTimerRef.current) clearTimeout(persistTimerRef.current);
+    persistTimerRef.current = setTimeout(() => {
+      persistTimerRef.current = null;
+      flushPersist();
+    }, 500);
+  }, [flushPersist]);
+
   const finalizeListenSession = useCallback((beacon: boolean) => {
     const sid = listenSessionIdRef.current;
     const tr = trackRef.current;
@@ -196,6 +227,56 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     window.addEventListener("pagehide", onHide);
     return () => window.removeEventListener("pagehide", onHide);
   }, []);
+
+  useEffect(() => {
+    const supabase = createClient();
+    let cancelled = false;
+
+    const applyProfile = (row: Record<string, unknown> | null) => {
+      if (!row || cancelled) return;
+      const qr = row.player_queue_repeat_mode;
+      if (qr === "off" || qr === "all" || qr === "one") {
+        queueRepeatPrefRef.current = qr;
+      }
+      if (typeof row.player_queue_shuffle === "boolean") {
+        queueShufflePrefRef.current = row.player_queue_shuffle;
+      }
+      if (typeof row.player_single_repeat === "boolean") {
+        singleRepeatPrefRef.current = row.player_single_repeat;
+      }
+    };
+
+    void supabase.auth.getSession().then(({ data: { session } }) => {
+      authedRef.current = Boolean(session?.user);
+      if (!session?.user) return;
+      void fetch("/api/user/profile", { credentials: "include" })
+        .then((r) => (r.ok ? r.json() : null))
+        .then(applyProfile)
+        .catch(() => {});
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      authedRef.current = Boolean(session?.user);
+      if (session?.user) {
+        void fetch("/api/user/profile", { credentials: "include" })
+          .then((r) => (r.ok ? r.json() : null))
+          .then(applyProfile)
+          .catch(() => {});
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+      if (persistTimerRef.current) {
+        clearTimeout(persistTimerRef.current);
+        persistTimerRef.current = null;
+        if (authedRef.current) flushPersist();
+      }
+    };
+  }, [flushPersist]);
 
   useEffect(() => {
     if (typeof navigator === "undefined" || !("mediaSession" in navigator)) return;
@@ -348,23 +429,28 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const startNonStopShuffle = useCallback((tracks: PlayerTrack[]) => {
-    const playable = tracks.filter((t) => t.audioUrl?.trim());
-    if (playable.length === 0) return;
-    poolRef.current = playable;
-    queueRef.current = shuffleArray(playable);
-    queueIndexRef.current = 0;
-    nonStopRef.current = true;
-    setNonStopActive(true);
-    setQueueSize(playable.length);
-    shuffleEnabledRef.current = true;
-    setShuffleEnabled(true);
-    repeatAllRef.current = true;
-    repeatOneRef.current = false;
-    setRepeatMode("all");
-    const first = queueRef.current[0];
-    if (first) playTrackInternalRef.current(first);
-  }, []);
+  const startNonStopShuffle = useCallback(
+    (tracks: PlayerTrack[]) => {
+      const playable = tracks.filter((t) => t.audioUrl?.trim());
+      if (playable.length === 0) return;
+      poolRef.current = playable;
+      queueRef.current = shuffleArray(playable);
+      queueIndexRef.current = 0;
+      nonStopRef.current = true;
+      setNonStopActive(true);
+      setQueueSize(playable.length);
+      shuffleEnabledRef.current = true;
+      setShuffleEnabled(true);
+      queueShufflePrefRef.current = true;
+      schedulePersist();
+      repeatAllRef.current = true;
+      repeatOneRef.current = false;
+      setRepeatMode("all");
+      const first = queueRef.current[0];
+      if (first) playTrackInternalRef.current(first);
+    },
+    [schedulePersist]
+  );
 
   const playPlaylistAt = useCallback((raw: PlayerTrack[], startIndex: number) => {
     const pool = raw.filter((t) => t.audioUrl?.trim());
@@ -372,8 +458,11 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const target = raw[startIndex];
     if (!target?.audioUrl?.trim()) return;
 
+    const qr = queueRepeatPrefRef.current;
+    const qs = queueShufflePrefRef.current;
+
     poolRef.current = pool;
-    queueRef.current = [...pool];
+    queueRef.current = qs ? shuffleArray(pool) : [...pool];
     const qIdx = Math.max(
       0,
       queueRef.current.findIndex((t) => t.id === target.id)
@@ -382,11 +471,11 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     nonStopRef.current = true;
     setNonStopActive(true);
     setQueueSize(pool.length);
-    shuffleEnabledRef.current = false;
-    setShuffleEnabled(false);
-    repeatAllRef.current = false;
-    repeatOneRef.current = false;
-    setRepeatMode("off");
+    shuffleEnabledRef.current = qs;
+    setShuffleEnabled(qs);
+    repeatAllRef.current = qr === "all";
+    repeatOneRef.current = qr === "one";
+    setRepeatMode(qr);
 
     const first = queueRef.current[qIdx];
     if (first) playTrackInternalRef.current(first);
@@ -414,9 +503,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     setQueueSize(0);
     shuffleEnabledRef.current = false;
     setShuffleEnabled(false);
+    const solo: PlayerRepeatMode = singleRepeatPrefRef.current ? "one" : "off";
     repeatAllRef.current = false;
-    repeatOneRef.current = false;
-    setRepeatMode("off");
+    repeatOneRef.current = solo === "one";
+    setRepeatMode(solo);
 
     playTrackInternalRef.current(newTrack);
   }, []);
@@ -425,13 +515,20 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     setRepeatMode((m) => {
       const hasQueue = nonStopRef.current && poolRef.current.length > 0;
       if (!hasQueue) {
-        return m === "off" ? "one" : "off";
+        const next: PlayerRepeatMode = m === "off" ? "one" : "off";
+        singleRepeatPrefRef.current = next === "one";
+        schedulePersist();
+        return next;
       }
-      if (m === "off") return "all";
-      if (m === "all") return "one";
-      return "off";
+      let next: PlayerRepeatMode;
+      if (m === "off") next = "all";
+      else if (m === "all") next = "one";
+      else next = "off";
+      queueRepeatPrefRef.current = next;
+      schedulePersist();
+      return next;
     });
-  }, []);
+  }, [schedulePersist]);
 
   const seekRatio = useCallback((ratio: number) => {
     listenHadUserSeekRef.current = true;
@@ -530,12 +627,14 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const next = !shuffleEnabledRef.current;
     shuffleEnabledRef.current = next;
     setShuffleEnabled(next);
+    queueShufflePrefRef.current = next;
+    schedulePersist();
     queueRef.current = next ? shuffleArray(poolRef.current) : [...poolRef.current];
     queueIndexRef.current = Math.max(
       0,
       queueRef.current.findIndex((t) => t.id === current.id)
     );
-  }, []);
+  }, [schedulePersist]);
 
   useLayoutEffect(() => {
     stopRef.current = stop;

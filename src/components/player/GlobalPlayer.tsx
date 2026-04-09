@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Menu } from "@base-ui/react/menu";
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  ChevronDown,
   Music,
   MoreHorizontal,
   Pause,
@@ -16,13 +17,20 @@ import {
   X,
 } from "lucide-react";
 import { TrackLikeButton } from "@/components/speu/TrackLikeButton";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { usePlayer, type PlayerRepeatMode, type PlayerTrack } from "@/contexts/PlayerContext";
 import { formatPlayerTime } from "@/lib/format-player-time";
 import { clientXToSeekRatio } from "@/lib/player-progress";
 import { cn } from "@/lib/utils";
 
-function GlobalPlayerProgress({ track }: { track: PlayerTrack }) {
+function GlobalPlayerProgress({
+  track,
+  className,
+}: {
+  track: PlayerTrack;
+  /** Напрыклад, для шторкі: relative mt-2 h-3.5 w-full max-w-md mx-auto */
+  className?: string;
+}) {
   const { currentTime, duration, canSeek, seekRatio, isPlaying } = usePlayer();
 
   const railRef = useRef<HTMLDivElement>(null);
@@ -120,9 +128,11 @@ function GlobalPlayerProgress({ track }: { track: PlayerTrack }) {
       onPointerCancel={onPointerUp}
       onKeyDown={onKeyDown}
       className={cn(
-        "absolute inset-x-0 top-0 z-30 h-3 cursor-pointer touch-none select-none",
+        "z-30 h-3 cursor-pointer touch-none select-none",
+        "absolute inset-x-0 top-0",
         "focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary/45 focus-visible:outline-offset-2 focus-visible:rounded-sm",
-        !canSeek && "cursor-not-allowed"
+        !canSeek && "cursor-not-allowed",
+        className
       )}
     >
       {canSeek ? (
@@ -294,6 +304,354 @@ function GlobalPlayerOverflowMenu({
 const ctrlBtn =
   "w-9 h-9 rounded-full border flex items-center justify-center transition-colors shrink-0 disabled:opacity-35 disabled:pointer-events-none";
 
+const mobileSheetCtrlBtn =
+  "min-h-11 min-w-11 rounded-full border flex items-center justify-center transition-colors shrink-0 disabled:opacity-35 disabled:pointer-events-none";
+
+function MobileNowPlayingSheet({
+  open,
+  onClose,
+  track,
+  canShuffle,
+  shuffleEnabled,
+  canSkipNext,
+  repeatLabel,
+}: {
+  open: boolean;
+  onClose: () => void;
+  track: PlayerTrack;
+  canShuffle: boolean;
+  shuffleEnabled: boolean;
+  canSkipNext: boolean;
+  repeatLabel: string;
+}) {
+  const {
+    isPlaying,
+    repeatMode,
+    currentTime,
+    duration,
+    togglePlay,
+    cycleRepeatMode,
+    toggleShuffle,
+    skipNext,
+    skipPrevious,
+    stop,
+  } = usePlayer();
+
+  const titleId = useId();
+  const closeBtnRef = useRef<HTMLButtonElement>(null);
+  const [pullDown, setPullDown] = useState(0);
+  const pullDownRef = useRef(0);
+  const pullStartY = useRef(0);
+  const pulling = useRef(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const id = requestAnimationFrame(() => closeBtnRef.current?.focus());
+    return () => cancelAnimationFrame(id);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  const resetPull = useCallback(() => {
+    if (pullDownRef.current > 130) onClose();
+    pullDownRef.current = 0;
+    setPullDown(0);
+    pulling.current = false;
+  }, [onClose]);
+
+  const onHandlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    pulling.current = true;
+    pullStartY.current = e.clientY;
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const onHandlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!pulling.current) return;
+    const d = Math.max(0, e.clientY - pullStartY.current);
+    pullDownRef.current = d;
+    setPullDown(d);
+  };
+
+  const onHandlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+    resetPull();
+  };
+
+  const swipeThreshold =
+    typeof window !== "undefined" ? Math.min(140, window.innerWidth * 0.28) : 100;
+
+  return (
+    <AnimatePresence>
+      {open ? (
+        <>
+          <motion.button
+            key="mobile-sheet-backdrop"
+            type="button"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[55] bg-black/45 backdrop-blur-[2px] md:hidden"
+            aria-hidden
+            onClick={onClose}
+          />
+          <motion.div
+            key="mobile-sheet-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={titleId}
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ type: "spring", damping: 34, stiffness: 380 }}
+            className="fixed inset-x-0 bottom-0 z-[60] max-h-[min(92dvh,920px)] min-h-[72dvh] md:hidden"
+          >
+            <div
+              style={{ transform: `translate3d(0, ${pullDown}px, 0)` }}
+              className="flex max-h-[min(92dvh,920px)] min-h-[72dvh] flex-col rounded-t-[1.35rem] border border-border/50 bg-background shadow-[0_-12px_48px_rgba(0,0,0,0.18)] pb-[max(1rem,env(safe-area-inset-bottom))] pt-1"
+            >
+            <div className="flex flex-col items-stretch gap-1 px-4 pb-2 pt-1">
+              <div
+                className="flex cursor-grab touch-none flex-col items-center py-2 active:cursor-grabbing"
+                onPointerDown={onHandlePointerDown}
+                onPointerMove={onHandlePointerMove}
+                onPointerUp={onHandlePointerUp}
+                onPointerCancel={onHandlePointerUp}
+              >
+                <div className="h-1 w-10 shrink-0 rounded-full bg-muted-foreground/35" aria-hidden />
+              </div>
+              <div className="flex w-full items-center justify-between gap-2">
+                <span className="text-xs font-medium text-muted-foreground">Зараз гуляе</span>
+                <button
+                  ref={closeBtnRef}
+                  type="button"
+                  onClick={onClose}
+                  aria-label="Згарнуць плэер"
+                  className="flex min-h-11 min-w-11 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary/40"
+                >
+                  <ChevronDown className="size-5" strokeWidth={2} />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-5 pb-6">
+              <motion.div
+                drag="x"
+                dragConstraints={{ left: 0, right: 0 }}
+                dragElastic={0.12}
+                onDragEnd={(_, info) => {
+                  const v = info.velocity.x;
+                  if (info.offset.x <= -swipeThreshold || v < -380) skipNext();
+                  else if (info.offset.x >= swipeThreshold || v > 380) skipPrevious();
+                }}
+                className="relative mx-auto mt-1 w-full max-w-[min(78vw,300px)] touch-none"
+              >
+                <div
+                  className="relative aspect-square w-full overflow-hidden rounded-2xl shadow-lg ring-1 ring-border/40"
+                  style={{
+                    background: track.accentColor
+                      ? `rgba(${track.accentRgb ?? "125,191,158"}, 0.12)`
+                      : "var(--muted)",
+                  }}
+                >
+                  {track.coverUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={track.coverUrl}
+                      alt=""
+                      className="size-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex size-full items-center justify-center">
+                      <Music
+                        className="size-[22%] max-w-[5rem]"
+                        style={{ color: track.accentColor ?? "var(--primary)" }}
+                        strokeWidth={1.25}
+                      />
+                    </div>
+                  )}
+                  {isPlaying ? <GlobalPlayerCoverEqualizer accentColor={track.accentColor} /> : null}
+                </div>
+                <p className="mt-2 text-center text-[11px] text-muted-foreground/80">
+                  Свайп улева — наступны, управа — папярэдні
+                </p>
+              </motion.div>
+
+              <div className="mt-5 space-y-1 text-center">
+                <h2 id={titleId} className="text-balance px-1 text-lg font-semibold leading-snug text-foreground">
+                  {track.trackHref ? (
+                    <Link
+                      href={track.trackHref}
+                      className="hover:underline underline-offset-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {track.title}
+                    </Link>
+                  ) : (
+                    track.title
+                  )}
+                </h2>
+                {track.artistName ? (
+                  <p className="text-sm text-muted-foreground">
+                    {track.artistSlug ? (
+                      <Link
+                        href={`/speu/artists/${track.artistSlug}`}
+                        className="hover:text-foreground transition-colors"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {track.artistName}
+                      </Link>
+                    ) : (
+                      track.artistName
+                    )}
+                  </p>
+                ) : null}
+              </div>
+
+              <GlobalPlayerProgress
+                track={track}
+                className="relative inset-x-auto top-auto z-30 mx-auto mt-6 h-3.5 w-full max-w-md touch-none select-none"
+              />
+
+              <div className="mt-2 flex items-center justify-center gap-1 font-mono text-xs tabular-nums text-muted-foreground">
+                <span aria-live="polite">
+                  {formatPlayerTime(currentTime)}
+                  <span className="text-muted-foreground/50"> / </span>
+                  {duration > 0 ? formatPlayerTime(duration) : "—:—"}
+                </span>
+              </div>
+
+              <div className="mt-8 flex items-center justify-center gap-3 sm:gap-4">
+                <button
+                  type="button"
+                  onClick={toggleShuffle}
+                  disabled={!canShuffle}
+                  aria-label={
+                    shuffleEnabled ? "Выпадковы парадак уключаны" : "Уключыць выпадковы парадак"
+                  }
+                  aria-pressed={shuffleEnabled}
+                  className={cn(
+                    mobileSheetCtrlBtn,
+                    shuffleEnabled
+                      ? "border-primary/50 text-primary bg-primary/12"
+                      : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
+                  )}
+                >
+                  <Shuffle className="size-[1.15rem]" strokeWidth={2} />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={skipPrevious}
+                  aria-label="Папярэдні трэк"
+                  className={cn(
+                    mobileSheetCtrlBtn,
+                    "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
+                  )}
+                >
+                  <SkipBack className="size-[1.15rem]" strokeWidth={2} />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => togglePlay(track)}
+                  aria-label={isPlaying ? "Паўза" : "Прайграць"}
+                  className="flex min-h-[3.25rem] min-w-[3.25rem] shrink-0 items-center justify-center rounded-full shadow-md transition-transform duration-200 hover:scale-[1.04] active:scale-[0.97]"
+                  style={{
+                    background: track.accentColor ?? "var(--primary)",
+                    color: "white",
+                  }}
+                >
+                  {isPlaying ? (
+                    <Pause className="size-7" fill="currentColor" strokeWidth={0} />
+                  ) : (
+                    <Play className="size-7 ml-1" fill="currentColor" strokeWidth={0} />
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={skipNext}
+                  disabled={!canSkipNext}
+                  aria-label="Наступны трэк"
+                  className={cn(
+                    mobileSheetCtrlBtn,
+                    "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
+                  )}
+                >
+                  <SkipForward className="size-[1.15rem]" strokeWidth={2} />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={cycleRepeatMode}
+                  aria-label={repeatLabel}
+                  aria-pressed={repeatMode !== "off"}
+                  className={cn(
+                    mobileSheetCtrlBtn,
+                    repeatMode !== "off"
+                      ? "border-primary/50 text-primary bg-primary/12"
+                      : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
+                  )}
+                >
+                  {repeatMode === "one" ? (
+                    <Repeat1 className="size-[1.15rem]" strokeWidth={2} />
+                  ) : (
+                    <Repeat className="size-[1.15rem]" strokeWidth={2} />
+                  )}
+                </button>
+              </div>
+
+              <div className="mt-8 flex items-center justify-center gap-6 border-t border-border/50 pt-6">
+                {track.trackHref?.startsWith("/speu/tracks/") ? (
+                  <TrackLikeButton
+                    trackId={track.id}
+                    size="sm"
+                    accentColor={track.accentColor ?? null}
+                    className="border-border/60 min-h-11 min-w-11 !max-h-11 !max-w-11 !min-h-11 !min-w-11 shrink-0 rounded-full !p-0 hover:bg-muted/50"
+                  />
+                ) : (
+                  <span className="min-h-11 min-w-11" aria-hidden />
+                )}
+                <button
+                  type="button"
+                  onClick={stop}
+                  aria-label="Спыніць прайграванне"
+                  className={cn(
+                    mobileSheetCtrlBtn,
+                    "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
+                  )}
+                >
+                  <X className="size-[1.05rem]" strokeWidth={2} />
+                </button>
+              </div>
+            </div>
+            </div>
+          </motion.div>
+        </>
+      ) : null}
+    </AnimatePresence>
+  );
+}
+
 export function GlobalPlayer() {
   const {
     track,
@@ -326,7 +684,14 @@ export function GlobalPlayer() {
         ? "Паўтор усяго плэйліста. Націсніце — паўтор аднаго трэка"
         : "Паўтор аднаго трэка. Націсніце — выключыць паўтор";
 
+  const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
+
+  useEffect(() => {
+    if (!track) setMobileSheetOpen(false);
+  }, [track]);
+
   return (
+    <>
     <AnimatePresence>
       {track && (
         <motion.div
@@ -345,8 +710,14 @@ export function GlobalPlayer() {
           <GlobalPlayerProgress track={track} />
 
           <div className="max-w-7xl mx-auto px-2 sm:px-6 py-2.5 sm:py-3 min-h-[3.25rem]">
-            {/* Мабільны плэер: вокладка + метаданыя, час / лайк / прайграванне, меню «⋯» */}
-            <div className="flex md:hidden flex-row items-center gap-1.5 min-w-0">
+            {/* Мабільны плэер: націск на радок (акрамя спасылак і кнопак) — шторка «зараз гуляе» */}
+            <div
+              className="flex md:hidden flex-row items-center gap-1.5 min-w-0 cursor-pointer"
+              onClick={(e) => {
+                if ((e.target as HTMLElement).closest("a, button")) return;
+                setMobileSheetOpen(true);
+              }}
+            >
               <div
                 className="relative w-10 h-10 shrink-0 overflow-hidden rounded-lg flex items-center justify-center"
                 style={{
@@ -649,5 +1020,17 @@ export function GlobalPlayer() {
         </motion.div>
       )}
     </AnimatePresence>
+    {track ? (
+      <MobileNowPlayingSheet
+        open={mobileSheetOpen}
+        onClose={() => setMobileSheetOpen(false)}
+        track={track}
+        canShuffle={canShuffle}
+        shuffleEnabled={shuffleEnabled}
+        canSkipNext={canSkipNext}
+        repeatLabel={repeatLabel}
+      />
+    ) : null}
+    </>
   );
 }

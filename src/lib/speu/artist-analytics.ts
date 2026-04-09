@@ -26,6 +26,15 @@ export type ArtistListenSummary = {
   prev_unique_listeners: number;
 };
 
+/** Дадатковыя лічбы для агляду лэйбла (RPC label_listen_dashboard). */
+export type LabelCatalogSnapshot = {
+  artists_total: number;
+  artists_published: number;
+  tracks_total: number;
+  albums_total: number;
+  releases_in_moderation: number;
+};
+
 export type ArtistListenDashboardOk = {
   ok: true;
   period_days: number;
@@ -34,6 +43,7 @@ export type ArtistListenDashboardOk = {
   summary: ArtistListenSummary;
   daily: ArtistListenDailyPoint[];
   tracks: ArtistListenTrackRow[];
+  catalog?: LabelCatalogSnapshot;
 };
 
 export type ArtistListenDashboardErr = {
@@ -56,6 +66,18 @@ export function parseArtistListenDashboard(raw: unknown): ArtistListenDashboard 
   if (!summary || typeof summary !== "object") return null;
   const s = summary as Record<string, unknown>;
   const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
+
+  let catalog: LabelCatalogSnapshot | undefined;
+  if (o.catalog && typeof o.catalog === "object") {
+    const c = o.catalog as Record<string, unknown>;
+    catalog = {
+      artists_total: num(c.artists_total),
+      artists_published: num(c.artists_published),
+      tracks_total: num(c.tracks_total),
+      albums_total: num(c.albums_total),
+      releases_in_moderation: num(c.releases_in_moderation),
+    };
+  }
 
   return {
     ok: true,
@@ -113,6 +135,7 @@ export function parseArtistListenDashboard(raw: unknown): ArtistListenDashboard 
           };
         })
       : [],
+    catalog,
   };
 }
 
