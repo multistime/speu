@@ -6,6 +6,7 @@ import React, {
   useContext,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -48,6 +49,8 @@ type PlayerContextValue = {
   /** Non-stop чарга: перамешаны плэйліст цыклічна прайграецца пасля канца трэка */
   nonStopActive: boolean;
   queueSize: number;
+  /** Суседнія трэкі ў чарзе для UI (карусель абкладак); null калі няма куды пераходзіць */
+  queueNeighborTracks: { prev: PlayerTrack | null; next: PlayerTrack | null };
   /** Прайграванне, с */
   currentTime: number;
   /** Вядомая даўжыньня трэка, с; 0 калі яшчэ невядома / бясконцысьць */
@@ -655,6 +658,29 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const canSeek = duration > 0;
 
+  const queueNeighborTracks = useMemo((): {
+    prev: PlayerTrack | null;
+    next: PlayerTrack | null;
+  } => {
+    if (!nonStopActive || queueSize < 2) return { prev: null, next: null };
+    const q = queueRef.current;
+    const idx = queueIndexRef.current;
+    const len = q.length;
+    if (len < 2) return { prev: null, next: null };
+
+    const ra = repeatMode === "all";
+    let prev: PlayerTrack | null = null;
+    let next: PlayerTrack | null = null;
+
+    if (idx > 0) prev = q[idx - 1] ?? null;
+    else if (ra) prev = q[len - 1] ?? null;
+
+    if (idx < len - 1) next = q[idx + 1] ?? null;
+    else if (ra) next = q[0] ?? null;
+
+    return { prev, next };
+  }, [nonStopActive, queueSize, repeatMode, track?.id, shuffleEnabled]);
+
   return (
     <PlayerContext.Provider
       value={{
@@ -664,6 +690,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         shuffleEnabled,
         nonStopActive,
         queueSize,
+        queueNeighborTracks,
         currentTime,
         duration,
         canSeek,
