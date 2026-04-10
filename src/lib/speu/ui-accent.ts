@@ -2,8 +2,8 @@ import { ARTIST_COLOR_PRESETS, type ArtistColorPreset } from "@/lib/artists/visu
 
 /** Прэсеты палітры акцэнту UI (без custom). */
 export const UI_ACCENT_PRESET_IDS = [
-  "default",
   "lyasun",
+  "paparat",
   "vuzel",
   "rasitsa",
   "balota",

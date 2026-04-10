@@ -41,7 +41,7 @@ const emptyForm = {
   location: "",
   status: "draft",
   sortOrder: "0",
-  colorPreset: "default" as ArtistColorPresetId,
+    colorPreset: "paparat" as ArtistColorPresetId,
   pattern: "diamond" as ArtistPatternId,
   customGradientFrom: "#2B5035",
   customGradientTo: "#0E1811",

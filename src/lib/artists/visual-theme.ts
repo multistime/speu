@@ -1,7 +1,7 @@
 export const ARTIST_PATTERN_IDS = ["diamond", "waves", "circles", "grid", "fern", "spiral"] as const;
 export type ArtistPatternId = (typeof ARTIST_PATTERN_IDS)[number];
 
-export const ARTIST_COLOR_PRESET_IDS = ["default", "lyasun", "vuzel", "rasitsa", "balota", "zhytnik", "custom"] as const;
+export const ARTIST_COLOR_PRESET_IDS = ["lyasun", "paparat", "vuzel", "rasitsa", "balota", "zhytnik", "custom"] as const;
 export type ArtistColorPresetId = (typeof ARTIST_COLOR_PRESET_IDS)[number];
 
 export type ArtistColorPreset = {
@@ -15,20 +15,20 @@ export type ArtistColorPreset = {
 
 export const ARTIST_COLOR_PRESETS: ArtistColorPreset[] = [
   {
-    id: "default",
-    label: "Зелена — купальска / змаўчанне",
-    gradientFrom: "#2B5035",
-    gradientTo: "#0E1811",
-    accent: "#7DBF9E",
-    accentRgb: "125, 191, 158",
-  },
-  {
     id: "lyasun",
     label: "Начны лес",
     gradientFrom: "#152018",
     gradientTo: "#0A100C",
     accent: "#7DBF9E",
     accentRgb: "125, 191, 158",
+  },
+  {
+    id: "paparat",
+    label: "Папараць — купальская ноч",
+    gradientFrom: "#2B5035",
+    gradientTo: "#0E1811",
+    accent: "#3D6B52",
+    accentRgb: "61, 107, 82",
   },
   {
     id: "vuzel",
@@ -95,11 +95,15 @@ export function detectColorPreset(visual: Record<string, unknown>): Exclude<Arti
     !normHex(visual.gradientFrom) &&
     !normHex(visual.gradientTo) &&
     !normHex(visual.accent);
-  if (noColors) return "default";
+  if (noColors) return "paparat";
 
   const gf = normHex(visual.gradientFrom);
   const gt = normHex(visual.gradientTo);
   const ac = normHex(visual.accent);
+  /* Legacy: стары прэсет «default» — купальскі лес + светлая шалва */
+  if (gf === "#2b5035" && gt === "#0e1811" && ac === "#7dbf9e") {
+    return "paparat";
+  }
   for (const p of ARTIST_COLOR_PRESETS) {
     if (
       normHex(p.gradientFrom) === gf &&
@@ -123,17 +127,20 @@ export function resolveArtistVisual(input: {
     ? input.pattern
     : "diamond";
 
+  const presetId =
+    input.colorPreset === "default" ? "paparat" : input.colorPreset;
+
   let gradientFrom: string;
   let gradientTo: string;
   let accent: string;
 
-  if (input.colorPreset === "custom") {
+  if (presetId === "custom") {
     const base = ARTIST_COLOR_PRESETS[0];
     gradientFrom = isValidHex6(input.customGradientFrom ?? "") ? input.customGradientFrom!.trim() : base.gradientFrom;
     gradientTo = isValidHex6(input.customGradientTo ?? "") ? input.customGradientTo!.trim() : base.gradientTo;
     accent = isValidHex6(input.customAccent ?? "") ? input.customAccent!.trim() : base.accent;
   } else {
-    const preset = ARTIST_COLOR_PRESETS.find((p) => p.id === input.colorPreset) ?? ARTIST_COLOR_PRESETS[0];
+    const preset = ARTIST_COLOR_PRESETS.find((p) => p.id === presetId) ?? ARTIST_COLOR_PRESETS[0];
     gradientFrom = preset.gradientFrom;
     gradientTo = preset.gradientTo;
     accent = preset.accent;

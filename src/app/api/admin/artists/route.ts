@@ -12,6 +12,9 @@ import {
 import { isLikelyImageUrl } from "@/lib/admin/image-upload";
 
 const colorPresetEnum = z.enum(ARTIST_COLOR_PRESET_IDS);
+const colorPresetField = z
+  .union([colorPresetEnum, z.literal("default")])
+  .transform((v) => (v === "default" ? "paparat" : v));
 const patternEnum = z.enum(ARTIST_PATTERN_IDS);
 
 const artistSchema = z
@@ -27,7 +30,7 @@ const artistSchema = z
     initials: z.string().optional(),
     status: z.enum(["draft", "published", "archived"]).default("draft"),
     sortOrder: z.number().int().default(0),
-    colorPreset: colorPresetEnum.default("default"),
+    colorPreset: colorPresetField.default("paparat"),
     pattern: patternEnum.default("diamond"),
     customGradientFrom: z.string().optional(),
     customGradientTo: z.string().optional(),

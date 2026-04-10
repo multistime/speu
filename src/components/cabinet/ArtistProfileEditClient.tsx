@@ -130,7 +130,7 @@ export function ArtistProfileEditClient({ artistId }: { artistId: string }) {
       location: data.location ?? "",
       yearStarted: typeof data.yearStarted === "number" ? data.yearStarted : null,
       initials: data.initials ?? "",
-      colorPreset: data.colorPreset ?? "default",
+      colorPreset: data.colorPreset ?? "paparat",
       pattern: data.pattern ?? "diamond",
       customGradientFrom: data.customGradientFrom ?? "#2B5035",
       customGradientTo: data.customGradientTo ?? "#0E1811",

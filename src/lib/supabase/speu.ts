@@ -22,7 +22,7 @@ export type SpeuProfile = {
   player_queue_repeat_mode?: "off" | "all" | "one";
   player_queue_shuffle?: boolean;
   player_single_repeat?: boolean;
-  /** Прэсет палітры UI: default, lyasun (прадвызначэнне), vuzel, rasitsa, balota, zhytnik */
+  /** Прэсет палітры UI: lyasun (прадвызначэнне), paparat, vuzel, rasitsa, balota, zhytnik */
   ui_accent_preset_id?: string;
 };
 
