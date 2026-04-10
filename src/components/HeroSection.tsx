@@ -47,10 +47,14 @@ export function HeroSection({
     () => true
   );
 
-  const { accentColor: accent, glowPrimaryRgb, glowAccentRgb } = useUiAccent();
+  const { accentColor: accent, glowPrimaryRgb, glowAccentRgb, topoSpec } = useUiAccent();
   const accentRgb = glowPrimaryRgb.replace(/\s/g, "");
   const accentRgbSpaced = glowPrimaryRgb;
   const glowAccentClean = glowAccentRgb.replace(/\s/g, "");
+
+  const staticBackdropGradient = isDark
+    ? `radial-gradient(circle at 50% 40%, ${topoSpec.dark.bg[0]} 0%, ${topoSpec.dark.bg[1]} 55%, ${topoSpec.dark.bg[2]} 100%)`
+    : `radial-gradient(circle at 50% 40%, ${topoSpec.light.bg[0]} 0%, ${topoSpec.light.bg[1]} 55%, ${topoSpec.light.bg[2]} 100%)`;
 
   const badgeBorder = isDark ? `rgba(${accentRgbSpaced},0.22)` : `rgba(${accentRgbSpaced},0.18)`;
   const badgeBg = `rgba(${accentRgbSpaced},0.06)`;
@@ -67,12 +71,7 @@ export function HeroSection({
       ) : (
         <div
           className="absolute inset-0"
-          style={{
-            background:
-              isDark
-                ? "radial-gradient(circle at 50% 40%, rgba(14,28,22,0.95) 0%, rgba(11,18,16,0.97) 55%, rgba(6,10,8,1) 100%)"
-                : "radial-gradient(circle at 50% 40%, rgba(246,242,232,1) 0%, rgba(242,237,224,1) 55%, rgba(234,229,212,1) 100%)",
-          }}
+          style={{ background: staticBackdropGradient }}
           aria-hidden
         />
       )}
