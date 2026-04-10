@@ -16,6 +16,7 @@ import {
   setTrackMediaMetadata,
   updateMediaSessionPositionState,
 } from "@/lib/player-media-session";
+import { listenTerminalClientSkipReason } from "@/lib/listen-analytics/terminal-guard";
 import { submitListenTerminal } from "@/lib/listen-analytics/submit";
 import { createClient } from "@/lib/supabase/client";
 import { getSpeuPlayerAudio } from "@/lib/speu-player-audio";
@@ -207,7 +208,17 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const dFromAudio = finiteDuration(audio?.duration ?? 0);
     const dSec = dFromAudio > 0 ? dFromAudio : finiteDuration(listenDurationSecRef.current);
     const durationMs = Math.round(dSec * 1000);
-    if (durationMs < 1000) return;
+    const skip = listenTerminalClientSkipReason({
+      listeningSessionId: sid,
+      trackId: tr.id,
+      durationMs,
+    });
+    if (skip) {
+      if (process.env.NODE_ENV === "development") {
+        console.debug("[speu:listen] skip client submit", skip, { trackId: tr.id });
+      }
+      return;
+    }
     const maxSec = Math.max(
       listenMaxPosSecRef.current,
       finiteDuration(audio?.currentTime ?? 0)

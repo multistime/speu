@@ -13,6 +13,8 @@ export type ArtistListenTrackRow = {
   period_partial: number;
   all_full: number;
   all_partial: number;
+  /** false = listens are not recorded (same gate as record_listen_terminal / track_is_publicly_likeable). */
+  analytics_eligible: boolean;
 };
 
 export type ArtistListenSummary = {
@@ -62,7 +64,7 @@ export type TrackListenDashboardOk = {
   range: { start: string; end: string };
   prev_range: { start: string; end: string };
   daily: ArtistListenDailyPoint[];
-  track: { id: string; title: string };
+  track: { id: string; title: string; analytics_eligible: boolean };
 };
 
 export type TrackListenDashboardErr = {
@@ -177,6 +179,7 @@ export function parseArtistListenDashboard(raw: unknown): ArtistListenDashboard 
             period_partial: num(r.period_partial),
             all_full: num(r.all_full),
             all_partial: num(r.all_partial),
+            analytics_eligible: r.analytics_eligible !== false,
           };
         })
       : [],
@@ -235,6 +238,7 @@ export function parseTrackListenDashboard(raw: unknown): TrackListenDashboard | 
     track: {
       id: String(t.id ?? ""),
       title: String(t.title ?? ""),
+      analytics_eligible: t.analytics_eligible !== false,
     },
   };
 }

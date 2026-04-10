@@ -106,7 +106,14 @@ export async function POST(req: Request) {
   });
 
   if (rpcErr) {
-    console.error("[api/public/listen rpc]", rpcErr.message);
+    console.warn(
+      JSON.stringify({
+        speu_listen_reject: true,
+        error: "record_failed",
+        status: 500,
+        rpc_message: rpcErr.message,
+      }),
+    );
     return NextResponse.json({ error: "record_failed" }, { status: 500 });
   }
 
@@ -119,6 +126,15 @@ export async function POST(req: Request) {
         : err === "track_not_eligible" || err === "duration_mismatch" || err === "position_overflow"
           ? 422
           : 400;
+    const trackPrefix = typeof trackId === "string" ? `${trackId.slice(0, 8)}…` : null;
+    console.warn(
+      JSON.stringify({
+        speu_listen_reject: true,
+        error: err,
+        status,
+        track_id_prefix: trackPrefix,
+      }),
+    );
     return NextResponse.json({ error: err }, { status });
   }
 

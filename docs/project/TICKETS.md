@@ -35,7 +35,7 @@
 
 | Напрамак | Што ўжо ёсць у рэпазіторыі |
 |----------|----------------------------|
-| **Праслухоўванні / чарты** | `listen_outcomes`, агрэгаты `track_listen_by_day_minsk` (full/partial па днях Мінска); RPC `label_listen_dashboard(period, filter_artist_id?)` — KPI, дні, **табліца трэкаў** (перыяд/ ўвогуле, лайкі), **топ артыстаў па сесіях**, блок `catalog`; RPC `artist_listen_dashboard`; RPC **`track_listen_dashboard(track_id, period)`** для дыялога дынамікі трэка (`TrackDynamicsDialog`); міграцыя `20260427100000_listen_dashboard_track_and_label_filter.sql` |
+| **Праслухоўванні / чарты** | `listen_outcomes`, агрэгаты `track_listen_by_day_minsk` (full/partial па днях Мінска); RPC `label_listen_dashboard(period, filter_artist_id?)` — KPI, дні, **табліца трэкаў** (`analytics_eligible`, бэйдж «без уліку»), **топ артыстаў па сесіях**, блок `catalog`; RPC `artist_listen_dashboard`; RPC **`track_listen_dashboard(track_id, period)`** для дыялога дынамікі трэка (`TrackDynamicsDialog`); міграцыі `20260427100000_listen_dashboard_track_and_label_filter.sql`, `20260428120100_listen_dashboard_analytics_eligible.sql`; SQL для аператараў: `docs/project/listen-analytics-operator-queries.sql` |
 | **Плеер** | `PlayerContext`, `GlobalPlayer`, Media Session, API наладаў (`profiles_player_prefs`) |
 | **Шарынг** | Web Share / fallback на трэку, артысце, ў плэеры |
 | **Мета трэка** | `is_explicit`, `language` (`bel`/`ru`/`en`/`instrumental`), `is_ai_lyrics` / `is_ai_music`, аўтары; бейджы ў `SpeuTrackRow`; submission у кабінеце |

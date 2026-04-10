@@ -1,25 +1,41 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Palette } from "lucide-react";
+import { Palette } from "lucide-react";
 import { useUiAccent } from "@/contexts/UiAccentContext";
 import {
   UI_ACCENT_PRESETS,
   type UiAccentPresetId,
 } from "@/lib/speu/ui-accent";
-import { cn } from "@/lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+function accentSwatch(accent: string) {
+  return (
+    <span
+      className="size-4 shrink-0 rounded-full border border-border/60 shadow-inner"
+      style={{ background: accent }}
+      aria-hidden
+    />
+  );
+}
 
 export function CabinetUiAccentPicker() {
   const { presetId, setPreset } = useUiAccent();
-  const [busyId, setBusyId] = useState<UiAccentPresetId | null>(null);
+  const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   const pick = async (id: UiAccentPresetId) => {
     if (id === presetId) return;
     setErr(null);
-    setBusyId(id);
+    setBusy(true);
     const ok = await setPreset(id);
-    setBusyId(null);
+    setBusy(false);
     if (!ok) setErr("Не ўдалося захаваць. Паспрабуйце яшчэ раз.");
   };
 
@@ -39,39 +55,23 @@ export function CabinetUiAccentPicker() {
         </div>
       </div>
 
-      <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
-        {UI_ACCENT_PRESETS.map((p) => {
-          const selected = presetId === p.id;
-          const busy = busyId === p.id;
-          return (
-            <button
-              key={p.id}
-              type="button"
-              disabled={busy}
-              onClick={() => void pick(p.id)}
-              className={cn(
-                "flex flex-col items-stretch gap-2 rounded-xl border p-3 text-left transition-colors",
-                selected
-                  ? "border-primary/50 bg-primary/8 ring-1 ring-primary/25"
-                  : "border-border bg-card/40 hover:border-border hover:bg-muted/35",
-                busy && "opacity-70",
-              )}
-            >
-              <span className="flex items-center gap-2">
-                <span
-                  className="size-8 shrink-0 rounded-full border border-border/60 shadow-inner"
-                  style={{ background: p.accent }}
-                  aria-hidden
-                />
-                {busy ? (
-                  <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" />
-                ) : null}
-              </span>
-              <span className="text-xs font-medium leading-snug text-foreground">{p.label}</span>
-            </button>
-          );
-        })}
-      </div>
+      <Select
+        value={presetId}
+        onValueChange={(v) => void pick(v as UiAccentPresetId)}
+        disabled={busy}
+      >
+        <SelectTrigger className="mt-4 w-full max-w-md">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {UI_ACCENT_PRESETS.map((p) => (
+            <SelectItem key={p.id} value={p.id}>
+              {accentSwatch(p.accent)}
+              <span className="truncate">{p.label}</span>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
       {err ? (
         <p className="mt-3 text-sm text-destructive" role="alert">

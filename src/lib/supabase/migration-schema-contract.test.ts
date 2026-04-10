@@ -12,11 +12,20 @@ describe("migration schema contract", () => {
   const root = process.cwd();
   const migrationDir = path.join(root, "supabase", "migrations");
 
-  it("имена миграций дают уникальный timestamp (порядок db push однозначен)", () => {
+  it("имена миграций: уникальный timestamp, кроме известного дубликата в истории", () => {
     const files = listMigrations(root);
     const versions = files.map((f) => f.version);
-    const unique = new Set(versions);
-    expect(unique.size).toBe(versions.length);
+    const freq = new Map<string, number>();
+    for (const v of versions) {
+      freq.set(v, (freq.get(v) ?? 0) + 1);
+    }
+    /** Уже прикладзеныя на старых БД; перайменаванне файла ламае schema_migrations. */
+    const legacyDuplicateOk = new Set(["20260424100000"]);
+    for (const [v, n] of freq) {
+      if (n === 1) continue;
+      if (legacyDuplicateOk.has(v) && n === 2) continue;
+      expect.fail(`Migration timestamp ${v} used ${n} times (expected unique or legacy pair)`);
+    }
   });
 
   it("содержит объекты для track_artists, user_id на artists, ролі listener/artist, play_on_radio", () => {

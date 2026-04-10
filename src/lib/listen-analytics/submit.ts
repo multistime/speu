@@ -10,6 +10,9 @@ export type ListenTerminalPayload = {
   shortGapCount: number;
 };
 
+const debugListen =
+  typeof process !== "undefined" && process.env.NEXT_PUBLIC_SPEU_DEBUG_LISTEN === "1";
+
 export function submitListenTerminal(payload: ListenTerminalPayload, useBeacon = false): void {
   const body = JSON.stringify(payload);
   if (useBeacon && typeof navigator !== "undefined" && navigator.sendBeacon) {
@@ -22,5 +25,16 @@ export function submitListenTerminal(payload: ListenTerminalPayload, useBeacon =
     headers: { "Content-Type": "application/json" },
     credentials: "include",
     body,
-  }).catch(() => {});
+  })
+    .then(async (res) => {
+      if (!debugListen || res.ok) return;
+      let detail: unknown;
+      try {
+        detail = await res.json();
+      } catch {
+        detail = null;
+      }
+      console.warn("[speu:listen] submit rejected", res.status, detail);
+    })
+    .catch(() => {});
 }

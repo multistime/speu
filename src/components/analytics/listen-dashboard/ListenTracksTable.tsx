@@ -47,18 +47,30 @@ export function ListenTracksTable({
               const href = t.slug ? `/speu/tracks/${encodeURIComponent(t.slug)}` : null;
               return (
                 <tr key={t.id} className="border-b border-border/40 last:border-0 hover:bg-muted/30">
-                  <td className="px-5 py-3 max-w-[12rem] sm:max-w-xs truncate">
-                    {onTrackClick ? (
-                      <button
-                        type="button"
-                        onClick={() => onTrackClick(t)}
-                        className="font-medium text-foreground text-left truncate w-full hover:underline"
-                      >
-                        {t.title}
-                      </button>
-                    ) : (
-                      <span className="font-medium text-foreground">{t.title}</span>
-                    )}
+                  <td className="px-5 py-3 max-w-[12rem] sm:max-w-xs">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="min-w-0 truncate">
+                        {onTrackClick ? (
+                          <button
+                            type="button"
+                            onClick={() => onTrackClick(t)}
+                            className="font-medium text-foreground text-left truncate w-full hover:underline"
+                          >
+                            {t.title}
+                          </button>
+                        ) : (
+                          <span className="font-medium text-foreground truncate block">{t.title}</span>
+                        )}
+                      </div>
+                      {!t.analytics_eligible ? (
+                        <span
+                          className="shrink-0 rounded border border-amber-500/35 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-900 dark:text-amber-100"
+                          title="Праслухоўванні не запісваюцца ў статыстыку, пакуль трэк не апублікаваны і няма апублікаванага артыста ў крэдытах (тое самае правіла, што для запісу сесій)."
+                        >
+                          без уліку
+                        </span>
+                      ) : null}
+                    </div>
                   </td>
                   <td className="px-3 py-3 text-right tabular-nums text-foreground">{periodTotal}</td>
                   <td className="px-3 py-3 text-right tabular-nums text-muted-foreground hidden sm:table-cell">

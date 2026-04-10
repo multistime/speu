@@ -106,12 +106,20 @@ export function TrackDynamicsDialog({
         ) : err ? (
           <p className="text-sm text-destructive py-8 text-center">{err}</p>
         ) : data ? (
-          <ListenDailyLineChart
-            days={data.daily}
-            rangeStart={data.range.start}
-            rangeEnd={data.range.end}
-            accent={accent}
-          />
+          <div className="space-y-3">
+            {!data.track.analytics_eligible ? (
+              <p className="text-xs text-amber-900 dark:text-amber-100 rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 leading-relaxed">
+                Гэты трэк без уліку праслухоўванняў у статыстыцы (не апублікаваны або няма апублікаванага артыста ў
+                крэдытах). Графік можа быць пустым нават калі вы прайгравалі трэк у плееры.
+              </p>
+            ) : null}
+            <ListenDailyLineChart
+              days={data.daily}
+              rangeStart={data.range.start}
+              rangeEnd={data.range.end}
+              accent={accent}
+            />
+          </div>
         ) : null}
       </div>
     </dialog>
