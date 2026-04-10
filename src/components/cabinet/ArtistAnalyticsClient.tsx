@@ -156,8 +156,8 @@ export function ArtistAnalyticsClient({ artistId }: { artistId: string }) {
       <div className="space-y-4">
         <header className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
           <div className="flex items-start gap-3">
-            <div className="h-12 w-12 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center shrink-0">
-              <BarChart3 className="h-6 w-6 text-emerald-500" strokeWidth={1.5} />
+            <div className="h-12 w-12 rounded-xl bg-primary/10 border border-primary/25 flex items-center justify-center shrink-0">
+              <BarChart3 className="h-6 w-6 text-primary" strokeWidth={1.5} />
             </div>
             <div>
               <h1 className="font-display text-2xl font-semibold text-foreground italic">Аналітыка</h1>
@@ -180,8 +180,8 @@ export function ArtistAnalyticsClient({ artistId }: { artistId: string }) {
     <div className="space-y-8">
       <header className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
         <div className="flex items-start gap-3">
-          <div className="h-12 w-12 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center shrink-0">
-            <BarChart3 className="h-6 w-6 text-emerald-500" strokeWidth={1.5} />
+          <div className="h-12 w-12 rounded-xl bg-primary/10 border border-primary/25 flex items-center justify-center shrink-0">
+            <BarChart3 className="h-6 w-6 text-primary" strokeWidth={1.5} />
           </div>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
@@ -208,7 +208,7 @@ export function ArtistAnalyticsClient({ artistId }: { artistId: string }) {
               className={cn(
                 "px-3.5 py-2 rounded-xl text-xs font-medium border transition-colors",
                 period === p.days
-                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300"
+                  ? "border-primary/40 bg-primary/10 text-primary"
                   : "border-border bg-card/30 text-muted-foreground hover:text-foreground hover:bg-muted",
               )}
             >
@@ -218,7 +218,7 @@ export function ArtistAnalyticsClient({ artistId }: { artistId: string }) {
         </div>
       </header>
 
-      <ListenKpiStrip items={kpiItems} theme="emerald" />
+      <ListenKpiStrip items={kpiItems} />
 
       <div className="grid gap-6 lg:grid-cols-5">
         <div className="lg:col-span-3 glass rounded-2xl border border-border p-5 sm:p-6">
@@ -230,7 +230,6 @@ export function ArtistAnalyticsClient({ artistId }: { artistId: string }) {
             days={data.daily}
             rangeStart={data.range.start}
             rangeEnd={data.range.end}
-            accent="emerald"
           />
         </div>
         <div className="lg:col-span-2 glass rounded-2xl border border-border p-5 sm:p-6">
@@ -239,7 +238,7 @@ export function ArtistAnalyticsClient({ artistId }: { artistId: string }) {
           {data.tracks.length === 0 ? (
             <p className="text-sm text-muted-foreground py-6 text-center">Няма трэкаў у каталогу для гэтага артыста.</p>
           ) : (
-            <TopTracksPanel tracks={data.tracks} accent="emerald" onSelectTrack={(t) => setTrackDialogId(t.id)} />
+            <TopTracksPanel tracks={data.tracks} onSelectTrack={(t) => setTrackDialogId(t.id)} />
           )}
         </div>
       </div>
@@ -248,7 +247,7 @@ export function ArtistAnalyticsClient({ artistId }: { artistId: string }) {
         <div className="px-5 py-4 border-b border-border/60 bg-card/20">
           <h2 className="text-sm font-semibold text-foreground">Усе трэкі</h2>
         </div>
-        <ListenTracksTable tracks={data.tracks} linkAccent="emerald" onTrackClick={(t) => setTrackDialogId(t.id)} />
+        <ListenTracksTable tracks={data.tracks} onTrackClick={(t) => setTrackDialogId(t.id)} />
       </div>
 
       <ListenMethodologyDialog open={methodologyOpen} onClose={() => setMethodologyOpen(false)} />
@@ -258,7 +257,6 @@ export function ArtistAnalyticsClient({ artistId }: { artistId: string }) {
         trackId={trackDialogId}
         periodDays={period}
         supabase={supabase}
-        accent="emerald"
       />
     </div>
   );

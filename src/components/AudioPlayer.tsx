@@ -11,6 +11,7 @@ import {
   VolumeX,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useUiAccent } from "@/contexts/UiAccentContext";
 
 interface Track {
   id: string;
@@ -68,33 +69,22 @@ function WaveformBars({ isPlaying, accent }: { isPlaying: boolean; accent: strin
   );
 }
 
-interface AudioPlayerProps {
-  isDark?: boolean;
-}
-
-export function AudioPlayer({ isDark = true }: AudioPlayerProps) {
+export function AudioPlayer() {
   const [trackIdx, setTrackIdx] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [muted, setMuted] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const { accentColor: accent, glowPrimaryRgb } = useUiAccent();
+  const accentRgbSpaced = glowPrimaryRgb;
+
   const track = DEMO_TRACKS[trackIdx];
   const progress = (currentTime / track.duration) * 100;
 
-  // Theme-resolved colors
-  const accent      = isDark ? "#7DBF9E" : "#35654D";
-  const accentRgb   = isDark ? "125,191,158" : "53,101,77";
-  const fg          = isDark ? "rgba(255,255,255,0.90)" : "rgba(25,29,24,0.90)";
-  const fgMuted     = isDark ? "rgba(255,255,255,0.40)" : "rgba(25,29,24,0.45)";
-  const fgGhost     = isDark ? "rgba(255,255,255,0.30)" : "rgba(25,29,24,0.30)";
-  const progressBg  = isDark ? "rgba(255,255,255,0.10)" : "rgba(25,29,24,0.08)";
-  const btnHoverBg  = isDark ? "rgba(255,255,255,0.05)" : "rgba(25,29,24,0.05)";
-  const cardBorder  = `rgba(${accentRgb},0.18)`;
-  const playBtnBg   = accent;
-  const playBtnFg   = isDark ? "#0E1811" : "#FFFFFF";
-  const playShadow  = `0 0 20px rgba(${accentRgb},0.4)`;
-  const playShadowHover = `0 0 30px rgba(${accentRgb},0.6)`;
+  const cardBorder = `rgba(${accentRgbSpaced},0.18)`;
+  const playShadow = `0 0 20px rgba(${accentRgbSpaced},0.4)`;
+  const playShadowHover = `0 0 30px rgba(${accentRgbSpaced},0.6)`;
 
   const clearTick = () => {
     if (intervalRef.current) clearInterval(intervalRef.current);
@@ -151,7 +141,7 @@ export function AudioPlayer({ isDark = true }: AudioPlayerProps) {
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.8, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-      className="glass rounded-2xl p-5 w-full max-w-lg"
+      className="glass rounded-2xl p-5 w-full max-w-lg border"
       style={{ borderColor: cardBorder }}
     >
       {/* Track info */}
@@ -164,13 +154,12 @@ export function AudioPlayer({ isDark = true }: AudioPlayerProps) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.25 }}
-              className="font-mono font-semibold text-sm"
-              style={{ color: fg }}
+              className="font-mono font-semibold text-sm text-foreground"
             >
               {track.title}
             </motion.p>
           </AnimatePresence>
-          <p className="text-xs mt-0.5" style={{ color: fgMuted }}>
+          <p className="text-xs mt-0.5 text-muted-foreground">
             {track.artist}
           </p>
         </div>
@@ -179,8 +168,7 @@ export function AudioPlayer({ isDark = true }: AudioPlayerProps) {
 
       {/* Progress bar */}
       <div
-        className="relative h-1 rounded-full mb-3 cursor-pointer group"
-        style={{ backgroundColor: progressBg }}
+        className="relative h-1 rounded-full mb-3 cursor-pointer group bg-muted"
         onClick={seek}
       >
         <motion.div
@@ -193,13 +181,13 @@ export function AudioPlayer({ isDark = true }: AudioPlayerProps) {
           style={{
             left: `${progress}%`,
             backgroundColor: accent,
-            boxShadow: `0 0 8px rgba(${accentRgb},0.8)`,
+            boxShadow: `0 0 8px rgba(${accentRgbSpaced},0.8)`,
           }}
         />
       </div>
 
       {/* Time */}
-      <div className="flex justify-between text-[10px] font-mono mb-4" style={{ color: fgGhost }}>
+      <div className="flex justify-between text-[10px] font-mono mb-4 text-muted-foreground/80">
         <span>{formatTime(currentTime)}</span>
         <span>{formatTime(track.duration)}</span>
       </div>
@@ -208,10 +196,7 @@ export function AudioPlayer({ isDark = true }: AudioPlayerProps) {
       <div className="flex items-center justify-between">
         <button
           onClick={() => setMuted((m) => !m)}
-          className="p-2 rounded-lg transition-colors"
-          style={{ color: fgMuted }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = fg; }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = fgMuted; }}
+          className="p-2 rounded-lg transition-colors text-muted-foreground hover:text-foreground"
         >
           {muted ? (
             <VolumeX className="h-4 w-4" />
@@ -223,18 +208,7 @@ export function AudioPlayer({ isDark = true }: AudioPlayerProps) {
         <div className="flex items-center gap-2">
           <button
             onClick={skipPrev}
-            className="p-2 rounded-lg transition-colors"
-            style={{ color: fgMuted }}
-            onMouseEnter={(e) => {
-              const el = e.currentTarget as HTMLElement;
-              el.style.color = fg;
-              el.style.backgroundColor = btnHoverBg;
-            }}
-            onMouseLeave={(e) => {
-              const el = e.currentTarget as HTMLElement;
-              el.style.color = fgMuted;
-              el.style.backgroundColor = "transparent";
-            }}
+            className="p-2 rounded-lg transition-colors text-muted-foreground hover:text-foreground hover:bg-muted"
           >
             <SkipBack className="h-4 w-4" strokeWidth={1.5} />
           </button>
@@ -243,11 +217,9 @@ export function AudioPlayer({ isDark = true }: AudioPlayerProps) {
             onClick={togglePlay}
             whileTap={{ scale: 0.92 }}
             className={cn(
-              "relative flex items-center justify-center h-11 w-11 rounded-full font-medium transition-all duration-300 hover:scale-105"
+              "relative flex items-center justify-center h-11 w-11 rounded-full font-medium transition-all duration-300 hover:scale-105 bg-primary text-primary-foreground"
             )}
             style={{
-              backgroundColor: playBtnBg,
-              color: playBtnFg,
               boxShadow: playShadow,
             }}
             onMouseEnter={(e) => {
@@ -284,24 +256,13 @@ export function AudioPlayer({ isDark = true }: AudioPlayerProps) {
 
           <button
             onClick={skipNext}
-            className="p-2 rounded-lg transition-colors"
-            style={{ color: fgMuted }}
-            onMouseEnter={(e) => {
-              const el = e.currentTarget as HTMLElement;
-              el.style.color = fg;
-              el.style.backgroundColor = btnHoverBg;
-            }}
-            onMouseLeave={(e) => {
-              const el = e.currentTarget as HTMLElement;
-              el.style.color = fgMuted;
-              el.style.backgroundColor = "transparent";
-            }}
+            className="p-2 rounded-lg transition-colors text-muted-foreground hover:text-foreground hover:bg-muted"
           >
             <SkipForward className="h-4 w-4" strokeWidth={1.5} />
           </button>
         </div>
 
-        <span className="text-[10px] font-mono" style={{ color: fgGhost }}>
+        <span className="text-[10px] font-mono text-muted-foreground/70">
           {trackIdx + 1}/{DEMO_TRACKS.length}
         </span>
       </div>

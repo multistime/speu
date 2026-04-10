@@ -20,10 +20,14 @@ export function isUiAccentPresetId(s: string): s is UiAccentPresetId {
 
 export const UI_ACCENT_PRESETS: readonly ArtistColorPreset[] = ARTIST_COLOR_PRESETS;
 
-const DEFAULT_ACCENT = ARTIST_COLOR_PRESETS[0];
+/** Прадвызначаная палітра ЛК і інтэрфейсу — «Начны лес». */
+export const DEFAULT_UI_ACCENT_PRESET_ID: UiAccentPresetId = "lyasun";
+
+const FALLBACK_ACCENT_PRESET =
+  ARTIST_COLOR_PRESETS.find((x) => x.id === DEFAULT_UI_ACCENT_PRESET_ID) ?? ARTIST_COLOR_PRESETS[0];
 
 export function resolveUiAccent(presetId: string): { accent: string; accentRgb: string } {
   const p = ARTIST_COLOR_PRESETS.find((x) => x.id === presetId);
-  const chosen = p ?? DEFAULT_ACCENT;
+  const chosen = p ?? FALLBACK_ACCENT_PRESET;
   return { accent: chosen.accent, accentRgb: chosen.accentRgb };
 }

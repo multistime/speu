@@ -5,24 +5,15 @@ import type { ArtistListenDailyPoint } from "@/lib/speu/artist-analytics";
 import { smoothLineThroughPoints } from "./chart-path";
 import { ymdRangeInclusive } from "./shared";
 
-type Accent = "emerald" | "primary";
-
-const strokeClass: Record<Accent, string> = {
-  emerald: "stroke-emerald-500/90",
-  primary: "stroke-primary",
-};
-
 export function ListenSparkline({
   daily,
   rangeStart,
   rangeEnd,
-  accent,
   series = "total",
 }: {
   daily: ArtistListenDailyPoint[];
   rangeStart: string;
   rangeEnd: string;
-  accent: Accent;
   series?: "total" | "full";
 }) {
   const { pathD } = useMemo(() => {
@@ -59,7 +50,7 @@ export function ListenSparkline({
         strokeWidth={1.5}
         strokeLinecap="round"
         strokeLinejoin="round"
-        className={strokeClass[accent]}
+        className="stroke-primary"
       />
     </svg>
   );

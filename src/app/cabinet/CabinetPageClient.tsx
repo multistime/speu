@@ -54,7 +54,7 @@ function MessageBanner({ msg }: { msg: Msg }) {
       icon: <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />,
     },
     success: {
-      wrapper: "bg-emerald-500/10 border border-emerald-500/30 text-emerald-400",
+      wrapper: "bg-primary/10 border border-primary/30 text-primary",
       icon: <CheckCircle className="h-4 w-4 shrink-0 mt-0.5" />,
     },
     info: {
@@ -448,10 +448,10 @@ export function CabinetPageClient({ initialUser, initialProfile }: CabinetPageCl
         {isArtist && (
           <Link
             href="/cabinet/artist"
-            className="group flex items-center gap-4 glass rounded-2xl border border-emerald-500/25 p-6 hover:border-emerald-500/45 hover:bg-emerald-500/5 transition-all duration-200"
+            className="group flex items-center gap-4 glass rounded-2xl border border-primary/25 p-6 hover:border-primary/45 hover:bg-primary/5 transition-all duration-200"
           >
-            <div className="h-11 w-11 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center shrink-0 group-hover:bg-emerald-500/15 transition-colors">
-              <Disc3 className="h-5 w-5 text-emerald-500" strokeWidth={1.5} />
+            <div className="h-11 w-11 rounded-xl bg-primary/10 border border-primary/25 flex items-center justify-center shrink-0 group-hover:bg-primary/15 transition-colors">
+              <Disc3 className="h-5 w-5 text-primary" strokeWidth={1.5} />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-foreground">Кабінет артыста</p>
@@ -459,7 +459,7 @@ export function CabinetPageClient({ initialUser, initialProfile }: CabinetPageCl
                 Загрузка сінглаў і альбомаў, статусы заявак на публікацыю
               </p>
             </div>
-            <span className="text-muted-foreground/40 group-hover:text-emerald-500/60 transition-colors text-lg">→</span>
+            <span className="text-muted-foreground/40 group-hover:text-primary/60 transition-colors text-lg">→</span>
           </Link>
         )}
 

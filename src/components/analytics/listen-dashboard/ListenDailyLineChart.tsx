@@ -6,19 +6,15 @@ import { cn } from "@/lib/utils";
 import { smoothAreaPath, smoothLineThroughPoints } from "./chart-path";
 import { ymdRangeInclusive } from "./shared";
 
-export type ListenChartAccent = "emerald" | "primary";
-
 export function ListenDailyLineChart({
   days,
   rangeStart,
   rangeEnd,
-  accent,
   className,
 }: {
   days: ArtistListenDailyPoint[];
   rangeStart: string;
   rangeEnd: string;
-  accent: ListenChartAccent;
   className?: string;
 }) {
   const uid = useId();
@@ -105,28 +101,14 @@ export function ListenDailyLineChart({
           onMouseLeave={onSvgLeave}
         >
           <defs>
-            {accent === "emerald" ? (
-              <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="rgb(16 185 129)" stopOpacity="0.28" />
-                <stop offset="100%" stopColor="rgb(16 185 129)" stopOpacity="0.02" />
-              </linearGradient>
-            ) : (
-              <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.28" />
-                <stop offset="100%" stopColor="var(--primary)" stopOpacity="0.02" />
-              </linearGradient>
-            )}
-            {accent === "emerald" ? (
-              <linearGradient id={strokeId} x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="rgb(16 185 129)" stopOpacity="0.85" />
-                <stop offset="100%" stopColor="rgb(16 185 129)" stopOpacity="1" />
-              </linearGradient>
-            ) : (
-              <linearGradient id={strokeId} x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.85" />
-                <stop offset="100%" stopColor="var(--primary)" stopOpacity="1" />
-              </linearGradient>
-            )}
+            <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.28" />
+              <stop offset="100%" stopColor="var(--primary)" stopOpacity="0.02" />
+            </linearGradient>
+            <linearGradient id={strokeId} x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.85" />
+              <stop offset="100%" stopColor="var(--primary)" stopOpacity="1" />
+            </linearGradient>
           </defs>
           {geometry.areaD ? (
             <path d={geometry.areaD} fill={`url(#${gradId})`} className="transition-opacity" />
@@ -149,7 +131,7 @@ export function ListenDailyLineChart({
                 y1={padT}
                 x2={geometry.pts[hover.idx].x}
                 y2={padT + innerH}
-                className={cn("stroke-border/80", accent === "emerald" && "stroke-emerald-500/40")}
+                className="stroke-border/80 stroke-primary/40"
                 strokeWidth={1}
                 strokeDasharray="4 4"
               />
@@ -158,7 +140,7 @@ export function ListenDailyLineChart({
                 cy={geometry.pts[hover.idx].y}
                 r={5}
                 className="fill-background"
-                stroke={accent === "emerald" ? "rgb(16 185 129)" : "var(--primary)"}
+                stroke="var(--primary)"
                 strokeWidth={2}
               />
             </g>

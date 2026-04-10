@@ -101,6 +101,13 @@
 
   --glass-bg:     rgba(254, 252, 243, 0.80);
   --glass-border: rgba(53, 101, 77, 0.11);
+
+  /* Speu dynamic theme (lyasun fallback before client applies preset) */
+  --glow-primary-rgb:     53, 101, 77;
+  --glow-accent-rgb:      191, 117, 53;
+  --selection-bg-rgb:     53, 101, 77;
+  --selection-foreground: #35654D;
+  --ornament-stroke-hex:  35654D;
 }
 
 /* ══════════════════════════════════════════════════════════════════════ */
@@ -139,6 +146,12 @@
 
   --glass-bg:     rgba(14, 24, 17, 0.80);
   --glass-border: rgba(125, 191, 158, 0.12);
+
+  --glow-primary-rgb:     125, 191, 158;
+  --glow-accent-rgb:      212, 148, 74;
+  --selection-bg-rgb:     125, 191, 158;
+  --selection-foreground: #7DBF9E;
+  --ornament-stroke-hex:  35654D;
 }
 
 /* ══════════════════════════════════════════════════════════════════════ */
@@ -181,67 +194,67 @@
 /* ══════════════════════════════════════════════════════════════════════ */
 .glow-primary {
   box-shadow:
-    0 0 20px rgba(53, 101, 77, 0.20),
-    0 0 50px rgba(53, 101, 77, 0.08);
+    0 0 20px rgba(var(--glow-primary-rgb), 0.20),
+    0 0 50px rgba(var(--glow-primary-rgb), 0.08);
 }
 .dark .glow-primary {
   box-shadow:
-    0 0 20px rgba(125, 191, 158, 0.18),
-    0 0 50px rgba(125, 191, 158, 0.07);
+    0 0 20px rgba(var(--glow-primary-rgb), 0.18),
+    0 0 50px rgba(var(--glow-primary-rgb), 0.07);
 }
 .glow-accent {
   box-shadow:
-    0 0 20px rgba(191, 117, 53, 0.22),
-    0 0 50px rgba(191, 117, 53, 0.09);
+    0 0 20px rgba(var(--glow-accent-rgb), 0.22),
+    0 0 50px rgba(var(--glow-accent-rgb), 0.09);
 }
 .dark .glow-accent {
   box-shadow:
-    0 0 20px rgba(212, 148, 74, 0.22),
-    0 0 50px rgba(212, 148, 74, 0.09);
+    0 0 20px rgba(var(--glow-accent-rgb), 0.22),
+    0 0 50px rgba(var(--glow-accent-rgb), 0.09);
 }
 
 /* Legacy compat — inline the properties instead of @apply custom classes */
 .glow-moss {
   box-shadow:
-    0 0 20px rgba(53, 101, 77, 0.20),
-    0 0 50px rgba(53, 101, 77, 0.08);
+    0 0 20px rgba(var(--glow-primary-rgb), 0.20),
+    0 0 50px rgba(var(--glow-primary-rgb), 0.08);
 }
 .dark .glow-moss {
   box-shadow:
-    0 0 20px rgba(125, 191, 158, 0.18),
-    0 0 50px rgba(125, 191, 158, 0.07);
+    0 0 20px rgba(var(--glow-primary-rgb), 0.18),
+    0 0 50px rgba(var(--glow-primary-rgb), 0.07);
 }
 .glow-amber {
   box-shadow:
-    0 0 20px rgba(191, 117, 53, 0.22),
-    0 0 50px rgba(191, 117, 53, 0.09);
+    0 0 20px rgba(var(--glow-accent-rgb), 0.22),
+    0 0 50px rgba(var(--glow-accent-rgb), 0.09);
 }
 .dark .glow-amber {
   box-shadow:
-    0 0 20px rgba(212, 148, 74, 0.22),
-    0 0 50px rgba(212, 148, 74, 0.09);
+    0 0 20px rgba(var(--glow-accent-rgb), 0.22),
+    0 0 50px rgba(var(--glow-accent-rgb), 0.09);
 }
 
 .text-glow-primary {
   text-shadow:
-    0 0 18px rgba(53, 101, 77, 0.45),
-    0 0 38px rgba(53, 101, 77, 0.18);
+    0 0 18px rgba(var(--glow-primary-rgb), 0.45),
+    0 0 38px rgba(var(--glow-primary-rgb), 0.18);
 }
 .dark .text-glow-primary {
   text-shadow:
-    0 0 18px rgba(125, 191, 158, 0.50),
-    0 0 38px rgba(125, 191, 158, 0.22);
+    0 0 18px rgba(var(--glow-primary-rgb), 0.50),
+    0 0 38px rgba(var(--glow-primary-rgb), 0.22);
 }
 /* Legacy compat */
 .text-glow-moss {
   text-shadow:
-    0 0 18px rgba(53, 101, 77, 0.45),
-    0 0 38px rgba(53, 101, 77, 0.18);
+    0 0 18px rgba(var(--glow-primary-rgb), 0.45),
+    0 0 38px rgba(var(--glow-primary-rgb), 0.18);
 }
 .dark .text-glow-moss {
   text-shadow:
-    0 0 18px rgba(125, 191, 158, 0.50),
-    0 0 38px rgba(125, 191, 158, 0.22);
+    0 0 18px rgba(var(--glow-primary-rgb), 0.50),
+    0 0 38px rgba(var(--glow-primary-rgb), 0.22);
 }
 
 /* ══════════════════════════════════════════════════════════════════════ */
@@ -293,12 +306,12 @@
 /*  SELECTION                                                              */
 /* ══════════════════════════════════════════════════════════════════════ */
 ::selection {
-  background: rgba(53, 101, 77, 0.16);
-  color: var(--primary);
+  background: rgba(var(--selection-bg-rgb), 0.16);
+  color: var(--selection-foreground);
 }
 .dark ::selection {
-  background: rgba(125, 191, 158, 0.18);
-  color: #7DBF9E;
+  background: rgba(var(--selection-bg-rgb), 0.18);
+  color: var(--selection-foreground);
 }
 
 /* ══════════════════════════════════════════════════════════════════════ */

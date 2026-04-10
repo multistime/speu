@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { TopographicCanvas } from "./TopographicCanvas";
 import { AudioPlayer } from "./AudioPlayer";
+import { useUiAccent } from "@/contexts/UiAccentContext";
 
 const fadeUp = {
   initial: { opacity: 0, y: 24 },
@@ -46,29 +47,20 @@ export function HeroSection({
     () => true
   );
 
-  // Theme-resolved color shortcuts
-  const accent      = isDark ? "#7DBF9E" : "#35654D";
-  const accentRgb   = isDark ? "125,191,158" : "53,101,77";
-  const fg          = isDark ? "#E2E8DD" : "#191D18";
-  const fgSub       = isDark ? "#C8DDD0" : "#4A5C4E";
-  const fgMuted     = isDark ? "rgba(200,221,208,0.60)" : "rgba(45,65,50,0.65)";
-  const fgDim       = isDark ? "rgba(200,221,208,0.40)" : "rgba(45,65,50,0.40)";
-  const fgGhost     = isDark ? "rgba(200,221,208,0.25)" : "rgba(45,65,50,0.25)";
-  const badgeBorder = isDark ? `rgba(${accentRgb},0.22)` : `rgba(${accentRgb},0.18)`;
-  const badgeBg     = `rgba(${accentRgb},0.06)`;
-  const ctaPrimBg   = isDark ? "#7DBF9E" : "#35654D";
-  const ctaPrimFg   = isDark ? "#0E1811" : "#FFFFFF";
-  const ctaGlow     = `rgba(${accentRgb},${isDark ? "0.38" : "0.28"})`;
-  const ctaSecBrd   = `rgba(${accentRgb},0.22)`;
-  const ctaSecFg    = isDark ? "rgba(200,221,208,0.65)" : "rgba(45,65,50,0.65)";
-  const scrollLine  = `rgba(${accentRgb},0.35)`;
-  const accentShadow = `0 0 20px rgba(${accentRgb},0.45), 0 0 40px rgba(${accentRgb},0.18)`;
+  const { accentColor: accent, glowPrimaryRgb, glowAccentRgb } = useUiAccent();
+  const accentRgb = glowPrimaryRgb.replace(/\s/g, "");
+  const accentRgbSpaced = glowPrimaryRgb;
+  const glowAccentClean = glowAccentRgb.replace(/\s/g, "");
+
+  const badgeBorder = isDark ? `rgba(${accentRgbSpaced},0.22)` : `rgba(${accentRgbSpaced},0.18)`;
+  const badgeBg = `rgba(${accentRgbSpaced},0.06)`;
+  const ctaGlow = `rgba(${accentRgbSpaced},${isDark ? "0.38" : "0.28"})`;
+  const ctaSecBrd = `rgba(${accentRgbSpaced},0.22)`;
+  const scrollLine = `rgba(${accentRgbSpaced},0.35)`;
+  const accentShadow = `0 0 20px rgba(${accentRgbSpaced},0.45), 0 0 40px rgba(${accentRgbSpaced},0.18)`;
 
   return (
-    <section
-      className="relative min-h-screen flex items-center justify-center overflow-hidden bg-background"
-      style={{ color: fg }}
-    >
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-background text-foreground">
       {/* Generative topographic background */}
       {showAnimatedBackdrop ? (
         <TopographicCanvas isDark={isDark} />
@@ -89,15 +81,17 @@ export function HeroSection({
       <div className="absolute inset-0 pointer-events-none">
         <div
           className="absolute top-1/3 left-1/4 w-96 h-96 rounded-full blur-[140px]"
-          style={{ background: `rgba(${accentRgb},${isDark ? "0.035" : "0.05"})` }}
+          style={{ background: `rgba(${accentRgbSpaced},${isDark ? "0.035" : "0.05"})` }}
         />
         <div
           className="absolute bottom-1/3 right-1/4 w-80 h-80 rounded-full blur-[120px]"
-          style={{ background: isDark ? "rgba(212,148,74,0.025)" : "rgba(191,117,53,0.04)" }}
+          style={{
+            background: isDark ? `rgba(${glowAccentClean},0.025)` : `rgba(${glowAccentClean},0.04)`,
+          }}
         />
         <div
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full blur-[180px]"
-          style={{ background: `rgba(${accentRgb},${isDark ? "0.015" : "0.03"})` }}
+          style={{ background: `rgba(${accentRgbSpaced},${isDark ? "0.015" : "0.03"})` }}
         />
       </div>
 
@@ -138,9 +132,8 @@ export function HeroSection({
               {...fadeUp}
               transition={{ delay: 0.35, duration: 0.7 }}
               className="text-4xl sm:text-5xl lg:text-7xl font-bold leading-[1.05] tracking-tight mb-6"
-              style={{ color: fg }}
             >
-              <span className="font-display italic font-semibold" style={{ color: fg }}>
+              <span className="font-display italic font-semibold text-foreground">
                 Генератыўная{" "}
               </span>
               <span className="relative inline-block">
@@ -160,14 +153,14 @@ export function HeroSection({
                 >
                   <path
                     d="M0 6 Q75 2 150 6 Q225 10 300 6"
-                    stroke={`rgba(${accentRgb},0.35)`}
+                    stroke={`rgba(${accentRgbSpaced},0.35)`}
                     strokeWidth="1.5"
                     fill="none"
                   />
                 </svg>
               </span>
               <br />
-              <span className="font-display italic font-light" style={{ color: fgSub }}>
+              <span className="font-display italic font-light text-secondary-foreground">
                 на беларускай мове
               </span>
             </motion.h1>
@@ -176,8 +169,7 @@ export function HeroSection({
             <motion.p
               {...fadeUp}
               transition={{ delay: 0.5, duration: 0.6 }}
-              className="text-base sm:text-lg mb-8 max-w-lg mx-auto lg:mx-0 leading-relaxed"
-              style={{ color: fgMuted }}
+              className="text-base sm:text-lg mb-8 max-w-lg mx-auto lg:mx-0 leading-relaxed text-muted-foreground"
             >
               Мы ствараем добрую музыку на беларускай мове — ад фолку да
               электронікі. Корань у зямлі. Мова наперад.
@@ -193,10 +185,8 @@ export function HeroSection({
                 {showGeneratorLink && (
                   <Link
                     href="/generator"
-                    className="group inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl font-semibold text-sm transition-all duration-300 hover:scale-[1.02]"
+                    className="group inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl font-semibold text-sm transition-all duration-300 hover:scale-[1.02] bg-primary text-primary-foreground"
                     style={{
-                      backgroundColor: ctaPrimBg,
-                      color: ctaPrimFg,
                       boxShadow: `0 0 20px ${ctaGlow}`,
                     }}
                   >
@@ -207,10 +197,9 @@ export function HeroSection({
                 {showServicesLink && (
                   <Link
                     href="/services"
-                    className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl border font-medium text-sm transition-all duration-300 hover:bg-primary/5 hover:text-foreground"
+                    className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl border font-medium text-sm transition-all duration-300 hover:bg-primary/5 hover:text-foreground text-muted-foreground"
                     style={{
                       borderColor: ctaSecBrd,
-                      color: ctaSecFg,
                     }}
                   >
                     Замовіць песню
@@ -234,7 +223,7 @@ export function HeroSection({
                   <p className="font-display text-2xl font-semibold" style={{ color: accent }}>
                     {value}
                   </p>
-                  <p className="text-xs mt-0.5" style={{ color: fgDim }}>
+                  <p className="text-xs mt-0.5 text-muted-foreground/70">
                     {label}
                   </p>
                 </div>
@@ -244,7 +233,7 @@ export function HeroSection({
 
           {/* Right: Audio player */}
           <div className="flex-shrink-0 w-full lg:w-auto flex justify-center">
-            <AudioPlayer isDark={isDark} />
+            <AudioPlayer />
           </div>
         </div>
       </div>
@@ -256,10 +245,7 @@ export function HeroSection({
         transition={{ delay: 1.5, duration: 0.8 }}
         className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 z-10"
       >
-        <span
-          className="text-[10px] font-mono tracking-widest uppercase"
-          style={{ color: fgGhost }}
-        >
+        <span className="text-[10px] font-mono tracking-widest uppercase text-muted-foreground/50">
           Уніз
         </span>
         <motion.div

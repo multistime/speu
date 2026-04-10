@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useUiAccent } from "@/contexts/UiAccentContext";
+import type { TopoSpec } from "@/lib/speu/ui-theme-tokens";
 
 interface Point {
   x: number;
@@ -106,12 +108,13 @@ function marchingSquaresContour(
 }
 
 export function TopographicCanvas({ isDark = true }: { isDark?: boolean }) {
+  const { topoSpec } = useUiAccent();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number>(0);
-  // Use a ref so the animation loop always reads the latest theme
-  // without needing to restart the loop on theme change
   const isDarkRef = useRef(isDark);
   isDarkRef.current = isDark;
+  const topoRef = useRef<TopoSpec>(topoSpec);
+  topoRef.current = topoSpec;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -138,28 +141,41 @@ export function TopographicCanvas({ isDark = true }: { isDark?: boolean }) {
       ctx.clearRect(0, 0, width, height);
       const contourStep = isSmallScreen ? 24 : 18;
 
+      const topo = topoRef.current;
+
       if (isDarkRef.current) {
-        // Dark: deep pine forest night
+        const d = topo.dark;
         const bg = ctx.createRadialGradient(
           width * 0.5, height * 0.4, 0,
           width * 0.5, height * 0.4, width * 0.8
         );
-        bg.addColorStop(0, "rgba(14,28,22,0.95)");
-        bg.addColorStop(0.5, "rgba(11,18,16,0.97)");
-        bg.addColorStop(1, "rgba(6,10,8,1)");
+        bg.addColorStop(0, d.bg[0]);
+        bg.addColorStop(0.5, d.bg[1]);
+        bg.addColorStop(1, d.bg[2]);
         ctx.fillStyle = bg;
         ctx.fillRect(0, 0, width, height);
 
         const levels = staticMode
           ? [0.34, 0.46, 0.58, 0.70]
           : [0.28, 0.34, 0.40, 0.46, 0.52, 0.58, 0.64, 0.70];
+        const gSpan = d.contourGTo - d.contourGFrom;
         levels.forEach((level, i) => {
           const progress = i / levels.length;
           const alpha = 0.08 + progress * 0.18;
-          const green = Math.round(160 + progress * 62);
-          marchingSquaresContour(ctx, width, height, t, level, `rgb(40,${green},70)`, alpha, contourStep);
+          const mid = Math.round(d.contourGFrom + progress * gSpan);
+          marchingSquaresContour(
+            ctx,
+            width,
+            height,
+            t,
+            level,
+            `rgb(${d.contourR},${mid},${d.contourB})`,
+            alpha,
+            contourStep
+          );
         });
 
+        const [ar, ag, ab] = d.amber;
         [0.55, 0.62].forEach((level, i) => {
           marchingSquaresContour(
             ctx,
@@ -167,24 +183,23 @@ export function TopographicCanvas({ isDark = true }: { isDark?: boolean }) {
             height,
             t * 0.7 + 50,
             level,
-            `rgb(200,140,40)`,
+            `rgb(${ar},${ag},${ab})`,
             0.04 + i * 0.04,
             contourStep
           );
         });
       } else {
-        // Light: warm linen daylight
+        const L = topo.light;
         const bg = ctx.createRadialGradient(
           width * 0.5, height * 0.4, 0,
           width * 0.5, height * 0.4, width * 0.8
         );
-        bg.addColorStop(0, "rgba(246,242,232,1)");
-        bg.addColorStop(0.5, "rgba(242,237,224,1)");
-        bg.addColorStop(1, "rgba(234,229,212,1)");
+        bg.addColorStop(0, L.bg[0]);
+        bg.addColorStop(0.5, L.bg[1]);
+        bg.addColorStop(1, L.bg[2]);
         ctx.fillStyle = bg;
         ctx.fillRect(0, 0, width, height);
 
-        // Forest moss contour lines — subtle on light linen
         const levels = staticMode
           ? [0.34, 0.46, 0.58, 0.70]
           : [0.28, 0.34, 0.40, 0.46, 0.52, 0.58, 0.64, 0.70];
@@ -197,13 +212,13 @@ export function TopographicCanvas({ isDark = true }: { isDark?: boolean }) {
             height,
             t,
             level,
-            `rgb(53,101,77)`,
+            `rgb(${L.contourRgb})`,
             alpha,
             contourStep
           );
         });
 
-        // Kupalle amber accents (sparse)
+        const [lr, lg, lb] = L.amber;
         [0.55, 0.62].forEach((level, i) => {
           marchingSquaresContour(
             ctx,
@@ -211,7 +226,7 @@ export function TopographicCanvas({ isDark = true }: { isDark?: boolean }) {
             height,
             t * 0.7 + 50,
             level,
-            `rgb(191,117,53)`,
+            `rgb(${lr},${lg},${lb})`,
             0.025 + i * 0.025,
             contourStep
           );

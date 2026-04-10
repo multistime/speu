@@ -252,7 +252,7 @@ export function LabelListenOverviewClient() {
         </div>
       ) : null}
 
-      <ListenKpiStrip items={kpiItems} theme="primary" />
+      <ListenKpiStrip items={kpiItems} />
 
       <div className="grid gap-6 lg:grid-cols-5">
         <div className="lg:col-span-3 glass rounded-2xl border border-border p-5 sm:p-6">
@@ -264,7 +264,6 @@ export function LabelListenOverviewClient() {
             days={data.daily}
             rangeStart={data.range.start}
             rangeEnd={data.range.end}
-            accent="primary"
           />
         </div>
         <div className="lg:col-span-2 flex flex-col gap-6">
@@ -289,7 +288,7 @@ export function LabelListenOverviewClient() {
             {data.tracks.length === 0 ? (
               <p className="text-sm text-muted-foreground py-6 text-center">Няма трэкаў у каталогу.</p>
             ) : (
-              <TopTracksPanel tracks={data.tracks} accent="primary" onSelectTrack={(t) => setTrackDialogId(t.id)} />
+              <TopTracksPanel tracks={data.tracks} onSelectTrack={(t) => setTrackDialogId(t.id)} />
             )}
           </div>
         </div>
@@ -299,7 +298,7 @@ export function LabelListenOverviewClient() {
         <div className="px-5 py-4 border-b border-border/60 bg-card/20">
           <h2 className="text-sm font-semibold text-foreground">Усе трэкі</h2>
         </div>
-        <ListenTracksTable tracks={data.tracks} linkAccent="primary" onTrackClick={(t) => setTrackDialogId(t.id)} />
+        <ListenTracksTable tracks={data.tracks} onTrackClick={(t) => setTrackDialogId(t.id)} />
       </div>
 
       <ListenMethodologyDialog open={methodologyOpen} onClose={() => setMethodologyOpen(false)} />
@@ -309,7 +308,6 @@ export function LabelListenOverviewClient() {
         trackId={trackDialogId}
         periodDays={period}
         supabase={supabase}
-        accent="primary"
       />
     </div>
   );

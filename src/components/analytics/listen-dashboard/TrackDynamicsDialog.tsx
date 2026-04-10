@@ -5,7 +5,6 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { Loader2, X } from "lucide-react";
 import { parseTrackListenDashboard, type TrackListenDashboardOk } from "@/lib/speu/artist-analytics";
 import { ListenDailyLineChart } from "./ListenDailyLineChart";
-import type { ListenChartAccent } from "./ListenDailyLineChart";
 
 export function TrackDynamicsDialog({
   open,
@@ -13,14 +12,12 @@ export function TrackDynamicsDialog({
   trackId,
   periodDays,
   supabase,
-  accent,
 }: {
   open: boolean;
   onClose: () => void;
   trackId: string | null;
   periodDays: number;
   supabase: SupabaseClient;
-  accent: ListenChartAccent;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const [loading, setLoading] = useState(false);
@@ -117,7 +114,6 @@ export function TrackDynamicsDialog({
               days={data.daily}
               rangeStart={data.range.start}
               rangeEnd={data.range.end}
-              accent={accent}
             />
           </div>
         ) : null}

@@ -7,17 +7,12 @@ import { cn } from "@/lib/utils";
 
 export function ListenTracksTable({
   tracks,
-  linkAccent,
   onTrackClick,
 }: {
   tracks: ArtistListenTrackRow[];
-  linkAccent: "emerald" | "primary";
   onTrackClick?: (t: ArtistListenTrackRow) => void;
 }) {
-  const linkHover =
-    linkAccent === "emerald"
-      ? "hover:text-emerald-600 dark:hover:text-emerald-400"
-      : "hover:text-primary";
+  const linkHover = "hover:text-primary";
 
   return (
     <div className="overflow-x-auto">

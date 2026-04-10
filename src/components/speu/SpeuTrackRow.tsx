@@ -173,7 +173,7 @@ function ChartMovementBadge({
   }
   if (movement === "up") {
     return (
-      <span className={cn(base, "text-emerald-600/90")} aria-label={`Падняўся на ${delta ?? 0} пазіцый`}>
+      <span className={cn(base, "text-primary")} aria-label={`Падняўся на ${delta ?? 0} пазіцый`}>
         ↑{delta ?? ""}
       </span>
     );

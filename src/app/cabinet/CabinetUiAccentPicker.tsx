@@ -50,7 +50,7 @@ export function CabinetUiAccentPicker() {
             Акцэнт інтэрфейсу
           </h2>
           <p className="mt-1 text-sm text-muted-foreground leading-snug">
-            Колер акцэнту ў хабе «Спеў» і глабальным плэеры. Па змаўчанні — купальскае зелена.
+            Палітра фону, кнопак, навігацыі і плэера. Па змаўчанні — «Начны лес» (як асноўны выгляд сайта).
           </p>
         </div>
       </div>

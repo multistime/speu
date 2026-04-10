@@ -6,11 +6,9 @@ import { cn } from "@/lib/utils";
 
 export function TopTracksPanel({
   tracks,
-  accent,
   onSelectTrack,
 }: {
   tracks: ArtistListenTrackRow[];
-  accent: "emerald" | "primary";
   onSelectTrack: (t: ArtistListenTrackRow) => void;
 }) {
   const top = useMemo(() => {
@@ -21,10 +19,7 @@ export function TopTracksPanel({
   const maxV = Math.max(1, ...top.map((t) => t.period_full + t.period_partial));
   if (top.length === 0) return null;
 
-  const barGrad =
-    accent === "emerald"
-      ? "bg-gradient-to-r from-emerald-600/80 to-emerald-400/90"
-      : "bg-gradient-to-r from-primary/90 to-primary/60";
+  const barGrad = "bg-gradient-to-r from-primary/90 to-primary/60";
 
   return (
     <div className="space-y-2">

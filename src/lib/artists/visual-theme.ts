@@ -25,10 +25,10 @@ export const ARTIST_COLOR_PRESETS: ArtistColorPreset[] = [
   {
     id: "lyasun",
     label: "Начны лес",
-    gradientFrom: "#1A1A2E",
-    gradientTo: "#0D0D1A",
-    accent: "#4A7A5A",
-    accentRgb: "74, 122, 90",
+    gradientFrom: "#152018",
+    gradientTo: "#0A100C",
+    accent: "#7DBF9E",
+    accentRgb: "125, 191, 158",
   },
   {
     id: "vuzel",

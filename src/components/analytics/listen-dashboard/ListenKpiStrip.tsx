@@ -5,27 +5,11 @@ import { cn } from "@/lib/utils";
 import { ListenSparkline } from "./ListenSparkline";
 import type { ArtistListenDailyPoint } from "@/lib/speu/artist-analytics";
 
-export type ListenKpiAccent = "emerald" | "primary";
-
-const ACCENTS: Record<
-  ListenKpiAccent,
-  { blob: string; icon: string; deltaUp: string; deltaDown: string; deltaNew: string }
-> = {
-  emerald: {
-    blob: "bg-emerald-500/35",
-    icon: "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-    deltaUp: "text-emerald-600 dark:text-emerald-400",
-    deltaDown: "text-rose-600 dark:text-rose-400",
-    deltaNew: "text-sky-600 dark:text-sky-400",
-  },
-  primary: {
-    blob: "bg-primary/35",
-    icon: "border-primary/30 bg-primary/10 text-primary",
-    deltaUp: "text-emerald-600 dark:text-emerald-400",
-    deltaDown: "text-rose-600 dark:text-rose-400",
-    deltaNew: "text-sky-600 dark:text-sky-400",
-  },
-};
+const STRIP_THEME = {
+  deltaUp: "text-primary",
+  deltaDown: "text-rose-600 dark:text-rose-400",
+  deltaNew: "text-sky-600 dark:text-sky-400",
+} as const;
 
 export type KpiItem = {
   key: string;
@@ -41,7 +25,7 @@ export type KpiItem = {
 };
 
 const CARD_ACCENTS = {
-  emerald: { blob: "bg-emerald-500/35", icon: "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" },
+  emerald: { blob: "bg-primary/35", icon: "border-primary/30 bg-primary/10 text-primary" },
   sky: { blob: "bg-sky-500/35", icon: "border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-400" },
   teal: { blob: "bg-teal-500/35", icon: "border-teal-500/30 bg-teal-500/10 text-teal-600 dark:text-teal-400" },
   amber: { blob: "bg-amber-500/35", icon: "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400" },
@@ -54,7 +38,6 @@ function ListenKpiCard({
   delta,
   icon: Icon,
   cardAccent,
-  theme,
   compactValue,
   sparkline,
   onPress,
@@ -64,13 +47,12 @@ function ListenKpiCard({
   delta?: { label: string; tone: "up" | "down" | "flat" | "new" };
   icon: LucideIcon;
   cardAccent: keyof typeof CARD_ACCENTS;
-  theme: ListenKpiAccent;
   compactValue?: boolean;
   sparkline?: { daily: ArtistListenDailyPoint[]; rangeStart: string; rangeEnd: string; series: "total" | "full" };
   onPress?: () => void;
 }) {
   const a = CARD_ACCENTS[cardAccent];
-  const t = ACCENTS[theme];
+  const t = STRIP_THEME;
   const interactive = Boolean(onPress);
 
   return (
@@ -129,7 +111,6 @@ function ListenKpiCard({
           daily={sparkline.daily}
           rangeStart={sparkline.rangeStart}
           rangeEnd={sparkline.rangeEnd}
-          accent={theme === "emerald" ? "emerald" : "primary"}
           series={sparkline.series}
         />
       ) : null}
@@ -137,13 +118,7 @@ function ListenKpiCard({
   );
 }
 
-export function ListenKpiStrip({
-  items,
-  theme,
-}: {
-  items: KpiItem[];
-  theme: ListenKpiAccent;
-}) {
+export function ListenKpiStrip({ items }: { items: KpiItem[] }) {
   return (
     <div
       className={cn(
@@ -159,7 +134,6 @@ export function ListenKpiStrip({
           delta={it.delta}
           icon={it.icon}
           cardAccent={it.accentKey}
-          theme={theme}
           compactValue={it.compactValue}
           sparkline={it.sparkline}
           onPress={it.onPress}
