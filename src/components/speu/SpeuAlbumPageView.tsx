@@ -8,6 +8,7 @@ import type { SpeuAlbumPageData } from "@/lib/speu/types";
 import { SpeuShareButton } from "@/components/speu/SpeuShareButton";
 import { SpeuTrackRow } from "@/components/speu/SpeuTrackRow";
 import { usePlayer } from "@/contexts/PlayerContext";
+import { useUiAccent } from "@/contexts/UiAccentContext";
 import { speuPublicTrackToPlayerTrack } from "@/lib/speu/player-map";
 import { cn } from "@/lib/utils";
 
@@ -64,9 +65,10 @@ function AlbumDescription({ text }: { text: string }) {
 
 export function SpeuAlbumPageView({ data }: { data: SpeuAlbumPageData }) {
   const { startNonStopShuffle, playPlaylistAt } = usePlayer();
+  const { accentColor: accent, accentRgb } = useUiAccent();
   const primary = data.artists[0];
   if (!primary) return null;
-  const { accent, accentRgb, gradientFrom, gradientTo } = primary.theme;
+  const { gradientFrom, gradientTo } = primary.theme;
   const playable = data.tracks;
 
   const albumPlaylist = useMemo(

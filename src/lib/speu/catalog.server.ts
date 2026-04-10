@@ -3,6 +3,7 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { topGenreCodesFromTrackLists } from "@/lib/speu/artist-genres";
 import { pickAudioUrl } from "@/lib/speu/audio";
+import { resolveUiAccent } from "@/lib/speu/ui-accent";
 import { themeFromVisualJson } from "@/lib/speu/theme";
 import type {
   SpeuAlbumPageData,
@@ -142,8 +143,7 @@ function mapRawTrackToPublic(row: RawTrackRow): SpeuPublicTrack | null {
     return ph ? { ...base, photoUrl: ph } : base;
   });
 
-  const primaryVisual = credits[0]?.artists?.visual_json;
-  const th = themeFromVisualJson(primaryVisual ?? undefined);
+  const uiDefault = resolveUiAccent("default");
 
   const albumRel = normAlbum(row.albums);
   const albumOk =
@@ -172,8 +172,8 @@ function mapRawTrackToPublic(row: RawTrackRow): SpeuPublicTrack | null {
     artistLine,
     artists,
     album: albumOk,
-    accentColor: th.accent,
-    accentRgb: th.accentRgb,
+    accentColor: uiDefault.accent,
+    accentRgb: uiDefault.accentRgb,
     playOnRadio: row.play_on_radio === true,
     sortOrder: row.sort_order,
     createdAt: row.created_at,

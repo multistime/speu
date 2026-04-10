@@ -24,6 +24,7 @@ import type { User as SupabaseUser } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { getSpeuProfile, type SpeuProfile } from "@/lib/supabase/speu";
 import { snapshotToDisplayUser, type CabinetUserSnapshot } from "./cabinet-user-snapshot";
+import { CabinetUiAccentPicker } from "./CabinetUiAccentPicker";
 import { cn } from "@/lib/utils";
 
 type Mode = "signin" | "signup";
@@ -441,6 +442,8 @@ export function CabinetPageClient({ initialUser, initialProfile }: CabinetPageCl
             </div>
           )}
         </div>
+
+        <CabinetUiAccentPicker />
 
         {isArtist && (
           <Link

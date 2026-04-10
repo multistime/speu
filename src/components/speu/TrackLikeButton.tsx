@@ -3,13 +3,13 @@
 import { Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTrackLikes } from "@/contexts/TrackLikesContext";
+import { useUiAccent } from "@/contexts/UiAccentContext";
 
 type TrackLikeButtonProps = {
   trackId: string;
   className?: string;
   /** sm — у радку трэка; md — на старонцы трэка; lg — плэер (крупнае сэрца, без рамкі з боку className) */
   size?: "sm" | "md" | "lg";
-  accentColor?: string | null;
   /** Бягучы агульны лік (для аптымістычнага +1 / −1 на старонцы трэка) */
   likeCount?: number;
   /** Пасля toggle — канчатковы лік з сервера; пры памылцы адкат да папярэдняга */
@@ -20,10 +20,10 @@ export function TrackLikeButton({
   trackId,
   className,
   size = "sm",
-  accentColor,
   likeCount: displayLikeCount,
   onLikeCount,
 }: TrackLikeButtonProps) {
+  const { accentColor } = useUiAccent();
   const { isLiked, toggleLike, authReady, user, isLikeRequestInFlight } = useTrackLikes();
   const liked = isLiked(trackId);
 
@@ -64,12 +64,11 @@ export function TrackLikeButton({
       className={cn(
         "box-border inline-flex shrink-0 items-center justify-center overflow-hidden rounded-lg border-0 border-transparent transition-colors",
         "hover:bg-muted/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary/40",
-        liked && !accentColor && "text-rose-500",
         !liked && "text-muted-foreground hover:text-foreground",
         pad,
         className
       )}
-      style={liked && accentColor ? { color: accentColor } : undefined}
+      style={liked ? { color: accentColor } : undefined}
     >
       <Heart
         className={cn("pointer-events-none shrink-0", iconClass, liked && "fill-current")}

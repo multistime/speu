@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { isUiAccentPresetId } from "@/lib/speu/ui-accent";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,12 @@ export async function PATCH(req: Request) {
   }
   if (typeof o.player_single_repeat === "boolean") {
     updates.player_single_repeat = o.player_single_repeat;
+  }
+  if (
+    typeof o.ui_accent_preset_id === "string" &&
+    isUiAccentPresetId(o.ui_accent_preset_id)
+  ) {
+    updates.ui_accent_preset_id = o.ui_accent_preset_id;
   }
 
   if (Object.keys(updates).length === 0) {

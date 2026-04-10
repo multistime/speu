@@ -24,22 +24,22 @@ import {
 import { TrackLikeButton } from "@/components/speu/TrackLikeButton";
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { usePlayer, type PlayerTrack } from "@/contexts/PlayerContext";
+import { useUiAccent } from "@/contexts/UiAccentContext";
 import { formatPlayerTime } from "@/lib/format-player-time";
 import { clientXToSeekRatio } from "@/lib/player-progress";
 import { cn } from "@/lib/utils";
 
 function GlobalPlayerProgress({
-  track,
   className,
   layout = "dock",
 }: {
-  track: PlayerTrack;
   /** Напрыклад, для шторкі: mx-auto mt-3 w-full max-w-md */
   className?: string;
   /** dock — тонкая рэйка ўнізе бару; sheet — высокая зона дотыку, скраб па свайпе */
   layout?: "dock" | "sheet";
 }) {
   const { currentTime, duration, canSeek, seekRatio, isPlaying } = usePlayer();
+  const { accentColor } = useUiAccent();
 
   const railRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef(false);
@@ -110,13 +110,10 @@ function GlobalPlayerProgress({
     }
   };
 
-  const fillStyle = track.accentColor
-    ? { background: track.accentColor }
-    : undefined;
+  const fillStyle = { background: accentColor };
 
   const fillDockClass = cn(
     "pointer-events-none absolute left-0 top-0 z-[1] h-px origin-left transition-[opacity,box-shadow]",
-    !track.accentColor && "bg-primary",
     isDragging
       ? "opacity-100 shadow-[0_0_10px_rgba(125,191,158,0.2)]"
       : "opacity-[0.95] group-hover/player:opacity-100"
@@ -124,7 +121,6 @@ function GlobalPlayerProgress({
 
   const thumbDockClass = cn(
     "pointer-events-none absolute top-0 z-[2] size-[5px] -translate-x-1/2 -translate-y-1/2 rotate-45 rounded-[1px] border border-background/80 shadow-[0_0_6px_rgba(0,0,0,0.35)] transition-transform duration-150 ease-out",
-    !track.accentColor && "bg-primary",
     "group-hover/player:scale-110",
     isDragging && "scale-125 ring-1 ring-primary/40"
   );
@@ -172,7 +168,6 @@ function GlobalPlayerProgress({
             <div
               className={cn(
                 "absolute left-0 top-1/2 z-[1] h-2 -translate-y-1/2 rounded-full transition-[opacity,box-shadow]",
-                !track.accentColor && "bg-primary",
                 isDragging ? "opacity-100 shadow-[0_0_12px_rgba(125,191,158,0.25)]" : "opacity-95"
               )}
               style={{
@@ -183,7 +178,6 @@ function GlobalPlayerProgress({
             <div
               className={cn(
                 "absolute top-1/2 z-[2] size-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-background shadow-md transition-transform duration-150 ease-out",
-                !track.accentColor && "bg-primary",
                 isDragging && "scale-110 ring-2 ring-primary/35"
               )}
               style={{
@@ -224,16 +218,8 @@ function GlobalPlayerProgress({
         >
           {isPlaying ? (
             <div
-              className={cn(
-                "speu-player-progress-indeterminate h-full w-[22%]",
-                track.accentColor ? "" : "bg-primary/75",
-                isSheet && "rounded-full"
-              )}
-              style={
-                track.accentColor
-                  ? { background: track.accentColor, opacity: 0.75 }
-                  : undefined
-              }
+              className={cn("speu-player-progress-indeterminate h-full w-[22%]", isSheet && "rounded-full")}
+              style={{ background: accentColor, opacity: 0.75 }}
             />
           ) : null}
         </div>
@@ -242,8 +228,9 @@ function GlobalPlayerProgress({
   );
 }
 
-function GlobalPlayerCoverEqualizer({ accentColor }: { accentColor: string | null | undefined }) {
-  const color = accentColor ?? "rgba(255,255,255,0.92)";
+function GlobalPlayerCoverEqualizer() {
+  const { accentColor } = useUiAccent();
+  const color = accentColor || "rgba(255,255,255,0.92)";
   return (
     <div
       className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] flex h-[48%] items-end justify-center gap-[3px] bg-gradient-to-t from-black/45 to-transparent pb-1 pt-5"
@@ -323,14 +310,9 @@ function MobileSheetArtistLine({
   return null;
 }
 
-function MobileSheetEqBadge({
-  isPlaying,
-  accentColor,
-}: {
-  isPlaying: boolean;
-  accentColor?: string | null;
-}) {
-  const color = accentColor ?? "var(--primary)";
+function MobileSheetEqBadge({ isPlaying }: { isPlaying: boolean }) {
+  const { accentColor } = useUiAccent();
+  const color = accentColor || "var(--primary)";
   return (
     <div
       aria-hidden
@@ -364,15 +346,12 @@ function MobileSheetEqBadge({
 
 /** Абкладка для каруселі (цэнтр і бакі) */
 function MobileSheetCoverArt({ t, className }: { t: PlayerTrack; className?: string }) {
-  const rgb = t.accentRgb ?? "125,191,158";
+  const { accentColor, accentRgb } = useUiAccent();
+  const rgb = accentRgb.replace(/\s/g, "");
   return (
     <div
       className={cn("relative size-full overflow-hidden bg-muted", className)}
-      style={
-        t.accentColor
-          ? { background: `rgba(${rgb}, 0.12)` }
-          : { background: "var(--muted)" }
-      }
+      style={{ background: `rgba(${rgb}, 0.12)` }}
     >
       {t.coverUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -381,7 +360,7 @@ function MobileSheetCoverArt({ t, className }: { t: PlayerTrack; className?: str
         <div className="flex size-full items-center justify-center">
           <Music
             className="size-[24%] max-w-10 opacity-55"
-            style={{ color: t.accentColor ?? "var(--primary)" }}
+            style={{ color: accentColor }}
             strokeWidth={1.25}
           />
         </div>
@@ -461,6 +440,8 @@ function MobileSheetCoverCarousel({
   skipToNext: () => void;
   skipToPreviousInQueue: () => void;
 }) {
+  const { accentRgb } = useUiAccent();
+  const rgbCompact = accentRgb.replace(/\s/g, "");
   const x = useMotionValue(0);
   const reduceMotion = useReducedMotion();
   const coverMeasureRef = useRef<HTMLDivElement>(null);
@@ -625,9 +606,7 @@ function MobileSheetCoverCarousel({
               style={{
                 scale: centerScale,
                 rotateY: centerRotateY,
-                background: track.accentColor
-                  ? `rgba(${track.accentRgb ?? "125,191,158"}, 0.1)`
-                  : "var(--muted)",
+                background: `rgba(${rgbCompact}, 0.1)`,
               }}
             >
               <motion.div
@@ -692,6 +671,7 @@ function MobileNowPlayingSheet({
     skipToPreviousInQueue,
     queueNeighborTracks,
   } = usePlayer();
+  const { accentColor } = useUiAccent();
 
   const titleId = useId();
   const playBtnRef = useRef<HTMLButtonElement>(null);
@@ -886,18 +866,14 @@ function MobileNowPlayingSheet({
               </div>
 
               <div className="shrink-0 px-4">
-                <GlobalPlayerProgress
-                  track={track}
-                  layout="sheet"
-                  className="mx-auto w-full max-w-md"
-                />
+                <GlobalPlayerProgress layout="sheet" className="mx-auto w-full max-w-md" />
               </div>
 
               <div
                 className="mt-auto flex shrink-0 items-center justify-between gap-2 px-2 pb-1 pt-3"
                 data-sheet-no-gesture
               >
-                <MobileSheetEqBadge isPlaying={isPlaying} accentColor={track.accentColor} />
+                <MobileSheetEqBadge isPlaying={isPlaying} />
                 <div className="flex flex-1 items-center justify-center gap-3">
                   <button
                     type="button"
@@ -924,7 +900,7 @@ function MobileNowPlayingSheet({
                     aria-label={isPlaying ? "Паўза" : "Прайграць"}
                     className="flex min-h-[3.1rem] min-w-[3.1rem] shrink-0 items-center justify-center rounded-full shadow-md transition-transform duration-200 hover:scale-[1.03] active:scale-[0.97]"
                     style={{
-                      background: track.accentColor ?? "var(--primary)",
+                      background: accentColor,
                       color: "white",
                     }}
                   >
@@ -958,7 +934,6 @@ function MobileNowPlayingSheet({
                   <TrackLikeButton
                     trackId={track.id}
                     size="lg"
-                    accentColor={track.accentColor ?? null}
                     className="min-h-11 min-w-11 !max-h-11 !max-w-11 shrink-0 rounded-full !p-0 hover:bg-muted/45 active:bg-muted/55"
                   />
                 ) : (
@@ -993,6 +968,8 @@ export function GlobalPlayer() {
     skipPrevious,
     stop,
   } = usePlayer();
+  const { accentColor, accentRgb } = useUiAccent();
+  const rgbCompact = accentRgb.replace(/\s/g, "");
 
   const queueNav = nonStopActive && queueSize > 0;
   const canShuffle = queueNav && queueSize > 1;
@@ -1025,13 +1002,9 @@ export function GlobalPlayer() {
           exit={{ y: 100, opacity: 0 }}
           transition={{ type: "spring", damping: 28, stiffness: 280 }}
           className="group/player fixed bottom-0 inset-x-0 z-50 overflow-visible bg-background/95 backdrop-blur-md border-t border-border/40 pt-3"
-          style={
-            track.accentRgb
-              ? { boxShadow: `0 -4px 40px rgba(${track.accentRgb}, 0.08)` }
-              : undefined
-          }
+          style={{ boxShadow: `0 -4px 40px rgba(${rgbCompact}, 0.08)` }}
         >
-          <GlobalPlayerProgress track={track} />
+          <GlobalPlayerProgress />
 
           <div className="max-w-7xl mx-auto px-2 sm:px-6 py-2.5 sm:py-3 min-h-[3.25rem]">
             {/* Мабільны плэер: націск на мініяцюру / тэкст / час — шторка; Play і лайк асобна; меню «⋯» толькі на md+ */}
@@ -1045,9 +1018,7 @@ export function GlobalPlayer() {
                 <div
                   className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg"
                   style={{
-                    background: track.accentColor
-                      ? `rgba(${track.accentRgb ?? "125,191,158"}, 0.15)`
-                      : "var(--muted)",
+                    background: `rgba(${rgbCompact}, 0.15)`,
                   }}
                 >
                   {track.coverUrl ? (
@@ -1056,11 +1027,11 @@ export function GlobalPlayer() {
                   ) : (
                     <Music
                       className="w-4 h-4"
-                      style={{ color: track.accentColor ?? "var(--primary)" }}
+                      style={{ color: accentColor }}
                       strokeWidth={1.5}
                     />
                   )}
-                  {isPlaying ? <GlobalPlayerCoverEqualizer accentColor={track.accentColor} /> : null}
+                  {isPlaying ? <GlobalPlayerCoverEqualizer /> : null}
                 </div>
 
                 <div className="min-w-0 flex-1">
@@ -1088,7 +1059,6 @@ export function GlobalPlayer() {
                 <TrackLikeButton
                   trackId={track.id}
                   size="lg"
-                  accentColor={track.accentColor ?? null}
                   className="size-10 !min-h-10 !min-w-10 !max-h-10 !max-w-10 shrink-0 rounded-full !p-0 hover:bg-muted/45 active:bg-muted/55"
                 />
               ) : null}
@@ -1099,7 +1069,7 @@ export function GlobalPlayer() {
                 aria-label={isPlaying ? "Паўза" : "Прайграць"}
                 className="flex size-10 shrink-0 items-center justify-center rounded-full shadow-sm transition-transform duration-200 hover:scale-105 active:scale-95"
                 style={{
-                  background: track.accentColor ?? "var(--primary)",
+                  background: accentColor,
                   color: "white",
                 }}
               >
@@ -1116,12 +1086,8 @@ export function GlobalPlayer() {
               <div
                 className="w-10 h-10 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden"
                 style={{
-                  background: track.accentColor
-                    ? `rgba(${track.accentRgb ?? "125,191,158"}, 0.15)`
-                    : "var(--muted)",
-                  border: track.accentColor
-                    ? `1px solid rgba(${track.accentRgb ?? "125,191,158"}, 0.25)`
-                    : "1px solid var(--border)",
+                  background: `rgba(${rgbCompact}, 0.15)`,
+                  border: `1px solid rgba(${rgbCompact}, 0.25)`,
                 }}
               >
                 {track.coverUrl ? (
@@ -1134,7 +1100,7 @@ export function GlobalPlayer() {
                 ) : (
                   <Music
                     className="w-4 h-4"
-                    style={{ color: track.accentColor ?? "var(--primary)" }}
+                    style={{ color: accentColor }}
                     strokeWidth={1.5}
                   />
                 )}
@@ -1209,7 +1175,7 @@ export function GlobalPlayer() {
                 aria-label={isPlaying ? "Паўза" : "Прайграць"}
                 className="w-11 h-11 mx-0.5 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-105 shadow-sm"
                 style={{
-                  background: track.accentColor ?? "var(--primary)",
+                  background: accentColor,
                   color: "white",
                 }}
               >
@@ -1257,7 +1223,6 @@ export function GlobalPlayer() {
                   <TrackLikeButton
                     trackId={track.id}
                     size="lg"
-                    accentColor={track.accentColor ?? null}
                     className="size-10 !min-h-10 !min-w-10 !max-h-10 !max-w-10 rounded-full !p-0 hover:bg-muted/45 active:bg-muted/55"
                   />
                 ) : null}
@@ -1282,7 +1247,7 @@ export function GlobalPlayer() {
                     <motion.span
                       key={i}
                       className="w-[3px] min-w-[3px] rounded-full"
-                      style={{ background: track.accentColor ?? "var(--primary)" }}
+                      style={{ background: accentColor }}
                       animate={{ height: ["35%", "100%", "45%", "85%", "35%"] }}
                       transition={{
                         duration: 0.75,

@@ -9,6 +9,7 @@ import { SpeuShareButton } from "@/components/speu/SpeuShareButton";
 import { SpeuTrackRow } from "@/components/speu/SpeuTrackRow";
 import { TrackLikeButton } from "@/components/speu/TrackLikeButton";
 import { usePlayer } from "@/contexts/PlayerContext";
+import { useUiAccent } from "@/contexts/UiAccentContext";
 import { speuPublicTrackToPlayerTrack } from "@/lib/speu/player-map";
 import { getGenreLabelBe } from "@/lib/speu/genre-taxonomy";
 import {
@@ -120,7 +121,7 @@ export function SpeuTrackPageView({ data }: { data: SpeuTrackPageData }) {
   const { track, sameAlbum, lyrics } = data;
   const [likeCount, setLikeCount] = useState(() => data.likeCount);
   const pt = speuPublicTrackToPlayerTrack(track);
-  const { accentColor: accent, accentRgb } = track;
+  const { accentColor: accent, accentRgb } = useUiAccent();
 
   const albumTracksOrdered = useMemo(
     () => [...sameAlbum, track].sort((a, b) => a.sortOrder - b.sortOrder),
@@ -160,7 +161,7 @@ export function SpeuTrackPageView({ data }: { data: SpeuTrackPageData }) {
               boxShadow: `0 0 50px rgba(${accentRgb}, 0.12)`,
               background: track.coverUrl
                 ? undefined
-                : `linear-gradient(160deg, ${track.accentColor}66 0%, var(--card) 100%)`,
+                : `linear-gradient(160deg, ${accent}66 0%, var(--card) 100%)`,
             }}
           >
             {track.coverUrl ? (
@@ -194,7 +195,6 @@ export function SpeuTrackPageView({ data }: { data: SpeuTrackPageData }) {
                   <TrackLikeButton
                     trackId={track.id}
                     size="md"
-                    accentColor={accent}
                     likeCount={likeCount}
                     onLikeCount={setLikeCount}
                     className="size-11 !min-h-11 !min-w-11 !max-h-11 !max-w-11 rounded-xl border border-border bg-card !p-0 hover:bg-muted/60"

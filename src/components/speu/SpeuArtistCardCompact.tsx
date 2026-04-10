@@ -6,6 +6,7 @@ import { MapPin, Play } from "lucide-react";
 import { ArtistPattern } from "@/components/artists/artist-pattern";
 import { getGenreLabelBe } from "@/lib/speu/genre-taxonomy";
 import type { SpeuHubArtistCard } from "@/lib/speu/types";
+import { useUiAccent } from "@/contexts/UiAccentContext";
 
 export function SpeuArtistCardCompact({
   artist,
@@ -14,7 +15,8 @@ export function SpeuArtistCardCompact({
   artist: SpeuHubArtistCard;
   index: number;
 }) {
-  const { gradientFrom, gradientTo, accent, accentRgb, pattern } = artist.theme;
+  const { gradientFrom, gradientTo, pattern } = artist.theme;
+  const { accentColor: accent, accentRgb } = useUiAccent();
 
   return (
     <motion.div

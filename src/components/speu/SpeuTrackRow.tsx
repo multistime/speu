@@ -13,6 +13,7 @@ import type { SpeuChartMovement, SpeuPublicTrack } from "@/lib/speu/types";
 import { speuPublicTrackToPlayerTrack } from "@/lib/speu/player-map";
 import { formatTrackDuration } from "@/components/speu/speu-format-duration";
 import { TrackLikeButton } from "@/components/speu/TrackLikeButton";
+import { useUiAccent } from "@/contexts/UiAccentContext";
 
 function TrackPlayingEqualizer({ color }: { color: string }) {
   const bars = 4;
@@ -43,7 +44,7 @@ function TrackPlayingEqualizer({ color }: { color: string }) {
 
 function SpeuTrackRowMobileMenu({ track }: { track: SpeuPublicTrack }) {
   const router = useRouter();
-  const { accentColor } = track;
+  const { accentColor } = useUiAccent();
 
   const itemClass =
     "flex cursor-pointer items-center rounded-md px-3 py-2 text-sm text-foreground outline-none select-none data-highlighted:bg-muted";
@@ -62,7 +63,7 @@ function SpeuTrackRowMobileMenu({ track }: { track: SpeuPublicTrack }) {
             "hover:bg-muted/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary/40",
             "text-muted-foreground hover:text-foreground"
           )}
-          style={accentColor ? { color: accentColor } : undefined}
+          style={{ color: accentColor }}
           aria-label="Дадаткова"
         >
           <MoreHorizontal className="size-4" strokeWidth={2} />
@@ -213,7 +214,7 @@ export function SpeuTrackRow({
   const playerTrack: PlayerTrack = speuPublicTrackToPlayerTrack(track);
   const active = isTrackActive(track.id);
   const playing = active && isPlaying;
-  const { accentColor, accentRgb } = track;
+  const { accentColor, accentRgb } = useUiAccent();
   const displayRank = rankProp ?? index + 1;
 
   const playActivate = () => {
@@ -286,7 +287,7 @@ export function SpeuTrackRow({
               style={
                 !track.coverUrl
                   ? {
-                      background: `linear-gradient(160deg, ${track.accentColor}33 0%, transparent 100%)`,
+                      background: `linear-gradient(160deg, ${accentColor}33 0%, transparent 100%)`,
                     }
                   : undefined
               }
@@ -369,7 +370,7 @@ export function SpeuTrackRow({
           )}
       </div>
 
-      <TrackLikeButton trackId={track.id} accentColor={accentColor} className="relative z-[2] shrink-0" />
+      <TrackLikeButton trackId={track.id} className="relative z-[2] shrink-0" />
       <SpeuTrackRowMobileMenu track={track} />
     </div>
   );

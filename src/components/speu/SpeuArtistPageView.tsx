@@ -17,6 +17,7 @@ import {
   SpeuYoutubeIcon,
 } from "@/components/speu/speu-social-icons";
 import { cn } from "@/lib/utils";
+import { useUiAccent } from "@/contexts/UiAccentContext";
 import { getGenreLabelBe } from "@/lib/speu/genre-taxonomy";
 
 function speuTrackCountLabel(n: number): string {
@@ -54,16 +55,15 @@ function TracksSectionHeader({ artistSlug, showAllLink }: { artistSlug: string; 
 function AlbumsStrip({
   albums,
   artistSlug,
-  accent,
   gradientFrom,
   gradientTo,
 }: {
   albums: SpeuArtistAlbum[];
   artistSlug: string;
-  accent: string;
   gradientFrom: string;
   gradientTo: string;
 }) {
+  const { accentColor: accent } = useUiAccent();
   if (albums.length === 0) {
     return (
       <section className="rounded-xl border border-dashed border-border/50 px-4 py-5 text-center text-sm text-muted-foreground">
@@ -129,7 +129,8 @@ function SpeuArtistProfileCard({
   const hasSocials = [instagram, youtube, spotify, telegram].some(
     (u) => typeof u === "string" && u.length > 1
   );
-  const { gradientFrom, gradientTo, accent, accentRgb, pattern } = data.theme;
+  const { gradientFrom, gradientTo, pattern } = data.theme;
+  const { accentColor: accent, accentRgb } = useUiAccent();
 
   return (
     <motion.div
@@ -287,7 +288,7 @@ function SpeuArtistProfileCard({
 export function SpeuArtistPageView({ data }: { data: SpeuArtistPageData }) {
   const profileColRef = useRef<HTMLDivElement>(null);
   const [tracksColHeight, setTracksColHeight] = useState<number | null>(null);
-  const { accent, gradientFrom, gradientTo } = data.theme;
+  const { gradientFrom, gradientTo } = data.theme;
 
   const singlesTracks = useMemo(() => data.tracks.filter((t) => !t.album), [data.tracks]);
   const hasSingles = singlesTracks.length > 0;
@@ -351,7 +352,6 @@ export function SpeuArtistPageView({ data }: { data: SpeuArtistPageData }) {
           <AlbumsStrip
             albums={albumsForStrip}
             artistSlug={data.slug}
-            accent={accent}
             gradientFrom={gradientFrom}
             gradientTo={gradientTo}
           />
@@ -367,7 +367,6 @@ export function SpeuArtistPageView({ data }: { data: SpeuArtistPageData }) {
               <AlbumsStrip
                 albums={albumsForStrip}
                 artistSlug={data.slug}
-                accent={accent}
                 gradientFrom={gradientFrom}
                 gradientTo={gradientTo}
               />
