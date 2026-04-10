@@ -64,10 +64,10 @@ export function SpeuHubClient({
   return (
     <div className="min-h-screen pt-20 pb-28 px-3 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        <section className="relative mb-0 overflow-x-clip">
-          {/* Мяккае «поле» за пластынай — глыбіня без шуму */}
+        <section className="relative mb-0">
+          {/* Мяккае «поле» за пластынай — на ўсю шырыню экрана (без overflow-x-clip, інакш размыцце рэжацца па баках) */}
           <div
-            className="pointer-events-none absolute left-1/2 top-[38%] sm:top-[40%] z-0 h-[min(78vw,22rem)] w-[min(110vw,36rem)] -translate-x-1/2 rounded-[50%] bg-primary/[0.07] blur-3xl dark:bg-primary/[0.09]"
+            className="pointer-events-none absolute left-1/2 top-[38%] sm:top-[40%] z-0 h-[min(78vw,22rem)] w-[min(100vw,38rem)] -translate-x-1/2 rounded-[50%] bg-primary/[0.07] blur-3xl dark:bg-primary/[0.09]"
             aria-hidden
           />
 

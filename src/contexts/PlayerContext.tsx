@@ -547,9 +547,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
     const onPlaying = () => {
       applyMediaSessionActionHandlers();
-      /* WebKit часта ігнаруе artwork/метаданыя, пастаўленыя да першага «playing». */
-      const tr = trackRef.current;
-      if (tr) setTrackMediaMetadata(tr);
     };
 
     audio.addEventListener("play", onPlay);
