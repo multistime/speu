@@ -744,7 +744,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         void audio.play();
         return;
       }
-      if (!repeatAllRef.current) {
+      if (!repeatAllRef.current && !repeatOneRef.current) {
         audio.pause();
         return;
       }
@@ -773,7 +773,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     }
     let idx = queueIndexRef.current - 1;
     if (idx < 0) {
-      if (!repeatAllRef.current) {
+      if (!repeatAllRef.current && !repeatOneRef.current) {
         seekRatioRef.current(0);
         return;
       }
@@ -793,7 +793,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     }
     let idx = queueIndexRef.current - 1;
     if (idx < 0) {
-      if (!repeatAllRef.current) {
+      if (!repeatAllRef.current && !repeatOneRef.current) {
         seekRatioRef.current(0);
         return;
       }
@@ -839,7 +839,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const canSeek = duration > 0;
 
-  /** Суседзі для каруселі вокладак: пры паўторы ўсёй чаргі — цыклічна; пры паўторы аднаго і адным трэку — той жа трэк з бакоў */
+  /** Суседзі для каруселі вокладак: пры паўторы ўсёй чаргі або аднаго (≥2 трэкаў) — цыклічна; пры адным трэку ў чарзе — той жа трэк з бакоў */
   const [queueNeighborTracks, setQueueNeighborTracks] = useState<{
     prev: PlayerTrack | null;
     next: PlayerTrack | null;
@@ -859,7 +859,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    if (repeatMode === "all" && len >= 2) {
+    if ((repeatMode === "all" || repeatMode === "one") && len >= 2) {
       setQueueNeighborTracks({
         prev: q[(idx - 1 + len) % len] ?? null,
         next: q[(idx + 1) % len] ?? null,
