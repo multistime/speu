@@ -3,7 +3,43 @@ export type MediaSessionTrackFields = {
   title: string;
   artistName?: string | null;
   coverUrl?: string | null;
+  /** Калі ёсьць — паказваецца як «альбом» у Now Playing / Dynamic Island */
+  albumTitle?: string | null;
 };
+
+/** iOS/Safari часта не падхопліваюць адносныя URL для artwork у фоне. */
+function toAbsoluteArtworkUrl(src: string): string {
+  const s = src.trim();
+  if (!s) return s;
+  try {
+    return new URL(s, window.location.href).href;
+  } catch {
+    return s;
+  }
+}
+
+function guessArtworkMimeType(url: string): string | undefined {
+  const path = url.split("?")[0].toLowerCase();
+  if (path.endsWith(".png")) return "image/png";
+  if (path.endsWith(".webp")) return "image/webp";
+  if (path.endsWith(".gif")) return "image/gif";
+  if (path.endsWith(".jpg") || path.endsWith(".jpeg")) return "image/jpeg";
+  return undefined;
+}
+
+/**
+ * Некалькі ўваходаў з sizes дапамагаюць WebKit/iOS выбраць якасць для lock screen і Dynamic Island.
+ * Усе вядуюць на адзін absolute URL — гэта дапушчальна па спэцыфікацыі.
+ */
+function buildArtworkForSrc(absoluteSrc: string): MediaImage[] {
+  const type = guessArtworkMimeType(absoluteSrc);
+  const extra = type ? { type } : {};
+  const hints = ["96x96", "128x128", "192x192", "256x256", "384x384", "512x512"] as const;
+  return [
+    { src: absoluteSrc, ...extra },
+    ...hints.map((sizes) => ({ src: absoluteSrc, sizes, ...extra })),
+  ];
+}
 
 export function setTrackMediaMetadata(track: MediaSessionTrackFields | null): void {
   if (typeof window === "undefined") return;
@@ -19,16 +55,19 @@ export function setTrackMediaMetadata(track: MediaSessionTrackFields | null): vo
   }
 
   const artist = track.artistName?.trim() || "Спеў";
-  const cover = track.coverUrl?.trim();
-  const artwork: MediaImage[] = cover
-    ? [{ src: cover }, { src: cover, sizes: "256x256" }, { src: cover, sizes: "512x512" }]
-    : [];
+  const album = track.albumTitle?.trim() || "Спеў";
+  const rawCover = track.coverUrl?.trim();
+  const absoluteCover = rawCover ? toAbsoluteArtworkUrl(rawCover) : "";
+  const artwork: MediaImage[] =
+    absoluteCover && (absoluteCover.startsWith("https:") || absoluteCover.startsWith("http:"))
+      ? buildArtworkForSrc(absoluteCover)
+      : [];
 
   try {
     navigator.mediaSession.metadata = new MediaMetadata({
       title: track.title.trim() || "Трэк",
       artist,
-      album: "Спеў",
+      album,
       artwork: artwork.length > 0 ? artwork : undefined,
     });
   } catch {
@@ -36,7 +75,7 @@ export function setTrackMediaMetadata(track: MediaSessionTrackFields | null): vo
       navigator.mediaSession.metadata = new MediaMetadata({
         title: track.title.trim() || "Трэк",
         artist,
-        album: "Спеў",
+        album,
       });
     } catch {
       /* ignore */

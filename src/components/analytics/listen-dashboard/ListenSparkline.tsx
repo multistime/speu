@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import type { ArtistListenDailyPoint } from "@/lib/speu/artist-analytics";
+import { smoothLineThroughPoints } from "./chart-path";
 import { ymdRangeInclusive } from "./shared";
 
 type Accent = "emerald" | "primary";
@@ -44,7 +45,7 @@ export function ListenSparkline({
       const y = pad + innerH - (v / maxV) * innerH;
       return { x, y };
     });
-    const pathD = pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
+    const pathD = smoothLineThroughPoints(pts);
     return { pathD };
   }, [daily, rangeStart, rangeEnd, series]);
 

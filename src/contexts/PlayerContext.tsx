@@ -40,6 +40,8 @@ export type PlayerTrack = {
   artistSlug?: string | null;
   /** Альбом для мабільнага меню навігацыі */
   albumSlug?: string | null;
+  /** Назва альбома для Media Session (Dynamic Island / Now Playing) */
+  albumTitle?: string | null;
   /** Усе артысты (меню «⋯» на мабільным) */
   navArtists?: { slug: string; name: string }[];
 };
@@ -545,6 +547,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
     const onPlaying = () => {
       applyMediaSessionActionHandlers();
+      /* WebKit часта ігнаруе artwork/метаданыя, пастаўленыя да першага «playing». */
+      const tr = trackRef.current;
+      if (tr) setTrackMediaMetadata(tr);
     };
 
     audio.addEventListener("play", onPlay);

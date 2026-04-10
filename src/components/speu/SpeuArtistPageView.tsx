@@ -358,12 +358,19 @@ export function SpeuArtistPageView({ data }: { data: SpeuArtistPageData }) {
         </div>
       </div>
 
-      {/* Дэсктоп: адзін экран — сетка + паласа альбомаў */}
-      <div className="box-border hidden h-svh max-h-svh flex-col overflow-hidden pt-20 pb-4 lg:flex">
-        <div className="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col px-4 sm:px-6 lg:px-8">
-          <div className="grid shrink-0 grid-cols-12 gap-6 items-start">
-            <div ref={profileColRef} className="col-span-4 w-full self-start">
+      {/* Дэсктоп: сетка — злева картачка + альбомы, справа трэкі той ж вышыні */}
+      <div className="box-border hidden min-h-svh pt-20 pb-24 lg:block">
+        <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-12 gap-6 items-start">
+            <div ref={profileColRef} className="col-span-4 w-full self-start space-y-6">
               <SpeuArtistProfileCard data={data} className="w-full" />
+              <AlbumsStrip
+                albums={albumsForStrip}
+                artistSlug={data.slug}
+                accent={accent}
+                gradientFrom={gradientFrom}
+                gradientTo={gradientTo}
+              />
             </div>
 
             <div
@@ -394,16 +401,6 @@ export function SpeuArtistPageView({ data }: { data: SpeuArtistPageData }) {
                 </div>
               </div>
             </div>
-          </div>
-
-          <div className="mt-3 min-h-0 flex-1 shrink border-t border-border/40 pt-3 overflow-auto">
-            <AlbumsStrip
-              albums={albumsForStrip}
-              artistSlug={data.slug}
-              accent={accent}
-              gradientFrom={gradientFrom}
-              gradientTo={gradientTo}
-            />
           </div>
         </div>
       </div>

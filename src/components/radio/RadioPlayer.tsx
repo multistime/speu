@@ -1,7 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Loader2, Radio, SkipForward } from "lucide-react";
+import {
+  clearMediaSessionPositionState,
+  setMediaSessionPlaybackState,
+  setTrackMediaMetadata,
+  updateMediaSessionPositionState,
+} from "@/lib/player-media-session";
 
 type RadioTrack = {
   id: string;
@@ -48,8 +54,8 @@ export function RadioPlayer() {
   const [streamSrc, setStreamSrc] = useState<string | null>(null);
 
   const playlistAudioRef = useRef<HTMLAudioElement | null>(null);
+  const streamAudioRef = useRef<HTMLAudioElement | null>(null);
   const autoplayAfterTrackChangeRef = useRef(false);
-  const playlistTrackCountRef = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -90,8 +96,6 @@ export function RadioPlayer() {
       ? shuffledTracks[playlistIndex % shuffledTracks.length]
       : null;
 
-  playlistTrackCountRef.current = shuffledTracks.length;
-
   useEffect(() => {
     if (data?.mode !== "playlist" || !currentTrack) return;
     if (!autoplayAfterTrackChangeRef.current) return;
@@ -110,15 +114,15 @@ export function RadioPlayer() {
       el.addEventListener("canplay", tryPlay, { once: true });
       return () => el.removeEventListener("canplay", tryPlay);
     }
-  }, [data?.mode, currentTrack?.id, currentTrack?.audioUrl]);
+  }, [data?.mode, currentTrack]);
 
   const advancePlaylist = useCallback(() => {
-    const n = playlistTrackCountRef.current;
+    const n = shuffledTracks.length;
     if (n <= 1) return;
     const el = playlistAudioRef.current;
     if (el && !el.paused) autoplayAfterTrackChangeRef.current = true;
     setPlaylistIndex((i) => (i + 1) % n);
-  }, []);
+  }, [shuffledTracks.length]);
 
   const handlePlaylistEnded = useCallback(() => {
     advancePlaylist();
@@ -127,6 +131,181 @@ export function RadioPlayer() {
   const goNext = useCallback(() => {
     advancePlaylist();
   }, [advancePlaylist]);
+
+  const radioAlbumLabel = data?.name?.trim() || "Спеў — радыё";
+
+  useLayoutEffect(() => {
+    if (typeof navigator === "undefined" || !("mediaSession" in navigator)) return;
+    if (!data || data.mode !== "playlist" || !currentTrack) return;
+
+    const el = playlistAudioRef.current;
+    if (!el) {
+      return () => {
+        setTrackMediaMetadata(null);
+        clearMediaSessionPositionState();
+        setMediaSessionPlaybackState("none");
+      };
+    }
+
+    const syncMetadata = () => {
+      setTrackMediaMetadata({
+        title: currentTrack.title,
+        artistName: currentTrack.artistName ?? radioAlbumLabel,
+        coverUrl: currentTrack.coverUrl,
+        albumTitle: radioAlbumLabel,
+      });
+    };
+
+    const onPlaying = () => {
+      syncMetadata();
+      setMediaSessionPlaybackState("playing");
+      updateMediaSessionPositionState(el);
+    };
+
+    const onPlay = () => {
+      setMediaSessionPlaybackState("playing");
+      updateMediaSessionPositionState(el);
+    };
+
+    const onPause = () => {
+      setMediaSessionPlaybackState(el.src?.trim() ? "paused" : "none");
+    };
+
+    const onLoaded = () => {
+      updateMediaSessionPositionState(el);
+    };
+
+    const onTime = () => {
+      updateMediaSessionPositionState(el);
+    };
+
+    syncMetadata();
+
+    const next = () => {
+      advancePlaylist();
+    };
+
+    try {
+      navigator.mediaSession.setActionHandler("play", () => void el.play());
+      navigator.mediaSession.setActionHandler("pause", () => el.pause());
+      if (shuffledTracks.length > 1) {
+        navigator.mediaSession.setActionHandler("nexttrack", next);
+      } else {
+        navigator.mediaSession.setActionHandler("nexttrack", null);
+      }
+      navigator.mediaSession.setActionHandler("previoustrack", null);
+    } catch {
+      /* ignore */
+    }
+
+    el.addEventListener("playing", onPlaying);
+    el.addEventListener("play", onPlay);
+    el.addEventListener("pause", onPause);
+    el.addEventListener("loadedmetadata", onLoaded);
+    el.addEventListener("timeupdate", onTime);
+
+    return () => {
+      el.removeEventListener("playing", onPlaying);
+      el.removeEventListener("play", onPlay);
+      el.removeEventListener("pause", onPause);
+      el.removeEventListener("loadedmetadata", onLoaded);
+      el.removeEventListener("timeupdate", onTime);
+      try {
+        navigator.mediaSession.setActionHandler("play", null);
+        navigator.mediaSession.setActionHandler("pause", null);
+        navigator.mediaSession.setActionHandler("nexttrack", null);
+        navigator.mediaSession.setActionHandler("previoustrack", null);
+      } catch {
+        /* ignore */
+      }
+      setTrackMediaMetadata(null);
+      clearMediaSessionPositionState();
+      setMediaSessionPlaybackState("none");
+    };
+  }, [data, currentTrack, radioAlbumLabel, shuffledTracks.length, advancePlaylist]);
+
+  useLayoutEffect(() => {
+    if (typeof navigator === "undefined" || !("mediaSession" in navigator)) return;
+    if (!data || data.mode !== "stream") return;
+
+    const activeStream = streamSrc || data.streamUrl;
+    if (!activeStream) return;
+
+    const title = data.name?.trim() || "Радыё";
+    const artist = data.description?.trim() || "Прамая трансляцыя";
+
+    const streamMeta = {
+      title,
+      artistName: artist,
+      albumTitle: radioAlbumLabel,
+    };
+
+    setTrackMediaMetadata(streamMeta);
+
+    const el = streamAudioRef.current;
+    if (!el) {
+      return () => {
+        setTrackMediaMetadata(null);
+        clearMediaSessionPositionState();
+        setMediaSessionPlaybackState("none");
+      };
+    }
+
+    const onPlaying = () => {
+      setTrackMediaMetadata(streamMeta);
+      setMediaSessionPlaybackState("playing");
+      updateMediaSessionPositionState(el);
+    };
+
+    const onPlay = () => {
+      setMediaSessionPlaybackState("playing");
+      updateMediaSessionPositionState(el);
+    };
+
+    const onPause = () => {
+      setMediaSessionPlaybackState(el.src?.trim() ? "paused" : "none");
+    };
+
+    const onLoaded = () => {
+      updateMediaSessionPositionState(el);
+    };
+
+    const onTime = () => {
+      updateMediaSessionPositionState(el);
+    };
+
+    try {
+      navigator.mediaSession.setActionHandler("play", () => void el.play());
+      navigator.mediaSession.setActionHandler("pause", () => el.pause());
+      navigator.mediaSession.setActionHandler("nexttrack", null);
+      navigator.mediaSession.setActionHandler("previoustrack", null);
+    } catch {
+      /* ignore */
+    }
+
+    el.addEventListener("playing", onPlaying);
+    el.addEventListener("play", onPlay);
+    el.addEventListener("pause", onPause);
+    el.addEventListener("loadedmetadata", onLoaded);
+    el.addEventListener("timeupdate", onTime);
+
+    return () => {
+      el.removeEventListener("playing", onPlaying);
+      el.removeEventListener("play", onPlay);
+      el.removeEventListener("pause", onPause);
+      el.removeEventListener("loadedmetadata", onLoaded);
+      el.removeEventListener("timeupdate", onTime);
+      try {
+        navigator.mediaSession.setActionHandler("play", null);
+        navigator.mediaSession.setActionHandler("pause", null);
+      } catch {
+        /* ignore */
+      }
+      setTrackMediaMetadata(null);
+      clearMediaSessionPositionState();
+      setMediaSessionPlaybackState("none");
+    };
+  }, [data, streamSrc, radioAlbumLabel]);
 
   if (loading) {
     return (
@@ -247,6 +426,7 @@ export function RadioPlayer() {
   return (
     <div className="space-y-3">
       <audio
+        ref={streamAudioRef}
         controls
         className="speu-native-audio"
         src={activeStream}

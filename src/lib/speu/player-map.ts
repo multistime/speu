@@ -14,6 +14,7 @@ export function speuPublicTrackToPlayerTrack(t: SpeuPublicTrack): PlayerTrack {
     trackHref: `/speu/tracks/${t.slug}`,
     artistSlug: primary?.slug ?? null,
     albumSlug: t.album?.slug ?? null,
+    albumTitle: t.album?.title ?? null,
     navArtists: t.artists.map((a) => ({ slug: a.slug, name: a.name })),
   };
 }

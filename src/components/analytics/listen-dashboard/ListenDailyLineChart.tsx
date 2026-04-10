@@ -3,6 +3,7 @@
 import { useCallback, useId, useMemo, useRef, useState } from "react";
 import type { ArtistListenDailyPoint } from "@/lib/speu/artist-analytics";
 import { cn } from "@/lib/utils";
+import { smoothAreaPath, smoothLineThroughPoints } from "./chart-path";
 import { ymdRangeInclusive } from "./shared";
 
 export type ListenChartAccent = "emerald" | "primary";
@@ -12,14 +13,12 @@ export function ListenDailyLineChart({
   rangeStart,
   rangeEnd,
   accent,
-  onOpenMethodology,
   className,
 }: {
   days: ArtistListenDailyPoint[];
   rangeStart: string;
   rangeEnd: string;
   accent: ListenChartAccent;
-  onOpenMethodology?: () => void;
   className?: string;
 }) {
   const uid = useId();
@@ -46,6 +45,8 @@ export function ListenDailyLineChart({
   const innerH = h - padT - padB;
   const n = filled.length;
 
+  const bottomY = padT + innerH;
+
   const geometry = useMemo(() => {
     if (n === 0) return { pts: [] as { x: number; y: number; d: string; full: number; partial: number }[], areaD: "", lineD: "" };
     const pts = filled.map((row, i) => {
@@ -54,13 +55,11 @@ export function ListenDailyLineChart({
       const y = padT + innerH - (total / maxVal) * innerH;
       return { x, y, d: row.d, full: row.full, partial: row.partial };
     });
-    const lineD = pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
-    const areaD =
-      pts.length > 0
-        ? `${lineD} L ${pts[pts.length - 1].x} ${padT + innerH} L ${pts[0].x} ${padT + innerH} Z`
-        : "";
+    const curvePts = pts.map((p) => ({ x: p.x, y: p.y }));
+    const lineD = smoothLineThroughPoints(curvePts);
+    const areaD = curvePts.length > 0 ? smoothAreaPath(curvePts, bottomY) : "";
     return { pts, areaD, lineD };
-  }, [filled, n, innerW, innerH, maxVal, padL, padT]);
+  }, [filled, n, innerW, innerH, maxVal, padL, padT, bottomY]);
 
   const wrapRef = useRef<HTMLDivElement>(null);
   const [hover, setHover] = useState<{ idx: number; tipLeft: number; tipTop: number } | null>(null);
@@ -94,17 +93,7 @@ export function ListenDailyLineChart({
 
   return (
     <div ref={wrapRef} className={cn("relative w-full", className)}>
-      <div
-        className="w-full overflow-x-auto cursor-crosshair"
-        role="presentation"
-        onClick={() => onOpenMethodology?.()}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            onOpenMethodology?.();
-          }
-        }}
-      >
+      <div className="w-full overflow-x-auto cursor-crosshair" role="presentation">
         <svg
           width={w}
           height={h}
@@ -114,7 +103,6 @@ export function ListenDailyLineChart({
           aria-label="Дынаміка праслухоўванняў па днях"
           onMouseMove={onSvgMove}
           onMouseLeave={onSvgLeave}
-          tabIndex={onOpenMethodology ? 0 : undefined}
         >
           <defs>
             {accent === "emerald" ? (
@@ -227,9 +215,6 @@ export function ListenDailyLineChart({
             </span>
           </p>
         </div>
-      ) : null}
-      {onOpenMethodology ? (
-        <p className="mt-1 text-[10px] text-muted-foreground/80">Націсніце на графік, каб прачытаць, як лічым паказчыкі.</p>
       ) : null}
     </div>
   );

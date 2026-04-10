@@ -90,7 +90,6 @@ export function LabelListenOverviewClient() {
         icon: Headphones,
         accentKey: "primary" as const,
         sparkline: { daily: data.daily, rangeStart: rs, rangeEnd: re, series: "total" as const },
-        onPress: () => setMethodologyOpen(true),
       },
       {
         key: "unique",
@@ -99,7 +98,6 @@ export function LabelListenOverviewClient() {
         delta: formatListenDelta(s.unique_listeners, s.prev_unique_listeners),
         icon: Users,
         accentKey: "sky" as const,
-        onPress: () => setMethodologyOpen(true),
       },
       {
         key: "full",
@@ -109,7 +107,6 @@ export function LabelListenOverviewClient() {
         icon: TrendingUp,
         accentKey: "teal" as const,
         sparkline: { daily: data.daily, rangeStart: rs, rangeEnd: re, series: "full" as const },
-        onPress: () => setMethodologyOpen(true),
       },
       {
         key: "top",
@@ -171,10 +168,11 @@ export function LabelListenOverviewClient() {
               <button
                 type="button"
                 onClick={() => setMethodologyOpen(true)}
-                className="inline-flex items-center gap-1 rounded-lg border border-border/80 bg-card/40 px-2 py-1 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border/80 bg-card/40 text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                aria-label="Як лічым"
+                title="Як лічым"
               >
-                <Info className="h-3.5 w-3.5" strokeWidth={1.5} />
-                Як лічым
+                <Info className="h-4 w-4" strokeWidth={1.5} />
               </button>
             </div>
             <p className="text-sm text-muted-foreground mt-0.5">Каталог і праслухоўванні</p>
@@ -267,7 +265,6 @@ export function LabelListenOverviewClient() {
             rangeStart={data.range.start}
             rangeEnd={data.range.end}
             accent="primary"
-            onOpenMethodology={() => setMethodologyOpen(true)}
           />
         </div>
         <div className="lg:col-span-2 flex flex-col gap-6">
