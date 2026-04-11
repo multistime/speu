@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createAnonServerClient, createClient } from "@/lib/supabase/server";
+import { createAnonServerClient, createClient, hasSupabasePublicEnv } from "@/lib/supabase/server";
 import { topGenreCodesFromTrackLists } from "@/lib/speu/artist-genres";
 import { pickAudioUrl } from "@/lib/speu/audio";
 import { DEFAULT_UI_ACCENT_PRESET_ID, resolveUiAccent } from "@/lib/speu/ui-accent";
@@ -18,6 +18,11 @@ import type {
   SpeuTrackVocalLanguage,
   SpeuTrackWorkKind,
 } from "@/lib/speu/types";
+
+function publicAnonClient() {
+  if (!hasSupabasePublicEnv()) return null;
+  return createAnonServerClient();
+}
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -206,7 +211,8 @@ function chartSort(a: SpeuPublicTrack, b: SpeuPublicTrack): number {
 }
 
 export async function fetchSpeuPlayableTracks(): Promise<SpeuPublicTrack[]> {
-  const supabase = createAnonServerClient();
+  const supabase = publicAnonClient();
+  if (!supabase) return [];
   const { data, error } = await supabase
     .schema("speu")
     .from("artist_tracks")
@@ -276,7 +282,8 @@ export async function fetchSpeuUserLikedTracks(limit?: number | null): Promise<S
 }
 
 export async function fetchSpeuHubArtists(limit = 20): Promise<SpeuHubArtistCard[]> {
-  const supabase = createAnonServerClient();
+  const supabase = publicAnonClient();
+  if (!supabase) return [];
   const { data, error } = await supabase
     .schema("speu")
     .from("artists")
@@ -344,7 +351,8 @@ export async function fetchSpeuHubArtists(limit = 20): Promise<SpeuHubArtistCard
 }
 
 export async function fetchSpeuArtistBySlug(slug: string): Promise<SpeuArtistPageData | null> {
-  const supabase = createAnonServerClient();
+  const supabase = publicAnonClient();
+  if (!supabase) return null;
   const { data: artist, error: aErr } = await supabase
     .schema("speu")
     .from("artists")
@@ -481,7 +489,8 @@ export async function fetchSpeuArtistBySlug(slug: string): Promise<SpeuArtistPag
 }
 
 export async function fetchSpeuAlbumBySlugOrId(param: string): Promise<SpeuAlbumPageData | null> {
-  const supabase = createAnonServerClient();
+  const supabase = publicAnonClient();
+  if (!supabase) return null;
 
   let album: {
     id: string;
@@ -655,7 +664,8 @@ const SPEU_TRACK_PAGE_TRACK_SELECT = `
     ` as const;
 
 export async function fetchSpeuTrackBySlugOrId(param: string): Promise<SpeuTrackPageData | null> {
-  const supabase = createAnonServerClient();
+  const supabase = publicAnonClient();
+  if (!supabase) return null;
 
   let row: Record<string, unknown> | null = null;
 
@@ -748,7 +758,8 @@ export async function fetchSpeuChartRows(limit: number): Promise<{
   snapshotDate: string | null;
   usedSnapshot: boolean;
 }> {
-  const supabase = createAnonServerClient();
+  const supabase = publicAnonClient();
+  if (!supabase) return speuChartRowsFromPlayableCatalog(limit);
 
   const { data: dates, error: dErr } = await supabase
     .schema("speu")

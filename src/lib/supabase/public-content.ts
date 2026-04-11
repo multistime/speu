@@ -1,4 +1,4 @@
-import { createAnonServerClient } from "@/lib/supabase/server";
+import { createAnonServerClient, hasSupabasePublicEnv } from "@/lib/supabase/server";
 
 type Block = {
   block_key: string;
@@ -6,6 +6,9 @@ type Block = {
 };
 
 export async function getPageBlocks(slug: string): Promise<Block[]> {
+  if (!hasSupabasePublicEnv()) {
+    return [];
+  }
   const supabase = createAnonServerClient();
   const { data: page } = await supabase
     .schema("speu")
