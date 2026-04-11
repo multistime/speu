@@ -1,20 +1,23 @@
 import { createServerClient } from "@supabase/ssr";
-import { createClient as createSupabaseJsClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 
 /**
- * Ананімны кліент без cookies — для публічнага каталога ў RSC.
- * Паводзіны як у гасця: тыя ж RLS. Абыходзіць праблемы, калі ў браўзеры біты/састарэлы JWT і PostgREST адмаўляе ў чытанні.
+ * Ананімны кліент без cookies сесіі — для публічнага каталога ў RSC/API.
+ * Той жа @supabase/ssr, што і createClient (інлайн NEXT_PUBLIC_* на білдзе); supabase-js напрамую ламае prerender на Vercel.
+ * Паводзіны як у гасця: тыя ж RLS. Абыходзіць біты JWT у cookie.
  */
 export function createAnonServerClient() {
-  return createSupabaseJsClient(
+  return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
+      cookies: {
+        getAll() {
+          return [];
+        },
+        setAll() {
+          /* no session cookies */
+        },
       },
     },
   );
