@@ -52,7 +52,8 @@ export default async function proxy(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
   const routeSlug = pathnameToSiteRouteSlug(pathname);
-  if (routeSlug && !pathname.startsWith("/admin")) {
+  // /speu — дынамічны музычны хаб (Next), не старонка з content_pages; інакш пры адсутнасці slug «speu» у БД гасцей рэдырэктзіць на /
+  if (routeSlug && routeSlug !== "speu" && !pathname.startsWith("/admin")) {
     let skipRedirect = false;
     if (user) {
       const { data: profRows } = await supabase.rpc("get_my_speu_profile");
