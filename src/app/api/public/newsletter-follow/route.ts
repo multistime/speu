@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import { createAnonServerClient } from "@/lib/supabase/server";
 
 const bodySchema = z.object({
   email: z.string().email(),
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
   }
 
   const email = parsed.data.email.trim().toLowerCase();
-  const supabase = await createClient();
+  const supabase = createAnonServerClient();
   const { error } = await supabase.schema("speu").from("newsletter_followers").insert({
     email,
     source: parsed.data.source,

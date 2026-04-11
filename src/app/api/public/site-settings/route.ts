@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createAnonServerClient } from "@/lib/supabase/server";
 
 // Keys that are safe to expose publicly (must match site_settings RLS policy)
 const PUBLIC_KEY_PREFIXES = ["radio_", "artists_", "support_", "speu_"];
@@ -16,7 +16,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
 
-  const supabase = await createClient();
+  const supabase = createAnonServerClient();
 
   let query = supabase.schema("speu").from("site_settings").select("key, value");
 

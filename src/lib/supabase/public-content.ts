@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAnonServerClient } from "@/lib/supabase/server";
 
 type Block = {
   block_key: string;
@@ -6,7 +6,7 @@ type Block = {
 };
 
 export async function getPageBlocks(slug: string): Promise<Block[]> {
-  const supabase = await createClient();
+  const supabase = createAnonServerClient();
   const { data: page } = await supabase
     .schema("speu")
     .from("content_pages")

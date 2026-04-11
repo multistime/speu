@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { topGenreCodesFromTrackLists } from "@/lib/speu/artist-genres";
-import { createClient } from "@/lib/supabase/server";
+import { createAnonServerClient } from "@/lib/supabase/server";
 
 type TrackRow = {
   id: string;
@@ -13,7 +13,7 @@ type TrackRow = {
 };
 
 export async function GET() {
-  const supabase = await createClient();
+  const supabase = createAnonServerClient();
 
   const { data: artists, error: artistsError } = await supabase
     .schema("speu")

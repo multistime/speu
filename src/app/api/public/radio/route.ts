@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createAnonServerClient } from "@/lib/supabase/server";
 
 function pickAudioUrl(row: {
   audio_url: string | null;
@@ -29,7 +29,7 @@ function artistNamesFromTrackRow(trackArtists: unknown): string | null {
 }
 
 export async function GET() {
-  const supabase = await createClient();
+  const supabase = createAnonServerClient();
 
   const { data: settingsRows, error: settingsError } = await supabase
     .schema("speu")

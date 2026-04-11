@@ -1,11 +1,11 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAnonServerClient } from "@/lib/supabase/server";
 import { SITE_ROUTE_SLUGS, slugToPublicPath, SPEU_HUB_HREF } from "@/lib/site-route-slugs";
 
 export { slugToPublicPath, pathnameToSiteRouteSlug, SITE_ROUTE_SLUGS, SPEU_HUB_HREF } from "@/lib/site-route-slugs";
 
 /** Шляхы, якія бачыць анонім/карыстальнік праз RLS (галоўная заўсёды ўключаная) */
 export async function getVisiblePublicHrefs(): Promise<Set<string>> {
-  const supabase = await createClient();
+  const supabase = createAnonServerClient();
   const { data, error } = await supabase
     .schema("speu")
     .from("content_pages")

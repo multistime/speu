@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createAnonServerClient } from "@/lib/supabase/server";
 
 type Params = { params: Promise<{ slug: string }> };
 
 export async function GET(_request: Request, { params }: Params) {
   const { slug } = await params;
-  const supabase = await createClient();
+  const supabase = createAnonServerClient();
 
   const { data: page, error: pageError } = await supabase
     .schema("speu")

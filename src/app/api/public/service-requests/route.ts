@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import { createAnonServerClient } from "@/lib/supabase/server";
 
 const serviceRequestSchema = z.object({
   name: z.string().min(2),
@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "invalid_payload" }, { status: 400 });
   }
 
-  const supabase = await createClient();
+  const supabase = createAnonServerClient();
   const { error } = await supabase.schema("speu").from("service_requests").insert({
     name: parsed.data.name,
     email: parsed.data.email,
