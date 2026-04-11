@@ -1,13 +1,13 @@
 import "server-only";
 
-import { createClient } from "@/lib/supabase/server";
+import { createAnonServerClient } from "@/lib/supabase/server";
 
 const HERO_DISC_KEY = "speu_hub_hero_disc_scale";
 const MIN = 1;
 const MAX = 5;
 
 export async function fetchSpeuHubHeroDiscScale(): Promise<number> {
-  const supabase = await createClient();
+  const supabase = createAnonServerClient();
   const { data } = await supabase
     .schema("speu")
     .from("site_settings")

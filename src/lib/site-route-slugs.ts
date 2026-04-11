@@ -1,6 +1,8 @@
-/** Першы сегмент URL → slug у content_pages (публічныя старонкі) */
+/**
+ * Першы сегмент URL → slug у content_pages (CMS).
+ * «speu» тут наўмысна няма: /speu — дынамічны хаб у Next, не CMS-старонка (інакш proxy рэдырэктзіць гасцей пры адсутнасці/хаванні slug у БД).
+ */
 export const SITE_ROUTE_SLUGS = [
-  "speu",
   "artists",
   "support",
   "services",
@@ -8,6 +10,9 @@ export const SITE_ROUTE_SLUGS = [
   "generator",
   "cabinet",
 ] as const;
+
+/** Шлях публічнага струменя — заўсёды ў навігацыі, незалежна ад content_pages */
+export const SPEU_HUB_HREF = "/speu" as const;
 
 export type SiteRouteSlug = (typeof SITE_ROUTE_SLUGS)[number];
 
