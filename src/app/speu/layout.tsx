@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 
+/** Публічны каталог /speu з БД — не кэшаваць сегмент як статычны */
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Спеў — струмень",
   description:

@@ -3,6 +3,9 @@ import { SpeuTrackRow } from "@/components/speu/SpeuTrackRow";
 import { fetchSpeuChartRows } from "@/lib/speu/catalog.server";
 import { speuPublicTrackToPlayerTrack } from "@/lib/speu/player-map";
 
+/** Чарт і каталог з БД — не кэшаваць старонку як статычную */
+export const dynamic = "force-dynamic";
+
 export default async function SpeuTop100Page() {
   const { rows } = await fetchSpeuChartRows(100);
   const topPlaylist = rows.map((r) => speuPublicTrackToPlayerTrack(r.track));

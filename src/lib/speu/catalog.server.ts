@@ -292,10 +292,14 @@ export async function fetchSpeuHubArtists(limit = 20): Promise<SpeuHubArtistCard
     .order("sort_order", { ascending: true })
     .limit(limit);
 
-  if (error || !data) return [];
+  if (error) {
+    console.warn("[fetchSpeuHubArtists] artists:", error.message);
+    return [];
+  }
+  if (!data) return [];
 
   const artistIds = data.map((a) => a.id);
-  const { data: creditRows } = await supabase
+  const { data: creditRows, error: creditErr } = await supabase
     .schema("speu")
     .from("track_artists")
     .select(
@@ -309,6 +313,10 @@ export async function fetchSpeuHubArtists(limit = 20): Promise<SpeuHubArtistCard
     `
     )
     .in("artist_id", artistIds);
+
+  if (creditErr) {
+    console.warn("[fetchSpeuHubArtists] track_artists:", creditErr.message);
+  }
 
   type CreditHubRow = {
     artist_id: string;
