@@ -133,3 +133,20 @@ export function clearMediaSessionPositionState(): void {
     /* ignore */
   }
 }
+
+/**
+ * Экран блакіроўкі / Now Playing: кнопка «падабаецца» (Media Session `like`).
+ * У старых `lib.dom` няма `like` у MediaSessionAction — прыводзім setActionHandler.
+ */
+export function setMediaSessionLikeActionHandler(handler: (() => void) | null): void {
+  if (typeof navigator === "undefined" || !("mediaSession" in navigator)) return;
+  try {
+    const set = navigator.mediaSession.setActionHandler.bind(navigator.mediaSession) as (
+      action: string,
+      fn: (() => void) | null,
+    ) => void;
+    set("like", handler);
+  } catch {
+    /* не падтрымліваецца */
+  }
+}

@@ -12,6 +12,7 @@ import React, {
 import {
   clearMediaSessionPositionState,
   mediaSessionPrefersTrackButtonsOnLockScreen,
+  setMediaSessionLikeActionHandler,
   setMediaSessionPlaybackState,
   setTrackMediaMetadata,
   updateMediaSessionPositionState,
@@ -26,6 +27,7 @@ import {
   saveSpeuPlayerSession,
 } from "@/lib/speu-player-session-storage";
 import { shuffleArray } from "@/lib/speu/shuffle";
+import { useTrackLikes } from "@/contexts/TrackLikesContext";
 
 export type PlayerTrack = {
   id: string;
@@ -102,6 +104,12 @@ function speuSameAudioSrc(audio: HTMLAudioElement, url: string): boolean {
 }
 
 export function PlayerProvider({ children }: { children: React.ReactNode }) {
+  const { toggleLike } = useTrackLikes();
+  const toggleLikeRef = useRef(toggleLike);
+  useLayoutEffect(() => {
+    toggleLikeRef.current = toggleLike;
+  }, [toggleLike]);
+
   const [track, setTrack] = useState<PlayerTrack | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [repeatMode, setRepeatMode] = useState<PlayerRepeatMode>("off");
@@ -421,6 +429,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       const stopFromOs = () => stopRef.current();
       const next = () => skipNextRef.current();
       const prev = () => skipPreviousRef.current();
+      const like = () => {
+        const id = trackRef.current?.id;
+        if (id) void toggleLikeRef.current(id);
+      };
       try {
         navigator.mediaSession.setActionHandler("play", play);
         navigator.mediaSession.setActionHandler("pause", pause);
@@ -430,6 +442,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       } catch {
         /* duplicate registration etc. */
       }
+      setMediaSessionLikeActionHandler(like);
       if (mediaSessionPrefersTrackButtonsOnLockScreen()) {
         for (const action of ["seekbackward", "seekforward", "seekto"] as const) {
           try {
@@ -453,6 +466,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       } catch {
         /* ignore */
       }
+      setMediaSessionLikeActionHandler(null);
       if (mediaSessionPrefersTrackButtonsOnLockScreen()) {
         for (const action of ["seekbackward", "seekforward", "seekto"] as const) {
           try {
