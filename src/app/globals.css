@@ -339,3 +339,33 @@ audio.speu-native-audio {
 .speu-player-progress-indeterminate {
   animation: speu-player-indeterminate 2.2s ease-in-out infinite alternate;
 }
+
+/* Hero: 100vh fallback, затым 100dvh (адзін клас — без канфлікту ўлітыліт Tailwind) */
+.min-h-hero-dvh {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* Hero demo AudioPlayer — waveform via transform (легчэ для Safari) */
+@keyframes speu-hero-waveform {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+    opacity: 0.45;
+  }
+  50% {
+    transform: scaleY(1);
+    opacity: 0.95;
+  }
+}
+.speu-hero-waveform-bar {
+  transform-origin: bottom;
+  animation: speu-hero-waveform 0.85s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .speu-hero-waveform-bar {
+    animation: none;
+    transform: scaleY(0.45);
+    opacity: 0.55;
+  }
+}

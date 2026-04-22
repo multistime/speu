@@ -92,8 +92,8 @@ export function Navbar({ visibleHrefs }: NavbarProps) {
       className={cn(
         "fixed top-0 left-0 right-0 z-50 w-full min-w-0 transition-all duration-500",
         barActive
-          ? "bg-[var(--glass-bg)] backdrop-blur-lg backdrop-saturate-150 border-0 border-b border-border py-3"
-          : "py-5 bg-transparent"
+          ? "border-0 border-b border-border pb-3 pt-[max(0.75rem,env(safe-area-inset-top,0px))] max-md:!bg-background/95 max-md:!backdrop-blur-none max-md:!backdrop-saturate-100 md:bg-[var(--glass-bg)] md:backdrop-blur-lg md:backdrop-saturate-150"
+          : "bg-transparent pb-5 pt-[max(1.25rem,env(safe-area-inset-top,0px))]",
       )}
     >
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">

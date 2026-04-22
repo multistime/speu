@@ -27,6 +27,8 @@ const DEMO_TRACKS: Track[] = [
   { id: "3", title: "Лясны Сігнал", artist: "Спеў", duration: 263 },
 ];
 
+const WAVE_BAR_COUNT = 16;
+
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = Math.floor(seconds % 60);
@@ -35,34 +37,18 @@ function formatTime(seconds: number): string {
 
 function WaveformBars({ isPlaying, accent }: { isPlaying: boolean; accent: string }) {
   return (
-    <div className="flex items-center gap-[3px] h-8">
-      {Array.from({ length: 28 }).map((_, i) => (
-        <motion.div
+    <div className="flex h-8 items-end gap-[3px]" aria-hidden>
+      {Array.from({ length: WAVE_BAR_COUNT }).map((_, i) => (
+        <span
           key={i}
-          className="w-[2px] rounded-full"
-          style={{ backgroundColor: accent }}
-          animate={
-            isPlaying
-              ? {
-                  height: [
-                    `${8 + Math.sin(i * 0.8) * 8}px`,
-                    `${16 + Math.sin(i * 0.5 + 1) * 12}px`,
-                    `${8 + Math.sin(i * 0.8) * 8}px`,
-                  ],
-                  opacity: [0.4, 0.9, 0.4],
-                }
-              : { height: "4px", opacity: 0.3 }
-          }
-          transition={
-            isPlaying
-              ? {
-                  duration: 0.8 + (i % 5) * 0.12,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                  delay: i * 0.04,
-                }
-              : { duration: 0.3 }
-          }
+          className={cn(
+            "w-[2px] rounded-full",
+            isPlaying ? "speu-hero-waveform-bar h-6" : "h-1 opacity-40",
+          )}
+          style={{
+            backgroundColor: accent,
+            animationDelay: isPlaying ? `${i * 0.04}s` : undefined,
+          }}
         />
       ))}
     </div>
@@ -141,11 +127,14 @@ export function AudioPlayer() {
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.8, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-      className="glass rounded-2xl p-5 w-full max-w-lg border"
+      className={cn(
+        "glass w-full max-w-lg rounded-2xl border p-5",
+        "max-md:bg-card/95 max-md:[backdrop-filter:none] max-md:[-webkit-backdrop-filter:none]",
+      )}
       style={{ borderColor: cardBorder }}
     >
       {/* Track info */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="mb-4 flex items-center justify-between">
         <div>
           <AnimatePresence mode="wait">
             <motion.p
@@ -154,12 +143,12 @@ export function AudioPlayer() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.25 }}
-              className="font-mono font-semibold text-sm text-foreground"
+              className="font-mono text-sm font-semibold text-foreground"
             >
               {track.title}
             </motion.p>
           </AnimatePresence>
-          <p className="text-xs mt-0.5 text-muted-foreground">
+          <p className="mt-0.5 text-xs text-muted-foreground">
             {track.artist}
           </p>
         </div>
@@ -168,7 +157,7 @@ export function AudioPlayer() {
 
       {/* Progress bar */}
       <div
-        className="relative h-1 rounded-full mb-3 cursor-pointer group bg-muted"
+        className="group relative mb-3 h-1 cursor-pointer rounded-full bg-muted"
         onClick={seek}
       >
         <motion.div
@@ -177,7 +166,7 @@ export function AudioPlayer() {
           transition={{ duration: 0.1 }}
         />
         <div
-          className="absolute top-1/2 -translate-y-1/2 h-3 w-3 rounded-full opacity-0 group-hover:opacity-100 transition-opacity -translate-x-1/2"
+          className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-0 transition-opacity group-hover:opacity-100"
           style={{
             left: `${progress}%`,
             backgroundColor: accent,
@@ -187,7 +176,7 @@ export function AudioPlayer() {
       </div>
 
       {/* Time */}
-      <div className="flex justify-between text-[10px] font-mono mb-4 text-muted-foreground/80">
+      <div className="mb-4 flex justify-between text-[10px] font-mono text-muted-foreground/80">
         <span>{formatTime(currentTime)}</span>
         <span>{formatTime(track.duration)}</span>
       </div>
@@ -195,8 +184,9 @@ export function AudioPlayer() {
       {/* Controls */}
       <div className="flex items-center justify-between">
         <button
+          type="button"
           onClick={() => setMuted((m) => !m)}
-          className="p-2 rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+          className="rounded-lg p-2 text-muted-foreground transition-colors hover:text-foreground"
         >
           {muted ? (
             <VolumeX className="h-4 w-4" />
@@ -207,17 +197,19 @@ export function AudioPlayer() {
 
         <div className="flex items-center gap-2">
           <button
+            type="button"
             onClick={skipPrev}
-            className="p-2 rounded-lg transition-colors text-muted-foreground hover:text-foreground hover:bg-muted"
+            className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             <SkipBack className="h-4 w-4" strokeWidth={1.5} />
           </button>
 
           <motion.button
+            type="button"
             onClick={togglePlay}
             whileTap={{ scale: 0.92 }}
             className={cn(
-              "relative flex items-center justify-center h-11 w-11 rounded-full font-medium transition-all duration-300 hover:scale-105 bg-primary text-primary-foreground"
+              "relative flex h-11 w-11 items-center justify-center rounded-full bg-primary font-medium text-primary-foreground transition-all duration-300 hover:scale-105",
             )}
             style={{
               boxShadow: playShadow,
@@ -255,8 +247,9 @@ export function AudioPlayer() {
           </motion.button>
 
           <button
+            type="button"
             onClick={skipNext}
-            className="p-2 rounded-lg transition-colors text-muted-foreground hover:text-foreground hover:bg-muted"
+            className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             <SkipForward className="h-4 w-4" strokeWidth={1.5} />
           </button>
