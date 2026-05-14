@@ -374,10 +374,8 @@ audio.speu-native-audio {
 }
 
 /* Mobile / PWA: bottom tab bar — extra space над футэрам */
-@media (max-width: 767px) {
-  body.speu-bottom-nav-active footer {
-    padding-bottom: var(--speu-mobile-bottom-stack);
-  }
+body.speu-bottom-nav-active footer {
+  padding-bottom: var(--speu-mobile-bottom-stack);
 }
 
 /* Вузкі экран + усталяваная PWA: хаваем скролбары караня, без гарызантальнага счаплення старонкі */

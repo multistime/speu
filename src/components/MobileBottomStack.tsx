@@ -49,7 +49,7 @@ export function MobileBottomStack({ logoHref }: MobileBottomStackProps) {
   if (!showBottomNav || !dockCtx) return null;
 
   return (
-    <div ref={stackRef} className="fixed bottom-0 left-0 right-0 z-[100] flex flex-col md:hidden">
+    <div ref={stackRef} className="fixed bottom-0 left-0 right-0 z-[100] flex flex-col">
       <div
         ref={(el) => {
           flushSync(() => {

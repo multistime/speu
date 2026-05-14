@@ -662,7 +662,9 @@ function MobileNowPlayingSheet({
   shuffleEnabled: boolean;
   repeatLabel: string;
 }) {
-  const { showBottomNav } = useSpeuMobileChrome();
+  const { showBottomNav, narrowViewport } = useSpeuMobileChrome();
+  /** Мабільная шторка: вузкі экран або PWA са знізу табам (tablet landscape / усталяваны выгляд). */
+  const useMobileMiniChrome = narrowViewport || showBottomNav;
   /** Ніз шторкі = сумарная вышыня таб-бара + дака (дзеля зменных глядзі `globals.css`, px з ResizeObserver). */
   const sheetBottomInset = showBottomNav ? "var(--speu-mobile-bottom-stack)" : "0px";
 
@@ -804,7 +806,8 @@ function MobileNowPlayingSheet({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             className={cn(
-              "fixed left-0 right-0 top-0 z-[85] bg-black/45 backdrop-blur-[2px] md:hidden",
+              "fixed left-0 right-0 top-0 z-[85] bg-black/45 backdrop-blur-[2px]",
+              !useMobileMiniChrome && "hidden",
             )}
             style={{ bottom: sheetBottomInset }}
             aria-hidden
@@ -820,7 +823,8 @@ function MobileNowPlayingSheet({
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 34, stiffness: 380 }}
             className={cn(
-              "fixed inset-x-0 z-[90] max-h-[88dvh] md:hidden",
+              "fixed inset-x-0 z-[90] max-h-[88dvh]",
+              !useMobileMiniChrome && "hidden",
             )}
             style={{ bottom: sheetBottomInset }}
           >
@@ -989,6 +993,7 @@ export function GlobalPlayer() {
   const canSkipNext = queueNav;
 
   const { showBottomNav, narrowViewport } = useSpeuMobileChrome();
+  /** Слот у `MobileBottomStack` — усё ніжні «дак + таб» кіруецца адным стэком, без `md:hidden`/портала на narrow-only. */
   const dockSlot = useMobileDockSlot()?.dockSlotEl ?? null;
 
   const repeatLabel = !queueNav
@@ -1089,7 +1094,7 @@ export function GlobalPlayer() {
   return (
     <>
       {/* Мабільная дак-панель у слоце над таб-барам — адзін стэк, без падзелу fixed + падлікаў */}
-      {narrowViewport && showBottomNav && dockSlot && track
+      {showBottomNav && dockSlot && track
         ? createPortal(
             <motion.div
               key="speu-mobile-dock-slot"
@@ -1123,9 +1128,9 @@ export function GlobalPlayer() {
         ) : null}
       </AnimatePresence>
 
-      {/* Дак-топ-бар для шырокага viewport */}
+      {/* Поўны док-бар без ніжняга таб-бара (звычайны дэсктоп / admin на шырокім экране) */}
       <AnimatePresence>
-        {track && !narrowViewport ? (
+        {track && !showBottomNav && !narrowViewport ? (
           <motion.div
             key="global-player-desktop"
             initial={{ y: 100, opacity: 0 }}
