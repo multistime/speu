@@ -1,5 +1,10 @@
 import { createAnonServerClient, hasSupabasePublicEnv } from "@/lib/supabase/server";
-import { SITE_ROUTE_SLUGS, slugToPublicPath, SPEU_HUB_HREF } from "@/lib/site-route-slugs";
+import {
+  homeSlugToPublicHref,
+  SITE_ROUTE_SLUGS,
+  slugToPublicPath,
+  SPEU_HUB_HREF,
+} from "@/lib/site-route-slugs";
 
 export { slugToPublicPath, pathnameToSiteRouteSlug, SITE_ROUTE_SLUGS, SPEU_HUB_HREF } from "@/lib/site-route-slugs";
 
@@ -30,7 +35,7 @@ export async function getVisiblePublicHrefs(): Promise<Set<string>> {
       break;
     }
   }
-  const hrefs = new Set<string>([SPEU_HUB_HREF]);
+  const hrefs = new Set<string>([SPEU_HUB_HREF, homeSlugToPublicHref(homeSlug)]);
   for (const row of data) {
     hrefs.add(slugToPublicPath(row.slug, homeSlug));
   }

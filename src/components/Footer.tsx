@@ -2,9 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Music2, Sparkles, Headphones, Heart, Users, Radio, Disc3 } from "lucide-react";
+import { Music2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { getSpeuProfile } from "@/lib/supabase/speu";
+import { SiteNavIcon } from "@/components/SiteNavIcon";
+import type { SiteNavItem } from "@/lib/site-nav";
+import { SPEU_HUB_HREF } from "@/lib/site-route-slugs";
 
 /* ── Custom brand SVG icons ──────────────────────────────────────────── */
 
@@ -80,22 +83,31 @@ const SOCIAL_LINKS = [
   },
 ] as const;
 
-const FOOTER_LINKS = [
-  { href: "/speu",      label: "Спеў",       icon: Disc3 },
-  { href: "/generator", label: "Генератар",  icon: Sparkles },
-  { href: "/artists",   label: "Артысты",    icon: Users },
-  { href: "/radio",     label: "Радыё Мара", icon: Radio },
-  { href: "/services",  label: "Паслугі",    icon: Headphones },
-  { href: "/support",   label: "Падтрымка",  icon: Heart },
+const FOOTER_LINKS_LEGACY: SiteNavItem[] = [
+  { slug: "speu", title: "Спеў", href: SPEU_HUB_HREF },
+  { slug: "generator", title: "Генератар", href: "/generator" },
+  { slug: "artists", title: "Артысты", href: "/artists" },
+  { slug: "radio", title: "Радыё Мара", href: "/radio" },
+  { slug: "services", title: "Паслугі", href: "/services" },
+  { slug: "support", title: "Падтрымка", href: "/support" },
 ];
 
 type FooterProps = {
   visibleHrefs: string[];
+  logoHref: string;
+  navItems: SiteNavItem[];
+  navItemsExpanded?: SiteNavItem[];
 };
 
-export function Footer({ visibleHrefs }: FooterProps) {
+export function Footer({
+  visibleHrefs,
+  logoHref,
+  navItems,
+  navItemsExpanded,
+}: FooterProps) {
   const visibleSet = new Set(visibleHrefs);
   const [adminShowAllPages, setAdminShowAllPages] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
@@ -105,15 +117,18 @@ export function Footer({ visibleHrefs }: FooterProps) {
       const user = data.user;
       if (!user) {
         setAdminShowAllPages(false);
+        setIsAdmin(false);
         return;
       }
       try {
         const profile = await getSpeuProfile(supabase, user.id);
+        setIsAdmin(Boolean(profile?.is_admin));
         setAdminShowAllPages(
-          Boolean(profile?.is_admin && profile?.admin_show_all_pages)
+          Boolean(profile?.is_admin && profile?.admin_show_all_pages),
         );
       } catch {
         setAdminShowAllPages(false);
+        setIsAdmin(false);
       }
     };
 
@@ -127,10 +142,15 @@ export function Footer({ visibleHrefs }: FooterProps) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const footerLinks = FOOTER_LINKS.filter((l) => {
-    if (adminShowAllPages) return true;
-    return visibleSet.has(l.href);
-  });
+  const effectiveNav =
+    isAdmin && adminShowAllPages && navItemsExpanded && navItemsExpanded.length > 0
+      ? navItemsExpanded
+      : navItems.length > 0
+        ? navItems
+        : FOOTER_LINKS_LEGACY.filter((l) => {
+            if (adminShowAllPages) return true;
+            return visibleSet.has(l.href);
+          });
 
   return (
     <footer className="border-t border-border bg-background">
@@ -140,7 +160,7 @@ export function Footer({ visibleHrefs }: FooterProps) {
 
           {/* Brand column */}
           <div>
-            <Link href="/" className="group flex items-center gap-2.5 mb-4">
+            <Link href={logoHref} className="group flex items-center gap-2.5 mb-4">
               <Music2 className="h-5 w-5 text-primary" strokeWidth={1.5} />
               <span className="font-mono text-base font-semibold tracking-wider text-foreground">
                 SPE<span className="text-primary">Ǔ</span>
@@ -174,14 +194,14 @@ export function Footer({ visibleHrefs }: FooterProps) {
               Навігацыя
             </p>
             <ul className="space-y-2">
-              {footerLinks.map(({ href, label, icon: Icon }) => (
-                <li key={href}>
+              {effectiveNav.map(({ href, title, slug }) => (
+                <li key={slug}>
                   <Link
                     href={href}
                     className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors duration-200 group"
                   >
-                    <Icon className="h-3.5 w-3.5 opacity-40 group-hover:opacity-70 transition-opacity" strokeWidth={1.5} />
-                    {label}
+                    <SiteNavIcon slug={slug} className="h-3.5 w-3.5 opacity-40 group-hover:opacity-70 transition-opacity" />
+                    {title}
                   </Link>
                 </li>
               ))}

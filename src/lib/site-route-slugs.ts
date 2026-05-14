@@ -14,6 +14,15 @@ export const SITE_ROUTE_SLUGS = [
 /** Шлях публічнага струменя — заўсёды ў навігацыі, незалежна ад content_pages */
 export const SPEU_HUB_HREF = "/speu" as const;
 
+/** Slug у content_pages, які адпавядае дынамічнаму хабу Next `/speu` (не блытаць з `/`) */
+export const SPEU_HUB_SLUG = "speu" as const;
+
+/** Куды вядзе лога і што лічыць «каранём» сайта: хаб заўсёды `/speu`, іншыя галоўныя — `/` */
+export function homeSlugToPublicHref(homeSlug: string): string {
+  if (homeSlug === SPEU_HUB_SLUG) return SPEU_HUB_HREF;
+  return slugToPublicPath(homeSlug, homeSlug);
+}
+
 export type SiteRouteSlug = (typeof SITE_ROUTE_SLUGS)[number];
 
 export function pathnameToSiteRouteSlug(pathname: string): SiteRouteSlug | null {
@@ -24,6 +33,12 @@ export function pathnameToSiteRouteSlug(pathname: string): SiteRouteSlug | null 
   return (SITE_ROUTE_SLUGS as readonly string[]).includes(seg)
     ? (seg as SiteRouteSlug)
     : null;
+}
+
+/** Публічны URL для slug старонкі KMS (`/speu` для хаба, інакш з улікам галоўнай) */
+export function publicHrefForContentSlug(slug: string, homeSlug: string): string {
+  if (slug === SPEU_HUB_SLUG) return SPEU_HUB_HREF;
+  return slugToPublicPath(slug, homeSlug);
 }
 
 /** `homeSlug` — slug бягучай галоўнай (калары `content_pages.is_home`). */

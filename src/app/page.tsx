@@ -1,9 +1,11 @@
 import { HeroSection } from "@/components/HeroSection";
 import { SupportTiers } from "@/components/SupportTiers";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { ArrowRight, Sparkles, Headphones, Heart, Radio } from "lucide-react";
 import { blockPayload, getPageBlocks } from "@/lib/supabase/public-content";
 import { getHomePageSlug } from "@/lib/site-home";
+import { SPEU_HUB_SLUG, homeSlugToPublicHref } from "@/lib/site-route-slugs";
 import { getVisiblePublicHrefs } from "@/lib/site-visibility";
 
 // Rhombic ornament divider — echoes traditional embroidery (вышыўка) motifs
@@ -30,12 +32,16 @@ function OrnamentDivider() {
 }
 
 export default async function HomePage() {
+  const homeSlug = await getHomePageSlug();
+  if (homeSlug === SPEU_HUB_SLUG) {
+    redirect(homeSlugToPublicHref(SPEU_HUB_SLUG));
+  }
+
   const visible = await getVisiblePublicHrefs();
   const showGenerator = visible.has("/generator");
   const showRadio = visible.has("/radio");
   const showSupport = visible.has("/support");
 
-  const homeSlug = await getHomePageSlug();
   const blocks = await getPageBlocks(homeSlug);
   const about = blockPayload(blocks, "about", {
     label: "Пра нас",

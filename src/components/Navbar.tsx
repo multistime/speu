@@ -4,38 +4,43 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Music2, Sparkles, Headphones, Heart, Users, Radio, Disc3 } from "lucide-react";
+import { Menu, Music2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { SiteNavIcon } from "@/components/SiteNavIcon";
 import { createClient } from "@/lib/supabase/client";
 import { getSpeuProfile } from "@/lib/supabase/speu";
-
-const navLinks = [
-  { href: "/speu",      label: "Спеў",      icon: Disc3 },
-  { href: "/generator", label: "Генератар", icon: Sparkles },
-  { href: "/artists",   label: "Артысты",   icon: Users },
-  { href: "/radio",     label: "Радыё Мара", icon: Radio },
-  { href: "/services",  label: "Паслугі",   icon: Headphones },
-  { href: "/support",   label: "Падтрымка", icon: Heart },
-];
+import type { SiteNavItem } from "@/lib/site-nav";
 
 type NavbarProps = {
   visibleHrefs: string[];
+  logoHref: string;
+  navItems: SiteNavItem[];
+  /** Усе апублікаваныя пункты: толькі для адміна, каб уключыць «паказаць усе старонкі» */
+  navItemsExpanded?: SiteNavItem[];
 };
 
-export function Navbar({ visibleHrefs }: NavbarProps) {
+export function Navbar({
+  visibleHrefs,
+  logoHref,
+  navItems,
+  navItemsExpanded,
+}: NavbarProps) {
   const visibleSet = new Set(visibleHrefs);
   const [adminShowAllPages, setAdminShowAllPages] = useState(false);
-  const filteredNav = navLinks.filter((l) => {
-    if (adminShowAllPages) return true;
-    return visibleSet.has(l.href);
-  });
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  const effectiveNav =
+    isAdmin && adminShowAllPages && navItemsExpanded && navItemsExpanded.length > 0
+      ? navItemsExpanded
+      : navItems;
+
   const showCabinet = adminShowAllPages || visibleSet.has("/cabinet");
+
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const barActive = scrolled || mobileOpen;
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -47,53 +52,53 @@ export function Navbar({ visibleHrefs }: NavbarProps) {
   useEffect(() => {
     const supabase = createClient();
 
-      const updateUserState = async () => {
-        const { data } = await supabase.auth.getUser();
-        const user = data.user;
+    const updateUserState = async () => {
+      const { data } = await supabase.auth.getUser();
+      const user = data.user;
 
-        setIsAuthenticated(Boolean(user));
-        if (!user) {
-          setIsAdmin(false);
-          setAdminShowAllPages(false);
-          return;
-        }
+      setIsAuthenticated(Boolean(user));
+      if (!user) {
+        setIsAdmin(false);
+        setAdminShowAllPages(false);
+        return;
+      }
 
-        try {
-          const profile = await getSpeuProfile(supabase, user.id);
-          setIsAdmin(Boolean(profile?.is_admin));
-          setAdminShowAllPages(
-            Boolean(profile?.is_admin && profile?.admin_show_all_pages)
-          );
-        } catch {
-          setIsAdmin(false);
-          setAdminShowAllPages(false);
-        }
-      };
+      try {
+        const profile = await getSpeuProfile(supabase, user.id);
+        setIsAdmin(Boolean(profile?.is_admin));
+        setAdminShowAllPages(
+          Boolean(profile?.is_admin && profile?.admin_show_all_pages),
+        );
+      } catch {
+        setIsAdmin(false);
+        setAdminShowAllPages(false);
+      }
+    };
 
-      void updateUserState();
+    void updateUserState();
 
-      const {
-        data: { subscription },
-      } = supabase.auth.onAuthStateChange(async (_event, session) => {
-        const user = session?.user;
-        setIsAuthenticated(Boolean(user));
-        if (!user) {
-          setIsAdmin(false);
-          setAdminShowAllPages(false);
-          return;
-        }
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const user = session?.user;
+      setIsAuthenticated(Boolean(user));
+      if (!user) {
+        setIsAdmin(false);
+        setAdminShowAllPages(false);
+        return;
+      }
 
-        try {
-          const profile = await getSpeuProfile(supabase, user.id);
-          setIsAdmin(Boolean(profile?.is_admin));
-          setAdminShowAllPages(
-            Boolean(profile?.is_admin && profile?.admin_show_all_pages)
-          );
-        } catch {
-          setIsAdmin(false);
-          setAdminShowAllPages(false);
-        }
-      });
+      try {
+        const profile = await getSpeuProfile(supabase, user.id);
+        setIsAdmin(Boolean(profile?.is_admin));
+        setAdminShowAllPages(
+          Boolean(profile?.is_admin && profile?.admin_show_all_pages),
+        );
+      } catch {
+        setIsAdmin(false);
+        setAdminShowAllPages(false);
+      }
+    });
 
     return () => subscription.unsubscribe();
   }, []);
@@ -111,9 +116,7 @@ export function Navbar({ visibleHrefs }: NavbarProps) {
       )}
     >
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-
-        {/* Logo */}
-        <Link href="/" className="group flex items-center gap-2.5">
+        <Link href={logoHref} className="group flex items-center gap-2.5">
           <div className="relative">
             <Music2
               className="h-6 w-6 text-primary transition-all duration-300 group-hover:scale-110"
@@ -126,23 +129,23 @@ export function Navbar({ visibleHrefs }: NavbarProps) {
           </span>
         </Link>
 
-        {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-1">
-          {filteredNav.map(({ href, label, icon: Icon }) => {
-            const isActive = pathname.startsWith(href);
+          {effectiveNav.map(({ href, title, slug }) => {
+            const isActive =
+              pathname === href || (href.length > 1 && pathname.startsWith(`${href}/`));
             return (
               <Link
-                key={href}
+                key={slug}
                 href={href}
                 className={cn(
                   "relative flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300",
                   isActive
                     ? "text-primary bg-primary/8"
-                    : "text-foreground/55 hover:text-foreground hover:bg-muted"
+                    : "text-foreground/55 hover:text-foreground hover:bg-muted",
                 )}
               >
-                <Icon className="h-4 w-4" strokeWidth={1.5} />
-                {label}
+                <SiteNavIcon slug={slug} className="h-4 w-4" />
+                {title}
                 {isActive && (
                   <motion.div
                     layoutId="nav-indicator"
@@ -155,7 +158,6 @@ export function Navbar({ visibleHrefs }: NavbarProps) {
           })}
         </nav>
 
-        {/* Right controls */}
         <div className="hidden md:flex items-center gap-2">
           <ThemeToggle />
           {isAuthenticated && isAdmin && (
@@ -176,10 +178,10 @@ export function Navbar({ visibleHrefs }: NavbarProps) {
           )}
         </div>
 
-        {/* Mobile: theme toggle + hamburger */}
         <div className="md:hidden flex items-center gap-1">
           <ThemeToggle />
           <button
+            type="button"
             className="p-2 rounded-lg text-foreground/60 hover:text-foreground hover:bg-muted transition-colors"
             onClick={() => setMobileOpen((v) => !v)}
             aria-label="Адкрыць/закрыць меню"
@@ -189,7 +191,6 @@ export function Navbar({ visibleHrefs }: NavbarProps) {
         </div>
       </div>
 
-      {/* Mobile menu */}
       <AnimatePresence>
         {mobileOpen && (
           <motion.div
@@ -200,22 +201,23 @@ export function Navbar({ visibleHrefs }: NavbarProps) {
             className="md:hidden w-full overflow-hidden border-0"
           >
             <div className="w-full px-4 sm:px-6 lg:px-8 py-4 flex flex-col gap-1 max-w-7xl mx-auto">
-              {filteredNav.map(({ href, label, icon: Icon }) => {
-                const isActive = pathname.startsWith(href);
+              {effectiveNav.map(({ href, title, slug }) => {
+                const isActive =
+                  pathname === href || (href.length > 1 && pathname.startsWith(`${href}/`));
                 return (
                   <Link
-                    key={href}
+                    key={slug}
                     href={href}
                     onClick={() => setMobileOpen(false)}
                     className={cn(
                       "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all",
                       isActive
                         ? "text-primary bg-primary/8"
-                        : "text-foreground/55 hover:text-foreground hover:bg-muted"
+                        : "text-foreground/55 hover:text-foreground hover:bg-muted",
                     )}
                   >
-                    <Icon className="h-4 w-4" strokeWidth={1.5} />
-                    {label}
+                    <SiteNavIcon slug={slug} className="h-4 w-4" />
+                    {title}
                   </Link>
                 );
               })}

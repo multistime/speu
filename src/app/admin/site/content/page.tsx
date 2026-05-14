@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { slugToPublicPath } from "@/lib/site-route-slugs";
+import { homeSlugToPublicHref, slugToPublicPath } from "@/lib/site-route-slugs";
 
 type ContentPageItem = {
   id: number;
@@ -152,7 +152,10 @@ export default function AdminContentPage() {
         ) : (
           <ul className="space-y-2">
             {sorted.map((page) => {
-              const path = slugToPublicPath(page.slug, homeSlug);
+              const path =
+                page.slug === homeSlug
+                  ? homeSlugToPublicHref(homeSlug)
+                  : slugToPublicPath(page.slug, homeSlug);
               const visible = page.visible_on_site !== false;
               const locked = page.is_home === true;
               const busy = savingSlug === page.slug;

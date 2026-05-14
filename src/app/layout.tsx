@@ -4,6 +4,8 @@ import "./globals.css";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { ClientProviders } from "@/components/ClientProviders";
+import { getPublicSiteNav, getExpandedSiteNav, type SiteNavItem } from "@/lib/site-nav";
+import { createClient } from "@/lib/supabase/server";
 import { getVisiblePublicHrefs } from "@/lib/site-visibility";
 
 const geistSans = Geist({
@@ -41,7 +43,28 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const visibleHrefs = Array.from(await getVisiblePublicHrefs());
+  const visibleHrefsArray = Array.from(await getVisiblePublicHrefs());
+  const publicNav = await getPublicSiteNav();
+  let logoHref = publicNav.logoHref;
+  const navItems = publicNav.items;
+
+  let navItemsExpanded: SiteNavItem[] | undefined;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user) {
+    const { data: rpc } = await supabase.rpc("get_my_speu_profile");
+    const prof = (Array.isArray(rpc) ? rpc[0] : rpc) as {
+      is_admin?: boolean;
+    } | null;
+    if (prof?.is_admin) {
+      const exp = await getExpandedSiteNav(supabase);
+      navItemsExpanded = exp.items;
+      logoHref = exp.logoHref;
+    }
+  }
 
   return (
     <html
@@ -62,9 +85,19 @@ export default async function RootLayout({
       </head>
       <body className="min-h-screen overflow-x-hidden bg-background text-foreground antialiased">
         <ClientProviders>
-          <Navbar visibleHrefs={visibleHrefs} />
+          <Navbar
+            visibleHrefs={visibleHrefsArray}
+            logoHref={logoHref}
+            navItems={navItems}
+            navItemsExpanded={navItemsExpanded}
+          />
           <main>{children}</main>
-          <Footer visibleHrefs={visibleHrefs} />
+          <Footer
+            visibleHrefs={visibleHrefsArray}
+            logoHref={logoHref}
+            navItems={navItems}
+            navItemsExpanded={navItemsExpanded}
+          />
         </ClientProviders>
       </body>
     </html>
