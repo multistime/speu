@@ -1009,7 +1009,7 @@ export function GlobalPlayer() {
   /** Дак сядзіць на таб-бары; main/footer — на поўны стэк */
   const mobileBottomChromeInset =
     showBottomNav
-      ? "max-md:bottom-[var(--speu-mobile-tab-bar-height)] md:bottom-0"
+      ? "bottom-[var(--speu-mobile-tab-bar-height)] md:bottom-0"
       : "bottom-0";
 
   useEffect(() => {
