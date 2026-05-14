@@ -1,5 +1,10 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Music2, Sparkles, Headphones, Heart, Users, Radio, Disc3 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { getSpeuProfile } from "@/lib/supabase/speu";
 
 /* ── Custom brand SVG icons ──────────────────────────────────────────── */
 
@@ -90,7 +95,42 @@ type FooterProps = {
 
 export function Footer({ visibleHrefs }: FooterProps) {
   const visibleSet = new Set(visibleHrefs);
-  const footerLinks = FOOTER_LINKS.filter((l) => visibleSet.has(l.href));
+  const [adminShowAllPages, setAdminShowAllPages] = useState(false);
+
+  useEffect(() => {
+    const supabase = createClient();
+
+    const run = async () => {
+      const { data } = await supabase.auth.getUser();
+      const user = data.user;
+      if (!user) {
+        setAdminShowAllPages(false);
+        return;
+      }
+      try {
+        const profile = await getSpeuProfile(supabase, user.id);
+        setAdminShowAllPages(
+          Boolean(profile?.is_admin && profile?.admin_show_all_pages)
+        );
+      } catch {
+        setAdminShowAllPages(false);
+      }
+    };
+
+    void run();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(() => {
+      void run();
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const footerLinks = FOOTER_LINKS.filter((l) => {
+    if (adminShowAllPages) return true;
+    return visibleSet.has(l.href);
+  });
 
   return (
     <footer className="border-t border-border bg-background">

@@ -57,19 +57,26 @@ export default async function proxy(request: NextRequest) {
     if (user) {
       const { data: profRows } = await supabase.rpc("get_my_speu_profile");
       const prof = Array.isArray(profRows) ? profRows[0] : profRows;
-      skipRedirect = Boolean(prof && typeof prof === "object" && "is_admin" in prof && prof.is_admin);
+      const showAll =
+        prof &&
+        typeof prof === "object" &&
+        "admin_show_all_pages" in prof &&
+        (prof as { admin_show_all_pages?: boolean }).admin_show_all_pages === true;
+      skipRedirect = Boolean(
+        prof && typeof prof === "object" && "is_admin" in prof && prof.is_admin && showAll
+      );
     }
     if (!skipRedirect) {
       const { data: page } = await supabase
         .schema("speu")
         .from("content_pages")
-        .select("id, slug, visible_on_site")
+        .select("id, slug, visible_on_site, is_home")
         .eq("slug", routeSlug)
         .eq("status", "published")
         .maybeSingle();
       const hidden =
         page &&
-        page.slug !== "home" &&
+        !page.is_home &&
         page.visible_on_site === false;
       if (!page || hidden) {
         return NextResponse.redirect(new URL("/", request.url));

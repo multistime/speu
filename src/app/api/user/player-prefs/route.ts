@@ -48,6 +48,22 @@ export async function PATCH(req: Request) {
   ) {
     updates.ui_accent_preset_id = o.ui_accent_preset_id;
   }
+  if (typeof o.admin_show_all_pages === "boolean") {
+    const { data: profRows, error: profErr } = await supabase.rpc("get_my_speu_profile");
+    if (profErr) {
+      return NextResponse.json({ error: "Profile check failed" }, { status: 500 });
+    }
+    const prof = Array.isArray(profRows) ? profRows[0] : profRows;
+    const isAdmin =
+      prof &&
+      typeof prof === "object" &&
+      "is_admin" in prof &&
+      Boolean((prof as { is_admin?: boolean }).is_admin);
+    if (!isAdmin) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    updates.admin_show_all_pages = o.admin_show_all_pages;
+  }
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: "No valid fields" }, { status: 400 });

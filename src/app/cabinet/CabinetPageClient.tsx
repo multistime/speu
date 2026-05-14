@@ -122,6 +122,10 @@ export function CabinetPageClient({ initialUser, initialProfile }: CabinetPageCl
   );
   const [isAdmin, setIsAdmin] = useState(() => Boolean(initialProfile?.is_admin));
   const [isArtist, setIsArtist] = useState(() => Boolean(initialProfile?.is_artist));
+  const [showAllSitePages, setShowAllSitePages] = useState(() =>
+    Boolean(initialProfile?.admin_show_all_pages),
+  );
+  const [savingShowAll, setSavingShowAll] = useState(false);
 
   const lastUserIdRef = useRef<string | null>(initialUser?.id ?? null);
 
@@ -131,6 +135,7 @@ export function CabinetPageClient({ initialUser, initialProfile }: CabinetPageCl
       setUser(null);
       setIsAdmin(false);
       setIsArtist(false);
+      setShowAllSitePages(false);
       return;
     }
 
@@ -141,16 +146,19 @@ export function CabinetPageClient({ initialUser, initialProfile }: CabinetPageCl
     if (switchedAccount) {
       setIsAdmin(false);
       setIsArtist(false);
+      setShowAllSitePages(false);
     }
 
     try {
       const profile = await getSpeuProfile(supabase, u.id);
       setIsAdmin(Boolean(profile?.is_admin));
       setIsArtist(Boolean(profile?.is_artist));
+      setShowAllSitePages(Boolean(profile?.admin_show_all_pages));
     } catch {
       if (switchedAccount) {
         setIsAdmin(false);
         setIsArtist(false);
+        setShowAllSitePages(false);
       }
     }
   };
@@ -356,6 +364,25 @@ export function CabinetPageClient({ initialUser, initialProfile }: CabinetPageCl
     );
   }
 
+  const toggleShowAllSitePages = async () => {
+    if (!isAdmin || savingShowAll) return;
+    const next = !showAllSitePages;
+    setSavingShowAll(true);
+    setMessage(null);
+    const res = await fetch("/api/user/player-prefs", {
+      method: "PATCH",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ admin_show_all_pages: next }),
+    });
+    setSavingShowAll(false);
+    if (!res.ok) {
+      setMessage({ text: "Не ўдалося захаваць налады", kind: "error" });
+      return;
+    }
+    setShowAllSitePages(next);
+  };
+
   const displayName =
     user?.user_metadata?.full_name ??
     user?.user_metadata?.name ??
@@ -444,6 +471,37 @@ export function CabinetPageClient({ initialUser, initialProfile }: CabinetPageCl
         </div>
 
         <CabinetUiAccentPicker />
+
+        {isAdmin && (
+          <div className="glass rounded-2xl border border-border p-6 flex flex-wrap items-center justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <Eye className="h-4 w-4 text-primary" strokeWidth={1.75} />
+                Паказваць усе старонкі ў меню
+              </p>
+              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                Уключайце, каб у навігацыі адлюстроўваліся ўсе раздзелы (уключна схаваныя для публікі). Каб адкрываць
+                схаваныя URL без рэдырэкту на галоўную, таксама патрэбная гэтая опцыя.
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={showAllSitePages}
+              disabled={savingShowAll}
+              onClick={() => void toggleShowAllSitePages()}
+              className={`relative w-11 h-6 shrink-0 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-50 ${
+                showAllSitePages ? "bg-primary" : "bg-muted"
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-background shadow transition-transform ${
+                  showAllSitePages ? "translate-x-5" : "translate-x-0"
+                }`}
+              />
+            </button>
+          </div>
+        )}
 
         {isArtist && (
           <Link

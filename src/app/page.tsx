@@ -3,6 +3,7 @@ import { SupportTiers } from "@/components/SupportTiers";
 import Link from "next/link";
 import { ArrowRight, Sparkles, Headphones, Heart, Radio } from "lucide-react";
 import { blockPayload, getPageBlocks } from "@/lib/supabase/public-content";
+import { getHomePageSlug } from "@/lib/site-home";
 import { getVisiblePublicHrefs } from "@/lib/site-visibility";
 
 // Rhombic ornament divider — echoes traditional embroidery (вышыўка) motifs
@@ -34,7 +35,8 @@ export default async function HomePage() {
   const showRadio = visible.has("/radio");
   const showSupport = visible.has("/support");
 
-  const blocks = await getPageBlocks("home");
+  const homeSlug = await getHomePageSlug();
+  const blocks = await getPageBlocks(homeSlug);
   const about = blockPayload(blocks, "about", {
     label: "Пра нас",
     title: "Там, дзе старажытны спеў сустракае новы гук",

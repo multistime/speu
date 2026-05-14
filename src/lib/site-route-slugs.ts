@@ -26,7 +26,8 @@ export function pathnameToSiteRouteSlug(pathname: string): SiteRouteSlug | null 
     : null;
 }
 
-export function slugToPublicPath(slug: string): string {
-  if (slug === "home") return "/";
+/** `homeSlug` — slug бягучай галоўнай (калары `content_pages.is_home`). */
+export function slugToPublicPath(slug: string, homeSlug: string = "home"): string {
+  if (slug === homeSlug) return "/";
   return `/${slug}`;
 }

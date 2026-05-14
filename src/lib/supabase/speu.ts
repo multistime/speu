@@ -12,6 +12,8 @@ export type SpeuProfile = {
   id: string;
   display_name: string | null;
   is_admin: boolean;
+  /** Уключана ў кабінеце: паказваць у меню ўсе пункты, уключаючы схаваныя на сайце */
+  admin_show_all_pages?: boolean;
   /** true when at least one speu.artists row has user_id = this profile */
   is_artist?: boolean;
   /** Першы артыст па назве (сумяшчальнасць); для спісу глядзіце linked_artists */

@@ -25,8 +25,12 @@ type NavbarProps = {
 
 export function Navbar({ visibleHrefs }: NavbarProps) {
   const visibleSet = new Set(visibleHrefs);
-  const filteredNav = navLinks.filter((l) => visibleSet.has(l.href));
-  const showCabinet = visibleSet.has("/cabinet");
+  const [adminShowAllPages, setAdminShowAllPages] = useState(false);
+  const filteredNav = navLinks.filter((l) => {
+    if (adminShowAllPages) return true;
+    return visibleSet.has(l.href);
+  });
+  const showCabinet = adminShowAllPages || visibleSet.has("/cabinet");
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const barActive = scrolled || mobileOpen;
@@ -50,14 +54,19 @@ export function Navbar({ visibleHrefs }: NavbarProps) {
         setIsAuthenticated(Boolean(user));
         if (!user) {
           setIsAdmin(false);
+          setAdminShowAllPages(false);
           return;
         }
 
         try {
           const profile = await getSpeuProfile(supabase, user.id);
           setIsAdmin(Boolean(profile?.is_admin));
+          setAdminShowAllPages(
+            Boolean(profile?.is_admin && profile?.admin_show_all_pages)
+          );
         } catch {
           setIsAdmin(false);
+          setAdminShowAllPages(false);
         }
       };
 
@@ -70,14 +79,19 @@ export function Navbar({ visibleHrefs }: NavbarProps) {
         setIsAuthenticated(Boolean(user));
         if (!user) {
           setIsAdmin(false);
+          setAdminShowAllPages(false);
           return;
         }
 
         try {
           const profile = await getSpeuProfile(supabase, user.id);
           setIsAdmin(Boolean(profile?.is_admin));
+          setAdminShowAllPages(
+            Boolean(profile?.is_admin && profile?.admin_show_all_pages)
+          );
         } catch {
           setIsAdmin(false);
+          setAdminShowAllPages(false);
         }
       });
 

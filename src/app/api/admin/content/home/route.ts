@@ -6,7 +6,6 @@ import { writeAdminAuditLog } from "@/lib/supabase/admin-repos/audit";
 
 const bodySchema = z.object({
   slug: z.string().min(1),
-  visibleOnSite: z.boolean(),
 });
 
 export async function POST(request: Request) {
@@ -21,36 +20,54 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "invalid_payload" }, { status: 400 });
   }
 
-  const { slug, visibleOnSite } = parsed.data;
+  const { slug } = parsed.data;
 
-  const { data: page, error: fetchErr } = await adminDb
+  const { data: target, error: fetchErr } = await adminDb
     .schema("speu")
     .from("content_pages")
-    .select("id, is_home")
+    .select("id, slug, status")
     .eq("slug", slug)
     .maybeSingle();
-  if (fetchErr || !page) {
+
+  if (fetchErr || !target) {
     return NextResponse.json({ error: "page_not_found" }, { status: 404 });
   }
-  if (page.is_home) {
-    return NextResponse.json({ error: "home_cannot_be_hidden" }, { status: 400 });
+  if (target.status !== "published") {
+    return NextResponse.json({ error: "page_must_be_published" }, { status: 400 });
   }
 
-  const { error } = await adminDb
+  const { error: clearErr } = await adminDb
     .schema("speu")
     .from("content_pages")
-    .update({ visible_on_site: visibleOnSite, updated_by: user.id })
-    .eq("slug", slug);
-  if (error) {
+    .update({ is_home: false })
+    .neq("slug", "");
+
+  if (clearErr) {
     return NextResponse.json(
-      { error: "update_failed", details: error.message },
+      { error: "update_failed", details: clearErr.message },
       { status: 500 }
     );
   }
 
-  await writeAdminAuditLog(adminDb, user.id, "content_page.visibility", "content_pages", String(page.id), {
+  const { error: setErr } = await adminDb
+    .schema("speu")
+    .from("content_pages")
+    .update({
+      is_home: true,
+      visible_on_site: true,
+      updated_by: user.id,
+    })
+    .eq("slug", slug);
+
+  if (setErr) {
+    return NextResponse.json(
+      { error: "update_failed", details: setErr.message },
+      { status: 500 }
+    );
+  }
+
+  await writeAdminAuditLog(adminDb, user.id, "content_page.home", "content_pages", String(target.id), {
     slug,
-    visibleOnSite,
   });
 
   revalidatePath("/", "layout");

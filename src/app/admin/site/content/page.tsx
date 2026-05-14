@@ -9,12 +9,14 @@ type ContentPageItem = {
   title: string;
   status: string;
   visible_on_site?: boolean;
+  is_home?: boolean;
 };
 
 export default function AdminContentPage() {
   const [items, setItems] = useState<ContentPageItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingSlug, setSavingSlug] = useState<string | null>(null);
+  const [savingHome, setSavingHome] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -35,16 +37,43 @@ export default function AdminContentPage() {
     void load();
   }, [load]);
 
+  const homeSlug = useMemo(() => items.find((p) => p.is_home)?.slug ?? "home", [items]);
+
   const sorted = useMemo(() => {
     return [...items].sort((a, b) => {
-      if (a.slug === "home") return -1;
-      if (b.slug === "home") return 1;
+      if (a.is_home) return -1;
+      if (b.is_home) return 1;
       return a.title.localeCompare(b.title, "be");
     });
   }, [items]);
 
+  const setHomePage = async (slug: string) => {
+    if (slug === homeSlug) return;
+    setSavingHome(true);
+    setError(null);
+    const res = await fetch("/api/admin/content/home", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ slug }),
+    });
+    setSavingHome(false);
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      setError(typeof d.error === "string" ? d.error : "Памылка захавання галоўнай");
+      return;
+    }
+    setItems((prev) =>
+      prev.map((p) => ({
+        ...p,
+        is_home: p.slug === slug,
+        visible_on_site: p.slug === slug ? true : p.visible_on_site,
+      }))
+    );
+  };
+
   const toggleVisible = async (slug: string, next: boolean) => {
-    if (slug === "home") return;
+    const row = items.find((p) => p.slug === slug);
+    if (row?.is_home) return;
     setSavingSlug(slug);
     setError(null);
     const res = await fetch("/api/admin/content/visibility", {
@@ -63,13 +92,19 @@ export default function AdminContentPage() {
     );
   };
 
+  const publishedOptions = useMemo(
+    () => items.filter((p) => p.status === "published").sort((a, b) => a.title.localeCompare(b.title, "be")),
+    [items]
+  );
+
   return (
     <div className="space-y-6">
       <div className="glass rounded-2xl border border-border p-6">
         <h1 className="font-display text-2xl italic text-foreground mb-2">Кантэнт</h1>
         <p className="text-sm text-muted-foreground">
-          Уключайце або хавайце старонкі для публікі. Схаваная старонка не паказваецца ў меню і пры адкрыцці URL робіць
-          рэдырэкт на галоўную. Галоўная заўсёды бачная.
+          Абярыце галоўную старонку — яна заўсёды бачная на сайце і адкрываецца на /. Іншыя старонкі можна схаваць:
+          яны знікнуць з меню, URL перанакіруе на галоўную. У кабінеце адміністратар можа ўключыць паказ усіх пунктаў
+          меню для перагляду схаваных.
         </p>
       </div>
 
@@ -80,7 +115,36 @@ export default function AdminContentPage() {
       )}
 
       <div className="glass rounded-2xl border border-border p-6">
-        <h2 className="text-sm font-semibold text-foreground mb-4">Старонкі</h2>
+        <h2 className="text-sm font-semibold text-foreground mb-4">Галоўная старонка</h2>
+        {loading ? (
+          <p className="text-sm text-muted-foreground">Загружаецца…</p>
+        ) : publishedOptions.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Няма апублікаваных старонак</p>
+        ) : (
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="text-sm text-muted-foreground shrink-0" htmlFor="home-page-select">
+              Slug для маршруту /
+            </label>
+            <select
+              id="home-page-select"
+              className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground min-w-[12rem]"
+              value={homeSlug}
+              disabled={savingHome}
+              onChange={(e) => void setHomePage(e.target.value)}
+            >
+              {publishedOptions.map((p) => (
+                <option key={p.slug} value={p.slug}>
+                  {p.title} ({p.slug})
+                </option>
+              ))}
+            </select>
+            {savingHome && <span className="text-xs text-muted-foreground">Захаванне…</span>}
+          </div>
+        )}
+      </div>
+
+      <div className="glass rounded-2xl border border-border p-6">
+        <h2 className="text-sm font-semibold text-foreground mb-4">Відочнасць старонак</h2>
         {loading ? (
           <p className="text-sm text-muted-foreground">Загружаецца…</p>
         ) : sorted.length === 0 ? (
@@ -88,9 +152,9 @@ export default function AdminContentPage() {
         ) : (
           <ul className="space-y-2">
             {sorted.map((page) => {
-              const path = slugToPublicPath(page.slug);
+              const path = slugToPublicPath(page.slug, homeSlug);
               const visible = page.visible_on_site !== false;
-              const locked = page.slug === "home";
+              const locked = page.is_home === true;
               const busy = savingSlug === page.slug;
               return (
                 <li
@@ -101,7 +165,7 @@ export default function AdminContentPage() {
                     <p className="text-sm font-medium text-foreground">{page.title}</p>
                     <p className="text-xs text-muted-foreground font-mono mt-0.5">
                       {path}
-                      {locked ? " · заўсёды бачная" : ""}
+                      {locked ? " · галоўная (заўсёды бачная)" : ""}
                     </p>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">

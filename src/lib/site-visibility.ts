@@ -17,15 +17,22 @@ export async function getVisiblePublicHrefs(): Promise<Set<string>> {
   const { data, error } = await supabase
     .schema("speu")
     .from("content_pages")
-    .select("slug")
+    .select("slug, is_home")
     .eq("status", "published")
-    .or("slug.eq.home,visible_on_site.eq.true");
+    .or("is_home.eq.true,visible_on_site.eq.true");
   if (error || !data) {
     return fallbackVisibleHrefs();
   }
+  let homeSlug = "home";
+  for (const row of data) {
+    if (row.is_home) {
+      homeSlug = row.slug;
+      break;
+    }
+  }
   const hrefs = new Set<string>([SPEU_HUB_HREF]);
   for (const row of data) {
-    hrefs.add(slugToPublicPath(row.slug));
+    hrefs.add(slugToPublicPath(row.slug, homeSlug));
   }
   return hrefs;
 }
