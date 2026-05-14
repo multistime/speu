@@ -26,6 +26,7 @@ import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from
 import { usePlayer, type PlayerTrack } from "@/contexts/PlayerContext";
 import { useSpeuMobileChrome } from "@/contexts/SpeuMobileChromeContext";
 import { useUiAccent } from "@/contexts/UiAccentContext";
+import { useSyncSpeuMiniPlayerHeight } from "@/hooks/use-speu-mobile-chrome-layout";
 import { formatPlayerTime } from "@/lib/format-player-time";
 import { clientXToSeekRatio } from "@/lib/player-progress";
 import { cn } from "@/lib/utils";
@@ -661,9 +662,9 @@ function MobileNowPlayingSheet({
   repeatLabel: string;
 }) {
   const { showBottomNav } = useSpeuMobileChrome();
-  /** Вызнаем шторку над ніжнім таб-барам (`MobileMainFrame` — аднолькі падінг што ў `speu-bottom-nav-active`). */
+  /** Ніз шторкі = сумарная вышыня таб-бара + дака (дзеля зменных глядзі `globals.css`, px з ResizeObserver). */
   const sheetBottomInset = showBottomNav
-    ? "bottom-[calc(4.35rem+env(safe-area-inset-bottom,0px))]"
+    ? "bottom-[var(--speu-mobile-bottom-stack)]"
     : "bottom-0";
 
   const {
@@ -804,7 +805,7 @@ function MobileNowPlayingSheet({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             className={cn(
-              "fixed left-0 right-0 top-0 z-[55] bg-black/45 backdrop-blur-[2px] md:hidden",
+              "fixed left-0 right-0 top-0 z-[85] bg-black/45 backdrop-blur-[2px] md:hidden",
               sheetBottomInset,
             )}
             aria-hidden
@@ -820,7 +821,7 @@ function MobileNowPlayingSheet({
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 34, stiffness: 380 }}
             className={cn(
-              "fixed inset-x-0 z-[60] max-h-[88dvh] md:hidden",
+              "fixed inset-x-0 z-[90] max-h-[88dvh] md:hidden",
               sheetBottomInset,
             )}
           >
@@ -1002,9 +1003,13 @@ export function GlobalPlayer() {
 
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
 
+  const mobileDockMeasureRef = useRef<HTMLDivElement>(null);
+  useSyncSpeuMiniPlayerHeight(mobileDockMeasureRef, Boolean(track && showBottomNav));
+
+  /** Дак сядзіць на таб-бары; main/footer — на поўны стэк */
   const mobileBottomChromeInset =
     showBottomNav
-      ? "max-md:bottom-[calc(4.35rem+env(safe-area-inset-bottom,0px))] md:bottom-0"
+      ? "max-md:bottom-[var(--speu-mobile-tab-bar-height)] md:bottom-0"
       : "bottom-0";
 
   useEffect(() => {
@@ -1016,13 +1021,14 @@ export function GlobalPlayer() {
     <AnimatePresence>
       {track && (
         <motion.div
+          ref={mobileDockMeasureRef}
           key="global-player"
           initial={{ y: 100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 100, opacity: 0 }}
           transition={{ type: "spring", damping: 28, stiffness: 280 }}
           className={cn(
-            "group/player fixed inset-x-0 z-50 overflow-visible border-t border-border/40 bg-background/95 pt-3 backdrop-blur-md",
+            "group/player fixed inset-x-0 z-50 max-md:z-[55] overflow-visible border-t border-border/40 bg-background/95 pt-3 backdrop-blur-md",
             mobileBottomChromeInset,
           )}
           style={{ boxShadow: `0 -4px 40px rgba(${rgbCompact}, 0.08)` }}

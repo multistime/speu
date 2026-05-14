@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useRef } from "react";
 import { Heart, Home, LayoutGrid, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SPEU_HUB_HREF } from "@/lib/site-route-slugs";
 import { useSpeuMobileChrome } from "@/contexts/SpeuMobileChromeContext";
+import { useSyncSpeuTabBarHeight } from "@/hooks/use-speu-mobile-chrome-layout";
 
 type SpeuBottomNavProps = {
   logoHref: string;
@@ -13,7 +15,9 @@ type SpeuBottomNavProps = {
 
 export function SpeuBottomNav({ logoHref }: SpeuBottomNavProps) {
   const pathname = usePathname();
+  const navRef = useRef<HTMLElement>(null);
   const { showBottomNav } = useSpeuMobileChrome();
+  useSyncSpeuTabBarHeight(navRef, showBottomNav);
 
   if (!showBottomNav) return null;
 
@@ -48,8 +52,9 @@ export function SpeuBottomNav({ logoHref }: SpeuBottomNavProps) {
 
   return (
     <nav
+      ref={navRef}
       className={cn(
-        "fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/95 backdrop-blur-md md:hidden",
+        "fixed bottom-0 left-0 right-0 z-[100] border-t border-border bg-background/95 backdrop-blur-md md:hidden",
         "pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pt-1",
       )}
       aria-label="Ніжняя навігацыя"

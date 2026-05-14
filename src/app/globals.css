@@ -108,6 +108,13 @@
   --selection-bg-rgb:     53, 101, 77;
   --selection-foreground: #35654D;
   --ornament-stroke-hex:  35654D;
+
+  /* Мабільнае нішняе шкло: акурэтнае сумяшчэнне — JS перакрывае px праз ResizeObserver */
+  --speu-mobile-tab-bar-height: 5.25rem;
+  --speu-mobile-mini-player-height: 0px;
+  --speu-mobile-bottom-stack: calc(
+    var(--speu-mobile-tab-bar-height) + var(--speu-mobile-mini-player-height)
+  );
 }
 
 /* ══════════════════════════════════════════════════════════════════════ */
@@ -373,7 +380,7 @@ audio.speu-native-audio {
 /* Mobile / PWA: bottom tab bar — extra space над футэрам */
 @media (max-width: 767px) {
   body.speu-bottom-nav-active footer {
-    padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+    padding-bottom: var(--speu-mobile-bottom-stack);
   }
 }
 

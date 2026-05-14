@@ -4,6 +4,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -23,7 +24,7 @@ export function SpeuMobileChromeProvider({ children }: { children: ReactNode }) 
   const [narrowViewport, setNarrowViewport] = useState(false);
   const [standaloneDisplay, setStandaloneDisplay] = useState(false);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const mqNarrow = window.matchMedia("(max-width: 767px)");
     const mqStandalone = window.matchMedia("(display-mode: standalone)");
 
@@ -44,7 +45,7 @@ export function SpeuMobileChromeProvider({ children }: { children: ReactNode }) 
     };
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const isSpeuMobilePwa = standaloneDisplay && narrowViewport;
 
     if (isSpeuMobilePwa) {
@@ -99,7 +100,7 @@ export function SpeuMobileChromeProvider({ children }: { children: ReactNode }) 
     return narrowViewport || standaloneDisplay;
   }, [pathname, narrowViewport, standaloneDisplay]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (showBottomNav) document.body.classList.add("speu-bottom-nav-active");
     else document.body.classList.remove("speu-bottom-nav-active");
     return () => document.body.classList.remove("speu-bottom-nav-active");
