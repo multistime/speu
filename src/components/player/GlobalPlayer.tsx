@@ -24,6 +24,7 @@ import {
 import { TrackLikeButton } from "@/components/speu/TrackLikeButton";
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { usePlayer, type PlayerTrack } from "@/contexts/PlayerContext";
+import { useSpeuMobileChrome } from "@/contexts/SpeuMobileChromeContext";
 import { useUiAccent } from "@/contexts/UiAccentContext";
 import { formatPlayerTime } from "@/lib/format-player-time";
 import { clientXToSeekRatio } from "@/lib/player-progress";
@@ -659,6 +660,12 @@ function MobileNowPlayingSheet({
   shuffleEnabled: boolean;
   repeatLabel: string;
 }) {
+  const { showBottomNav } = useSpeuMobileChrome();
+  /** Вызнаем шторку над ніжнім таб-барам (`MobileMainFrame` — аднолькі падінг што ў `speu-bottom-nav-active`). */
+  const sheetBottomInset = showBottomNav
+    ? "bottom-[calc(4.35rem+env(safe-area-inset-bottom,0px))]"
+    : "bottom-0";
+
   const {
     isPlaying,
     repeatMode,
@@ -796,7 +803,10 @@ function MobileNowPlayingSheet({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[55] bg-black/45 backdrop-blur-[2px] md:hidden"
+            className={cn(
+              "fixed left-0 right-0 top-0 z-[55] bg-black/45 backdrop-blur-[2px] md:hidden",
+              sheetBottomInset,
+            )}
             aria-hidden
             onClick={onClose}
           />
@@ -809,7 +819,10 @@ function MobileNowPlayingSheet({
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 34, stiffness: 380 }}
-            className="fixed inset-x-0 bottom-0 z-[60] max-h-[88dvh] md:hidden"
+            className={cn(
+              "fixed inset-x-0 z-[60] max-h-[88dvh] md:hidden",
+              sheetBottomInset,
+            )}
           >
             <div
               style={{ transform: `translate3d(0, ${pullDown}px, 0)` }}
@@ -975,6 +988,8 @@ export function GlobalPlayer() {
   const canShuffle = queueNav && queueSize > 1;
   const canSkipNext = queueNav;
 
+  const { showBottomNav } = useSpeuMobileChrome();
+
   const repeatLabel = !queueNav
     ? repeatMode === "off"
       ? "Паўтор выклучаны. Націсніце — паўтор аднаго трэка"
@@ -986,6 +1001,11 @@ export function GlobalPlayer() {
         : "Паўтор аднаго трэка. Націсніце — выключыць паўтор";
 
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
+
+  const mobileBottomChromeInset =
+    showBottomNav
+      ? "max-md:bottom-[calc(4.35rem+env(safe-area-inset-bottom,0px))] md:bottom-0"
+      : "bottom-0";
 
   useEffect(() => {
     if (!track) queueMicrotask(() => setMobileSheetOpen(false));
@@ -1001,7 +1021,10 @@ export function GlobalPlayer() {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 100, opacity: 0 }}
           transition={{ type: "spring", damping: 28, stiffness: 280 }}
-          className="group/player fixed bottom-0 inset-x-0 z-50 overflow-visible bg-background/95 backdrop-blur-md border-t border-border/40 pt-3"
+          className={cn(
+            "group/player fixed inset-x-0 z-50 overflow-visible border-t border-border/40 bg-background/95 pt-3 backdrop-blur-md",
+            mobileBottomChromeInset,
+          )}
           style={{ boxShadow: `0 -4px 40px rgba(${rgbCompact}, 0.08)` }}
         >
           <GlobalPlayerProgress />
