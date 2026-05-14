@@ -376,3 +376,35 @@ audio.speu-native-audio {
     padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
   }
 }
+
+/* Вузкі экран + усталяваная PWA: хаваем скролбары караня, без гарызантальнага счаплення старонкі */
+html.speu-pwa-mobile,
+body.speu-pwa-mobile {
+  max-width: 100%;
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
+}
+
+@supports (overflow-x: clip) {
+  html.speu-pwa-mobile,
+  body.speu-pwa-mobile {
+    overflow-x: clip;
+  }
+}
+
+html.speu-pwa-mobile {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html.speu-pwa-mobile::-webkit-scrollbar,
+body.speu-pwa-mobile::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+body.speu-pwa-mobile {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
