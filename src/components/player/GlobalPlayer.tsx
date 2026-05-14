@@ -663,9 +663,7 @@ function MobileNowPlayingSheet({
 }) {
   const { showBottomNav } = useSpeuMobileChrome();
   /** Ніз шторкі = сумарная вышыня таб-бара + дака (дзеля зменных глядзі `globals.css`, px з ResizeObserver). */
-  const sheetBottomInset = showBottomNav
-    ? "bottom-[var(--speu-mobile-bottom-stack)]"
-    : "bottom-0";
+  const sheetBottomInset = showBottomNav ? "var(--speu-mobile-bottom-stack)" : "0px";
 
   const {
     isPlaying,
@@ -806,8 +804,8 @@ function MobileNowPlayingSheet({
             transition={{ duration: 0.2 }}
             className={cn(
               "fixed left-0 right-0 top-0 z-[85] bg-black/45 backdrop-blur-[2px] md:hidden",
-              sheetBottomInset,
             )}
+            style={{ bottom: sheetBottomInset }}
             aria-hidden
             onClick={onClose}
           />
@@ -822,8 +820,8 @@ function MobileNowPlayingSheet({
             transition={{ type: "spring", damping: 34, stiffness: 380 }}
             className={cn(
               "fixed inset-x-0 z-[90] max-h-[88dvh] md:hidden",
-              sheetBottomInset,
             )}
+            style={{ bottom: sheetBottomInset }}
           >
             <div
               style={{ transform: `translate3d(0, ${pullDown}px, 0)` }}
@@ -1007,10 +1005,7 @@ export function GlobalPlayer() {
   useSyncSpeuMiniPlayerHeight(mobileDockMeasureRef, Boolean(track && showBottomNav));
 
   /** Дак сядзіць на таб-бары; main/footer — на поўны стэк */
-  const mobileBottomChromeInset =
-    showBottomNav
-      ? "bottom-[var(--speu-mobile-tab-bar-height)] md:bottom-0"
-      : "bottom-0";
+  const mobileBottomChromeInset = showBottomNav ? "var(--speu-mobile-tab-bar-height)" : "0px";
 
   useEffect(() => {
     if (!track) queueMicrotask(() => setMobileSheetOpen(false));
@@ -1029,9 +1024,11 @@ export function GlobalPlayer() {
           transition={{ type: "spring", damping: 28, stiffness: 280 }}
           className={cn(
             "group/player fixed inset-x-0 z-50 max-md:z-[55] overflow-visible border-t border-border/40 bg-background/95 pt-3 backdrop-blur-md",
-            mobileBottomChromeInset,
           )}
-          style={{ boxShadow: `0 -4px 40px rgba(${rgbCompact}, 0.08)` }}
+          style={{
+            bottom: mobileBottomChromeInset,
+            boxShadow: `0 -4px 40px rgba(${rgbCompact}, 0.08)`,
+          }}
         >
           <GlobalPlayerProgress />
 
