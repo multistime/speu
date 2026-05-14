@@ -20,6 +20,7 @@ const SECTION_SETTINGS_KEYS = new Set([
   "artists_show_placeholder",
   "support_show_placeholder",
   "speu_hub_hero_disc_scale",
+  "footer_config",
 ]);
 
 export default function AdminSettingsPage() {

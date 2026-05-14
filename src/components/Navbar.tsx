@@ -11,6 +11,7 @@ import { SiteNavIcon } from "@/components/SiteNavIcon";
 import { createClient } from "@/lib/supabase/client";
 import { getSpeuProfile } from "@/lib/supabase/speu";
 import type { SiteNavItem } from "@/lib/site-nav";
+import { useSpeuMobileChrome } from "@/contexts/SpeuMobileChromeContext";
 
 type NavbarProps = {
   visibleHrefs: string[];
@@ -42,6 +43,16 @@ export function Navbar({
   const barActive = scrolled || mobileOpen;
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const pathname = usePathname();
+  const { showBottomNav } = useSpeuMobileChrome();
+
+  const showMobileOverflow =
+    effectiveNav.length > 0 ||
+    (Boolean(isAuthenticated) && isAdmin) ||
+    (showCabinet && !showBottomNav);
+
+  useEffect(() => {
+    if (!showMobileOverflow) setMobileOpen(false);
+  }, [showMobileOverflow]);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -180,19 +191,22 @@ export function Navbar({
 
         <div className="md:hidden flex items-center gap-1">
           <ThemeToggle />
-          <button
-            type="button"
-            className="p-2 rounded-lg text-foreground/60 hover:text-foreground hover:bg-muted transition-colors"
-            onClick={() => setMobileOpen((v) => !v)}
-            aria-label="Адкрыць/закрыць меню"
-          >
-            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
+          {showMobileOverflow && (
+            <button
+              type="button"
+              className="p-2 rounded-lg text-foreground/60 hover:text-foreground hover:bg-muted transition-colors"
+              onClick={() => setMobileOpen((v) => !v)}
+              aria-label="Адкрыць/закрыць меню"
+              aria-expanded={mobileOpen}
+            >
+              {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+          )}
         </div>
       </div>
 
       <AnimatePresence>
-        {mobileOpen && (
+        {mobileOpen && showMobileOverflow && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
@@ -221,7 +235,7 @@ export function Navbar({
                   </Link>
                 );
               })}
-              {showCabinet && (
+              {showCabinet && !showBottomNav && (
                 <Link
                   href="/cabinet"
                   onClick={() => setMobileOpen(false)}

@@ -3,6 +3,7 @@
 export const SITE_NAV_SEGMENTS = {
   overview: "",
   content: "content",
+  footer: "footer",
   supportTiers: "support-tiers",
   serviceRequests: "service-requests",
   users: "users",
@@ -35,6 +36,12 @@ export const SITE_NAV_SECTIONS: {
     label: "Кантэнт",
     pathSuffix: SITE_NAV_SEGMENTS.content,
     blurb: "CMS-блокі старонак",
+  },
+  {
+    key: "footer",
+    label: "Футэр",
+    pathSuffix: SITE_NAV_SEGMENTS.footer,
+    blurb: "Тэкст, сацсеткі, кантакты",
   },
   {
     key: "supportTiers",

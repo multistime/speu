@@ -4,8 +4,10 @@ import "./globals.css";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { ClientProviders } from "@/components/ClientProviders";
+import { MobileMainFrame } from "@/components/MobileMainFrame";
 import { getPublicSiteNav, getExpandedSiteNav, type SiteNavItem } from "@/lib/site-nav";
 import { createClient } from "@/lib/supabase/server";
+import { getFooterConfig } from "@/lib/speu/footer-config.server";
 import { getVisiblePublicHrefs } from "@/lib/site-visibility";
 
 const geistSans = Geist({
@@ -29,13 +31,30 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#F6F2E8" },
+    { media: "(prefers-color-scheme: dark)", color: "#0E1811" },
+  ],
 };
 
+const APP_NAME = "Спеў";
+const APP_DESCRIPTION =
+  "Спеў — беларускі музычны лейбл. Ствараем добрую музыку на беларускай мове: ад нэа-фолку да электронікі. Корань у традыцыі, погляд — наперад.";
+
 export const metadata: Metadata = {
-  title: "Спеў — Беларуская музыка на роднай мове",
-  description:
-    "Спеў — беларускі музычны лейбл. Ствараем добрую музыку на беларускай мове: ад нэа-фолку да электронікі. Корань у традыцыі, погляд — наперад.",
+  applicationName: APP_NAME,
+  title: {
+    default: "Спеў — Беларуская музыка на роднай мове",
+    template: "%s — Спеў",
+  },
+  description: APP_DESCRIPTION,
   keywords: ["беларуская музыка", "беларуская мова", "музычны лейбл", "Спеў", "нэа-фолк", "беларускія песні"],
+  appleWebApp: {
+    capable: true,
+    title: APP_NAME,
+    statusBarStyle: "black-translucent",
+  },
+  formatDetection: { telephone: false },
 };
 
 export default async function RootLayout({
@@ -66,6 +85,8 @@ export default async function RootLayout({
     }
   }
 
+  const footerConfig = await getFooterConfig();
+
   return (
     <html
       lang="be"
@@ -91,12 +112,13 @@ export default async function RootLayout({
             navItems={navItems}
             navItemsExpanded={navItemsExpanded}
           />
-          <main>{children}</main>
+          <MobileMainFrame logoHref={logoHref}>{children}</MobileMainFrame>
           <Footer
             visibleHrefs={visibleHrefsArray}
             logoHref={logoHref}
             navItems={navItems}
             navItemsExpanded={navItemsExpanded}
+            footerConfig={footerConfig}
           />
         </ClientProviders>
       </body>

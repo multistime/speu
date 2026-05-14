@@ -11,6 +11,7 @@ export function stripStrayOAuthCodeFromBrowserUrl(): void {
     const path = url.pathname;
     if (path === "/api/auth/callback" || path.startsWith("/api/auth/callback/")) return;
     if (path === "/auth/mobile-oauth" || path.startsWith("/auth/mobile-oauth/")) return;
+    if (path === "/auth/recovery" || path.startsWith("/auth/recovery/")) return;
     url.searchParams.delete("code");
     const next = `${url.pathname}${url.search}${url.hash}`;
     window.history.replaceState(window.history.state, "", next);

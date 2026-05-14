@@ -54,5 +54,7 @@ export async function POST(request: Request) {
     revalidatePath("/speu");
   }
 
-  return NextResponse.json({ ok: true });
+  if (parsed.data.some((r) => r.key === "footer_config")) {
+    revalidatePath("/", "layout");
+  }
 }

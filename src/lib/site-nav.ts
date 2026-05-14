@@ -21,13 +21,16 @@ const FALLBACK_NAV: SiteNavItem[] = [
   { slug: "support", title: "Падтрымка", href: "/support" },
 ];
 
+/** Не паказваем у галоўным меню: кабінет адкрываецца толькі кнопкай справа ўверсе */
+const SLUGS_EXCLUDED_FROM_MAIN_NAV = new Set(["cabinet"]);
+
 function mapPublishedRows(
   rows: { slug: string; title: string; is_home: boolean | null }[],
   homeSlug: string
 ): { logoHref: string; items: SiteNavItem[] } {
   const logoHref = homeSlugToPublicHref(homeSlug);
   const items: SiteNavItem[] = rows
-    .filter((r) => !r.is_home)
+    .filter((r) => !r.is_home && !SLUGS_EXCLUDED_FROM_MAIN_NAV.has(r.slug))
     .map((r) => ({
       slug: r.slug,
       title: r.title,

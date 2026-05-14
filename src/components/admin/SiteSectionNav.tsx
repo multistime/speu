@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FileText, Heart, Inbox, LayoutDashboard, Radio, Settings, Users } from "lucide-react";
+import { FileText, Heart, Inbox, LayoutDashboard, PanelBottom, Radio, Settings, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SITE_NAV_SECTIONS, siteNavPath, type SiteNavSectionKey } from "@/lib/admin/site-nav-data";
 
 const ICONS: Record<SiteNavSectionKey, typeof LayoutDashboard> = {
   overview: LayoutDashboard,
   content: FileText,
+  footer: PanelBottom,
   supportTiers: Heart,
   serviceRequests: Inbox,
   users: Users,
