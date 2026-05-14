@@ -1,8 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useRef } from "react";
-import { flushSync } from "react-dom";
-import { useMobileDockSlot } from "@/contexts/MobileDockSlotContext";
+import { SpeuMiniPlayerDock } from "@/components/player/SpeuMiniPlayerDock";
 import { useSpeuMobileChrome } from "@/contexts/SpeuMobileChromeContext";
 import { SpeuBottomNavBar } from "@/components/SpeuBottomNav";
 
@@ -11,12 +10,11 @@ type MobileBottomStackProps = {
 };
 
 /**
- * Адзін «каранёвы» fixed-стэк унізе: слот дак-плэера (партал) + таб-бар.
- * Вышыня стэка → `--speu-mobile-bottom-stack` для main / шторкі / футэра.
+ * Ніжні chrome: слот міні-дака (рэндэр у межах гэтага flex) + таб-бар.
+ * ResizeObserver задае `--speu-mobile-bottom-stack` без партала/GlobalPlayer-парадку.
  */
 export function MobileBottomStack({ logoHref }: MobileBottomStackProps) {
   const { showBottomNav } = useSpeuMobileChrome();
-  const dockCtx = useMobileDockSlot();
   const stackRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
@@ -46,19 +44,14 @@ export function MobileBottomStack({ logoHref }: MobileBottomStackProps) {
     };
   }, [showBottomNav]);
 
-  if (!showBottomNav || !dockCtx) return null;
+  if (!showBottomNav) return null;
 
   return (
     <div ref={stackRef} className="fixed bottom-0 left-0 right-0 z-[100] flex flex-col">
-      <div
-        ref={(el) => {
-          flushSync(() => {
-            dockCtx.setDockSlotEl(el);
-          });
-        }}
-        className="min-h-0 w-full shrink-0"
-      />
-      <SpeuBottomNavBar logoHref={logoHref} />
+      <SpeuMiniPlayerDock />
+      <div className="relative z-[2] shrink-0">
+        <SpeuBottomNavBar logoHref={logoHref} />
+      </div>
     </div>
   );
 }
