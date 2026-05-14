@@ -13,10 +13,12 @@ import { usePathname } from "next/navigation";
 
 type SpeuMobileChromeValue = {
   showBottomNav: boolean;
+  narrowViewport: boolean;
 };
 
 const SpeuMobileChromeContext = createContext<SpeuMobileChromeValue>({
   showBottomNav: false,
+  narrowViewport: false,
 });
 
 export function SpeuMobileChromeProvider({ children }: { children: ReactNode }) {
@@ -74,8 +76,10 @@ export function SpeuMobileChromeProvider({ children }: { children: ReactNode }) 
 
     const tryLockPortrait = () => {
       try {
-        const o = screen.orientation;
-        if (o && typeof o.lock === "function") {
+        const o = screen.orientation as ScreenOrientation & {
+          lock?: (orientation: string) => Promise<void>;
+        };
+        if (o?.lock) {
           void o.lock("portrait").catch(() => {});
         }
       } catch {
@@ -106,7 +110,10 @@ export function SpeuMobileChromeProvider({ children }: { children: ReactNode }) 
     return () => document.body.classList.remove("speu-bottom-nav-active");
   }, [showBottomNav]);
 
-  const value = useMemo(() => ({ showBottomNav }), [showBottomNav]);
+  const value = useMemo(
+    () => ({ showBottomNav, narrowViewport }),
+    [showBottomNav, narrowViewport],
+  );
 
   return (
     <SpeuMobileChromeContext.Provider value={value}>{children}</SpeuMobileChromeContext.Provider>

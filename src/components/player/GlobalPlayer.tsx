@@ -22,11 +22,12 @@ import {
   X,
 } from "lucide-react";
 import { TrackLikeButton } from "@/components/speu/TrackLikeButton";
+import { useMobileDockSlot } from "@/contexts/MobileDockSlotContext";
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { usePlayer, type PlayerTrack } from "@/contexts/PlayerContext";
 import { useSpeuMobileChrome } from "@/contexts/SpeuMobileChromeContext";
 import { useUiAccent } from "@/contexts/UiAccentContext";
-import { useSyncSpeuMiniPlayerHeight } from "@/hooks/use-speu-mobile-chrome-layout";
 import { formatPlayerTime } from "@/lib/format-player-time";
 import { clientXToSeekRatio } from "@/lib/player-progress";
 import { cn } from "@/lib/utils";
@@ -987,7 +988,8 @@ export function GlobalPlayer() {
   const canShuffle = queueNav && queueSize > 1;
   const canSkipNext = queueNav;
 
-  const { showBottomNav } = useSpeuMobileChrome();
+  const { showBottomNav, narrowViewport } = useSpeuMobileChrome();
+  const dockSlot = useMobileDockSlot()?.dockSlotEl ?? null;
 
   const repeatLabel = !queueNav
     ? repeatMode === "off"
@@ -1001,113 +1003,144 @@ export function GlobalPlayer() {
 
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
 
-  const mobileDockMeasureRef = useRef<HTMLDivElement>(null);
-  useSyncSpeuMiniPlayerHeight(mobileDockMeasureRef, Boolean(track && showBottomNav));
-
-  /** Дак сядзіць на таб-бары; main/footer — на поўны стэк */
-  const mobileBottomChromeInset = showBottomNav ? "var(--speu-mobile-tab-bar-height)" : "0px";
-
   useEffect(() => {
     if (!track) queueMicrotask(() => setMobileSheetOpen(false));
   }, [track]);
 
-  return (
-    <>
-    <AnimatePresence>
-      {track && (
-        <motion.div
-          ref={mobileDockMeasureRef}
-          key="global-player"
-          initial={{ y: 100, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: 100, opacity: 0 }}
-          transition={{ type: "spring", damping: 28, stiffness: 280 }}
-          className={cn(
-            "group/player fixed inset-x-0 z-50 max-md:z-[55] overflow-visible border-t border-border/40 bg-background/95 pt-3 backdrop-blur-md",
-          )}
-          style={{
-            bottom: mobileBottomChromeInset,
-            boxShadow: `0 -4px 40px rgba(${rgbCompact}, 0.08)`,
-          }}
-        >
-          <GlobalPlayerProgress />
+  const dockShadow = `0 -4px 40px rgba(${rgbCompact}, 0.08)`;
 
-          <div className="max-w-7xl mx-auto px-2 sm:px-6 py-2.5 sm:py-3 min-h-[3.25rem]">
-            {/* Мабільны плэер: націск на мініяцюру / тэкст / час — шторка; Play і лайк асобна; меню «⋯» толькі на md+ */}
-            <div className="flex md:hidden flex-row items-center gap-1.5 min-w-0">
-              <button
-                type="button"
-                className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 rounded-lg py-0.5 text-left outline-none transition-colors hover:bg-muted/35 focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                aria-label="Адкрыць плэер"
-                onClick={() => setMobileSheetOpen(true)}
-              >
-                <div
-                  className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg"
-                  style={{
-                    background: `rgba(${rgbCompact}, 0.15)`,
-                  }}
-                >
-                  {track.coverUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={track.coverUrl} alt="" className="size-full object-cover" draggable={false} />
-                  ) : (
-                    <Music
-                      className="w-4 h-4"
-                      style={{ color: accentColor }}
-                      strokeWidth={1.5}
-                    />
-                  )}
-                  {isPlaying ? <GlobalPlayerCoverEqualizer /> : null}
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium leading-tight text-foreground">
-                    {track.title}
-                  </p>
-                  {track.artistName ? (
-                    <p className="mt-0.5 truncate text-xs text-muted-foreground tabular-nums">
-                      {track.artistName}
-                    </p>
-                  ) : null}
-                </div>
-
-                <span
-                  className="shrink-0 font-mono text-[10px] tracking-tight text-muted-foreground/90 tabular-nums whitespace-nowrap"
-                  aria-live="polite"
-                >
-                  {formatPlayerTime(currentTime)}
-                  <span className="text-muted-foreground/50"> / </span>
-                  {duration > 0 ? formatPlayerTime(duration) : "—:—"}
-                </span>
-              </button>
-
-              {track.trackHref?.startsWith("/speu/tracks/") ? (
-                <TrackLikeButton
-                  trackId={track.id}
-                  size="lg"
-                  className="size-10 !min-h-10 !min-w-10 !max-h-10 !max-w-10 shrink-0 rounded-full !p-0 hover:bg-muted/45 active:bg-muted/55"
-                />
-              ) : null}
-
-              <button
-                type="button"
-                onClick={() => togglePlay(track)}
-                aria-label={isPlaying ? "Паўза" : "Прайграць"}
-                className="flex size-10 shrink-0 items-center justify-center rounded-full shadow-sm transition-transform duration-200 hover:scale-105 active:scale-95"
+  const narrowMobileDockInner =
+    track == null ? null : (
+      <>
+        <GlobalPlayerProgress />
+        <div className="max-w-7xl mx-auto px-2 sm:px-6 py-2.5 sm:py-3 min-h-[3.25rem]">
+          <div className="flex flex-row items-center gap-1.5 min-w-0">
+            <button
+              type="button"
+              className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 rounded-lg py-0.5 text-left outline-none transition-colors hover:bg-muted/35 focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              aria-label="Адкрыць плэер"
+              onClick={() => setMobileSheetOpen(true)}
+            >
+              <div
+                className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg"
                 style={{
-                  background: accentColor,
-                  color: "white",
+                  background: `rgba(${rgbCompact}, 0.15)`,
                 }}
               >
-                {isPlaying ? (
-                  <Pause className="size-[17px]" fill="currentColor" strokeWidth={0} />
+                {track.coverUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={track.coverUrl} alt="" className="size-full object-cover" draggable={false} />
                 ) : (
-                  <Play className="size-[17px] ml-0.5" fill="currentColor" strokeWidth={0} />
+                  <Music
+                    className="w-4 h-4"
+                    style={{ color: accentColor }}
+                    strokeWidth={1.5}
+                  />
                 )}
-              </button>
-            </div>
+                {isPlaying ? <GlobalPlayerCoverEqualizer /> : null}
+              </div>
 
-            <div className="hidden md:flex flex-row items-center gap-4 min-h-[3.25rem] w-full">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium leading-tight text-foreground">{track.title}</p>
+                {track.artistName ? (
+                  <p className="mt-0.5 truncate text-xs text-muted-foreground tabular-nums">{track.artistName}</p>
+                ) : null}
+              </div>
+
+              <span
+                className="shrink-0 font-mono text-[10px] tracking-tight text-muted-foreground/90 tabular-nums whitespace-nowrap"
+                aria-live="polite"
+              >
+                {formatPlayerTime(currentTime)}
+                <span className="text-muted-foreground/50"> / </span>
+                {duration > 0 ? formatPlayerTime(duration) : "—:—"}
+              </span>
+            </button>
+
+            {track.trackHref?.startsWith("/speu/tracks/") ? (
+              <TrackLikeButton
+                trackId={track.id}
+                size="lg"
+                className="size-10 !min-h-10 !min-w-10 !max-h-10 !max-w-10 shrink-0 rounded-full !p-0 hover:bg-muted/45 active:bg-muted/55"
+              />
+            ) : null}
+
+            <button
+              type="button"
+              onClick={() => togglePlay(track)}
+              aria-label={isPlaying ? "Паўза" : "Прайграць"}
+              className="flex size-10 shrink-0 items-center justify-center rounded-full shadow-sm transition-transform duration-200 hover:scale-105 active:scale-95"
+              style={{
+                background: accentColor,
+                color: "white",
+              }}
+            >
+              {isPlaying ? (
+                <Pause className="size-[17px]" fill="currentColor" strokeWidth={0} />
+              ) : (
+                <Play className="size-[17px] ml-0.5" fill="currentColor" strokeWidth={0} />
+              )}
+            </button>
+          </div>
+        </div>
+      </>
+    );
+
+  return (
+    <>
+      {/* Мабільная дак-панель у слоце над таб-барам — адзін стэк, без падзелу fixed + падлікаў */}
+      {narrowViewport && showBottomNav && dockSlot && track
+        ? createPortal(
+            <motion.div
+              key="speu-mobile-dock-slot"
+              initial={{ y: 100, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 100, opacity: 0 }}
+              transition={{ type: "spring", damping: 28, stiffness: 280 }}
+              className="group/player relative z-0 w-full overflow-visible border-t border-border/40 bg-background/95 pt-3 backdrop-blur-md"
+              style={{ boxShadow: dockShadow }}
+            >
+              {narrowMobileDockInner}
+            </motion.div>,
+            dockSlot,
+          )
+        : null}
+
+      {/* Мабільны фолбэк (admin / бяз слота): апорны fixed унізе сам па сабе */}
+      <AnimatePresence>
+        {track && narrowViewport && !showBottomNav ? (
+          <motion.div
+            key="global-player-mobile-fixed"
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            transition={{ type: "spring", damping: 28, stiffness: 280 }}
+            className="group/player fixed inset-x-0 bottom-0 z-[60] md:hidden overflow-visible border-t border-border/40 bg-background/95 pt-3 backdrop-blur-md"
+            style={{ boxShadow: dockShadow }}
+          >
+            {narrowMobileDockInner}
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+
+      {/* Дак-топ-бар для шырокага viewport */}
+      <AnimatePresence>
+        {track && !narrowViewport ? (
+          <motion.div
+            key="global-player-desktop"
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            transition={{ type: "spring", damping: 28, stiffness: 280 }}
+            className={cn(
+              "group/player fixed inset-x-0 bottom-0 z-50 hidden overflow-visible border-t border-border/40 bg-background/95 pt-3 backdrop-blur-md md:flex md:flex-col",
+            )}
+            style={{ boxShadow: dockShadow }}
+          >
+            <GlobalPlayerProgress />
+
+            <div className="max-w-7xl mx-auto px-2 sm:px-6 py-2.5 sm:py-3 min-h-[3.25rem] w-full">
+            <div className="flex flex-row items-center gap-4 min-h-[3.25rem] w-full">
             <div className="flex min-w-0 flex-1 items-center gap-2.5 sm:gap-3">
               <div
                 className="w-10 h-10 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden"
@@ -1298,8 +1331,8 @@ export function GlobalPlayer() {
             </div>
           </div>
         </motion.div>
-      )}
-    </AnimatePresence>
+        ) : null}
+      </AnimatePresence>
     {track ? (
       <MobileNowPlayingSheet
         open={mobileSheetOpen}

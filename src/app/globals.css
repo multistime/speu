@@ -109,12 +109,8 @@
   --selection-foreground: #35654D;
   --ornament-stroke-hex:  35654D;
 
-  /* Мабільнае нішняе шкло: акурэтнае сумяшчэнне — JS перакрывае px праз ResizeObserver */
-  --speu-mobile-tab-bar-height: 5.25rem;
-  --speu-mobile-mini-player-height: 0px;
-  --speu-mobile-bottom-stack: calc(
-    var(--speu-mobile-tab-bar-height) + var(--speu-mobile-mini-player-height)
-  );
+  /* Вышыня `MobileBottomStack` (слот партала дака + таб-бар), абнаўляецца па ResizeObserver */
+  --speu-mobile-bottom-stack: 5.5rem;
 }
 
 /* ══════════════════════════════════════════════════════════════════════ */

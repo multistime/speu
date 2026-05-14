@@ -5,6 +5,7 @@ import { SerwistProvider } from "@serwist/next/react";
 import { PlayerProvider } from "@/contexts/PlayerContext";
 import { TrackLikesProvider } from "@/contexts/TrackLikesContext";
 import { UiAccentProvider } from "@/contexts/UiAccentContext";
+import { MobileDockSlotProvider } from "@/contexts/MobileDockSlotContext";
 import { SpeuMobileChromeProvider } from "@/contexts/SpeuMobileChromeContext";
 
 const GlobalPlayer = dynamic(
@@ -21,8 +22,10 @@ export function ClientProviders({ children }: { children: React.ReactNode }) {
         <TrackLikesProvider>
           <UiAccentProvider>
             <PlayerProvider>
-              {children}
-              <GlobalPlayer />
+              <MobileDockSlotProvider>
+                {children}
+                <GlobalPlayer />
+              </MobileDockSlotProvider>
             </PlayerProvider>
           </UiAccentProvider>
         </TrackLikesProvider>

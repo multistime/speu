@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { useSpeuMobileChrome } from "@/contexts/SpeuMobileChromeContext";
-import { SpeuBottomNav } from "@/components/SpeuBottomNav";
+import { MobileBottomStack } from "@/components/MobileBottomStack";
 
 type MobileMainFrameProps = {
   logoHref: string;
@@ -22,7 +22,7 @@ export function MobileMainFrame({ logoHref, children }: MobileMainFrameProps) {
       >
         {children}
       </main>
-      <SpeuBottomNav logoHref={logoHref} />
+      <MobileBottomStack logoHref={logoHref} />
     </>
   );
 }

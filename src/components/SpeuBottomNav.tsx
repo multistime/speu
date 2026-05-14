@@ -2,24 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useRef } from "react";
 import { Heart, Home, LayoutGrid, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SPEU_HUB_HREF } from "@/lib/site-route-slugs";
-import { useSpeuMobileChrome } from "@/contexts/SpeuMobileChromeContext";
-import { useSyncSpeuTabBarHeight } from "@/hooks/use-speu-mobile-chrome-layout";
 
-type SpeuBottomNavProps = {
+type SpeuBottomNavBarProps = {
   logoHref: string;
 };
 
-export function SpeuBottomNav({ logoHref }: SpeuBottomNavProps) {
+/** Радок таб-бара без fixed — ўваходзіць у `MobileBottomStack` (слот партала зверху). */
+export function SpeuBottomNavBar({ logoHref }: SpeuBottomNavBarProps) {
   const pathname = usePathname();
-  const navRef = useRef<HTMLElement>(null);
-  const { showBottomNav } = useSpeuMobileChrome();
-  useSyncSpeuTabBarHeight(navRef, showBottomNav);
-
-  if (!showBottomNav) return null;
 
   const homeActive =
     pathname === logoHref || (logoHref !== "/" && pathname.startsWith(`${logoHref}/`));
@@ -52,9 +45,8 @@ export function SpeuBottomNav({ logoHref }: SpeuBottomNavProps) {
 
   return (
     <nav
-      ref={navRef}
       className={cn(
-        "fixed bottom-0 left-0 right-0 z-[100] border-t border-border bg-background/95 backdrop-blur-md md:hidden",
+        "w-full border-t border-border bg-background/95 backdrop-blur-md",
         "pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pt-1",
       )}
       aria-label="Ніжняя навігацыя"
