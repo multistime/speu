@@ -2,6 +2,9 @@ import { createAnonServerClient, hasSupabasePublicEnv } from "@/lib/supabase/ser
 
 const FALLBACK_HOME_SLUG = "home";
 
+/** Slug апублікаванай CMS-старонкі з блокамі класічнага лэндынга (Hero + секцыі); шлях `/home` заўсёды праглядае гэтую старонку */
+export const CLASSIC_SITE_LANDING_PAGE_SLUG = FALLBACK_HOME_SLUG;
+
 /** Slug CMS-старонкі, якая адлюстроўваецца на `/` */
 export async function getHomePageSlug(): Promise<string> {
   if (!hasSupabasePublicEnv()) {
