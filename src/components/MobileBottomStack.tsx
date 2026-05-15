@@ -16,18 +16,22 @@ type MobileBottomStackProps = {
 export function MobileBottomStack({ logoHref }: MobileBottomStackProps) {
   const { showBottomNav } = useSpeuMobileChrome();
   const stackRef = useRef<HTMLDivElement>(null);
+  const navRowRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
     if (!showBottomNav) {
       document.documentElement.style.removeProperty("--speu-mobile-bottom-stack");
+      document.documentElement.style.removeProperty("--speu-mobile-bottom-nav");
       return;
     }
     const el = stackRef.current;
     if (!el) return;
 
     const apply = () => {
-      const h = Math.ceil(el.getBoundingClientRect().height);
-      document.documentElement.style.setProperty("--speu-mobile-bottom-stack", `${h}px`);
+      const stackH = Math.ceil(el.getBoundingClientRect().height);
+      const navH = Math.ceil(navRowRef.current?.getBoundingClientRect().height ?? 0);
+      document.documentElement.style.setProperty("--speu-mobile-bottom-stack", `${stackH}px`);
+      document.documentElement.style.setProperty("--speu-mobile-bottom-nav", `${navH}px`);
     };
 
     apply();
@@ -41,6 +45,7 @@ export function MobileBottomStack({ logoHref }: MobileBottomStackProps) {
       window.visualViewport?.removeEventListener("resize", apply);
       window.removeEventListener("orientationchange", apply);
       document.documentElement.style.removeProperty("--speu-mobile-bottom-stack");
+      document.documentElement.style.removeProperty("--speu-mobile-bottom-nav");
     };
   }, [showBottomNav]);
 
@@ -51,7 +56,7 @@ export function MobileBottomStack({ logoHref }: MobileBottomStackProps) {
       <div className="relative z-[1] min-h-0 shrink-0">
         <SpeuMiniPlayerDock />
       </div>
-      <div className="relative z-[2] shrink-0">
+      <div ref={navRowRef} className="relative z-[2] shrink-0">
         <SpeuBottomNavBar logoHref={logoHref} />
       </div>
     </div>

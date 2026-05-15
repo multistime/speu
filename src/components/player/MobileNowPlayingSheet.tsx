@@ -425,8 +425,8 @@ export function MobileNowPlayingSheet({
   const { showBottomNav, mobileViewport } = useSpeuMobileChrome();
   /** Мабільная шторка: адзіны кантракт mobile+standalone з кантэксту. */
   const useMobileMiniChrome = mobileViewport;
-  /** Ніз шторкі = сумарная вышыня таб-бара + дака (дзеля зменных глядзі `globals.css`, px з ResizeObserver). */
-  const sheetBottomInset = showBottomNav ? "var(--speu-mobile-bottom-stack)" : "0px";
+  /** Ніз шторкі = толькі вышыня таб-бара, каб шторка накрывала mini-dock і выходзіла "ад меню". */
+  const sheetBottomInset = showBottomNav ? "var(--speu-mobile-bottom-nav)" : "0px";
 
   const {
     isPlaying,

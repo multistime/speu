@@ -109,8 +109,9 @@
   --selection-foreground: #35654D;
   --ornament-stroke-hex:  35654D;
 
-  /* Вышыня `MobileBottomStack` (слот партала дака + таб-бар), абнаўляецца па ResizeObserver */
+  /* Вышыня ніжняга chrome (стэк) + асобна радка таб-бара, абнаўляюцца па ResizeObserver */
   --speu-mobile-bottom-stack: 5.5rem;
+  --speu-mobile-bottom-nav: 4.25rem;
 }
 
 /* ══════════════════════════════════════════════════════════════════════ */
