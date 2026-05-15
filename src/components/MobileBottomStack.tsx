@@ -48,7 +48,9 @@ export function MobileBottomStack({ logoHref }: MobileBottomStackProps) {
 
   return (
     <div ref={stackRef} className="fixed bottom-0 left-0 right-0 z-[100] flex flex-col">
-      <SpeuMiniPlayerDock />
+      <div className="relative z-[1] min-h-0 shrink-0">
+        <SpeuMiniPlayerDock />
+      </div>
       <div className="relative z-[2] shrink-0">
         <SpeuBottomNavBar logoHref={logoHref} />
       </div>

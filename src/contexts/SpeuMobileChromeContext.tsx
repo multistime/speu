@@ -14,11 +14,13 @@ import { usePathname } from "next/navigation";
 type SpeuMobileChromeValue = {
   showBottomNav: boolean;
   narrowViewport: boolean;
+  mobileViewport: boolean;
 };
 
 const SpeuMobileChromeContext = createContext<SpeuMobileChromeValue>({
   showBottomNav: false,
   narrowViewport: false,
+  mobileViewport: false,
 });
 
 export function SpeuMobileChromeProvider({ children }: { children: ReactNode }) {
@@ -99,10 +101,15 @@ export function SpeuMobileChromeProvider({ children }: { children: ReactNode }) 
     };
   }, [standaloneDisplay, narrowViewport]);
 
+  const mobileViewport = useMemo(
+    () => narrowViewport || standaloneDisplay,
+    [narrowViewport, standaloneDisplay],
+  );
+
   const showBottomNav = useMemo(() => {
     if (pathname.startsWith("/admin")) return false;
-    return narrowViewport || standaloneDisplay;
-  }, [pathname, narrowViewport, standaloneDisplay]);
+    return mobileViewport;
+  }, [pathname, mobileViewport]);
 
   useLayoutEffect(() => {
     if (showBottomNav) document.body.classList.add("speu-bottom-nav-active");
@@ -111,8 +118,8 @@ export function SpeuMobileChromeProvider({ children }: { children: ReactNode }) 
   }, [showBottomNav]);
 
   const value = useMemo(
-    () => ({ showBottomNav, narrowViewport }),
-    [showBottomNav, narrowViewport],
+    () => ({ showBottomNav, narrowViewport, mobileViewport }),
+    [showBottomNav, narrowViewport, mobileViewport],
   );
 
   return (

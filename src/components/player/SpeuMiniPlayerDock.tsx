@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { Music, Pause, Play } from "lucide-react";
 import { useEffect, useState } from "react";
 import { TrackLikeButton } from "@/components/speu/TrackLikeButton";
-import { MobileNowPlayingSheet } from "@/components/player/GlobalPlayer";
+import { MobileNowPlayingSheet } from "@/components/player/MobileNowPlayingSheet";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useSpeuMobileChrome } from "@/contexts/SpeuMobileChromeContext";
 import { useUiAccent } from "@/contexts/UiAccentContext";

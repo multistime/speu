@@ -10,7 +10,7 @@ type SpeuBottomNavBarProps = {
   logoHref: string;
 };
 
-/** Радок таб-бара без fixed — ўваходзіць у `MobileBottomStack` (слот партала зверху). */
+/** Радок таб-бара без fixed — ніжні радок у `MobileBottomStack`. */
 export function SpeuBottomNavBar({ logoHref }: SpeuBottomNavBarProps) {
   const pathname = usePathname();
 
