@@ -20,6 +20,7 @@ import {
 import { listenTerminalClientSkipReason } from "@/lib/listen-analytics/terminal-guard";
 import { submitListenTerminal } from "@/lib/listen-analytics/submit";
 import { createClient } from "@/lib/supabase/client";
+import { resumeSpeuAudioFromOs } from "@/lib/speu-ios-audio-resume";
 import { getSpeuPlayerAudio } from "@/lib/speu-player-audio";
 import {
   clearSpeuPlayerSession,
@@ -131,6 +132,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const queueIndexRef = useRef(0);
 
   const playTrackInternalRef = useRef<(next: PlayerTrack) => void>(() => {});
+  const resumePlaybackRef = useRef<() => void>(() => {});
   const stopRef = useRef<() => void>(() => {});
   const seekRatioRef = useRef<(ratio: number) => void>(() => {});
   const skipNextRef = useRef<() => void>(() => {});
@@ -255,6 +257,19 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     finalizeListenSessionRef.current = finalizeListenSession;
   }, [finalizeListenSession]);
 
+  const resumePlayback = useCallback(async () => {
+    const audio = audioRef.current;
+    if (!audio?.src?.trim()) return;
+    const tr = trackRef.current;
+    if (tr) setTrackMediaMetadata(tr);
+    try {
+      await resumeSpeuAudioFromOs(audio);
+    } catch {
+      setIsPlaying(false);
+      setMediaSessionPlaybackState(audio.src?.trim() ? "paused" : "none");
+    }
+  }, []);
+
   const playTrackInternal = useCallback((next: PlayerTrack) => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -290,6 +305,12 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     playTrackInternalRef.current = playTrackInternal;
   }, [playTrackInternal]);
+
+  useLayoutEffect(() => {
+    resumePlaybackRef.current = () => {
+      void resumePlayback();
+    };
+  }, [resumePlayback]);
 
   useEffect(() => {
     listenDurationSecRef.current = finiteDuration(duration);
@@ -396,7 +417,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
           setCurrentTime(audio.currentTime);
           setTrackMediaMetadata(tr);
           if (saved.wasPlaying) {
-            void audio.play().catch(() => setIsPlaying(false));
+            void resumeSpeuAudioFromOs(audio).catch(() => setIsPlaying(false));
           } else {
             setIsPlaying(false);
           }
@@ -409,7 +430,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
           setIsPlaying(!audio.paused);
           setTrackMediaMetadata(tr);
           if (saved.wasPlaying && audio.paused) {
-            void audio.play().catch(() => setIsPlaying(false));
+            void resumeSpeuAudioFromOs(audio).catch(() => setIsPlaying(false));
           }
           if (!audio.paused) {
             setMediaSessionPlaybackState("playing");
@@ -424,7 +445,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     /** iOS: ранняя рэгістрацыя пры mount часта дае ±15 с; пасля «playing» — стрэлкі трэкаў (гл. SO 73993512). */
     const applyMediaSessionActionHandlers = () => {
       if (typeof navigator === "undefined" || !("mediaSession" in navigator)) return;
-      const play = () => void audio.play();
+      const play = () => resumePlaybackRef.current();
       const pause = () => audio.pause();
       const stopFromOs = () => stopRef.current();
       const next = () => skipNextRef.current();
@@ -584,6 +605,22 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     audio.addEventListener("waiting", onWaiting);
     audio.addEventListener("error", onError);
 
+    const onVisibility = () => {
+      if (document.visibilityState !== "visible") return;
+      if (!audio.src?.trim() || audio.paused) return;
+      const tr = trackRef.current;
+      if (tr) setTrackMediaMetadata(tr);
+      void resumeSpeuAudioFromOs(audio).catch(() => {});
+    };
+
+    const onPageShow = (e: PageTransitionEvent) => {
+      if (!e.persisted) return;
+      onVisibility();
+    };
+
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pageshow", onPageShow);
+
     return () => {
       audio.removeEventListener("play", onPlay);
       audio.removeEventListener("playing", onPlaying);
@@ -594,6 +631,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       audio.removeEventListener("loadedmetadata", onLoadedMetadata);
       audio.removeEventListener("waiting", onWaiting);
       audio.removeEventListener("error", onError);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pageshow", onPageShow);
       clearMediaSessionActionHandlers();
       /* Не спыняем аўдыё і не чысцім src: пры перамантаваньні PlayerProvider струмень застаецца;
          стан аднаўляецца з sessionStorage у пачатку гэтага эфекту. */
@@ -661,7 +700,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         listenHadUserPauseRef.current = true;
         audio.pause();
       } else {
-        void audio.play();
+        void resumePlayback();
       }
       return;
     }
@@ -680,7 +719,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     setRepeatMode(solo);
 
     playTrackInternalRef.current(newTrack);
-  }, []);
+  }, [resumePlayback]);
 
   const cycleRepeatMode = useCallback(() => {
     setRepeatMode((m) => {

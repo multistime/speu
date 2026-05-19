@@ -16,7 +16,10 @@ export function MobileMainFrame({ logoHref, children }: MobileMainFrameProps) {
   return (
     <>
       <main
-        className={cn(showBottomNav && "pb-[var(--speu-mobile-bottom-stack)]")}
+        className={cn(
+          "pt-[calc(var(--speu-site-header,5.5rem)+0.5rem)]",
+          showBottomNav && "pb-[var(--speu-mobile-bottom-stack)]",
+        )}
       >
         {children}
       </main>

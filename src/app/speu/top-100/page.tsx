@@ -11,7 +11,7 @@ export default async function SpeuTop100Page() {
   const topPlaylist = rows.map((r) => speuPublicTrackToPlayerTrack(r.track));
 
   return (
-    <div className="min-h-screen pt-20 pb-24 px-3 sm:px-6 lg:px-8">
+    <div className="min-h-screen pb-24 px-3 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto">
         <p className="text-xs uppercase tracking-[0.18em] text-primary/70 mb-3 font-medium text-center">
           Рэйтынг

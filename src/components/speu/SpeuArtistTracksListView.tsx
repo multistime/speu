@@ -28,7 +28,7 @@ export function SpeuArtistTracksListView({
     : `Усе апублікаваныя трэкі ў каталозе «Спеў».`;
 
   return (
-    <div className="min-h-screen pt-20 pb-24 px-3 sm:px-6 lg:px-8">
+    <div className="min-h-screen pb-24 px-3 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto">
         <p className="text-xs uppercase tracking-[0.18em] text-primary/70 mb-3 font-medium">{data.name}</p>
         <h1 className="font-display text-3xl sm:text-4xl font-semibold text-foreground mb-2 italic">{title}</h1>

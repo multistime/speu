@@ -7,8 +7,6 @@ import { Menu } from "@base-ui/react/menu";
 import { MoreHorizontal, Music, Pause, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePlayer, type PlayerTrack } from "@/contexts/PlayerContext";
-import { getGenreLabelBe } from "@/lib/speu/genre-taxonomy";
-import { WORK_KIND_LABELS, type WorkKind } from "@/lib/speu/release-submissions";
 import type { SpeuChartMovement, SpeuPublicTrack } from "@/lib/speu/types";
 import { speuPublicTrackToPlayerTrack } from "@/lib/speu/player-map";
 import { formatTrackDuration } from "@/components/speu/speu-format-duration";
@@ -105,47 +103,6 @@ function SpeuTrackRowMobileMenu({ track }: { track: SpeuPublicTrack }) {
   );
 }
 
-function SpeuTrackPublicMeta({ track }: { track: SpeuPublicTrack }) {
-  const { genres, workKind, isExplicit, isAiLyrics, isAiMusic, vocalLanguage } = track;
-  const showKind = workKind !== "track";
-  const showAiLyrics = vocalLanguage !== "instrumental" && isAiLyrics;
-  if (!isExplicit && !isAiMusic && !showAiLyrics && !showKind && genres.length === 0) return null;
-  return (
-    <div className="mt-1 flex flex-wrap gap-1 max-w-full">
-      {showKind ? (
-        <span className="rounded border border-border/70 bg-muted/50 px-1 py-px text-[10px] text-muted-foreground uppercase tracking-wide">
-          {WORK_KIND_LABELS[workKind as WorkKind]}
-        </span>
-      ) : null}
-      {isExplicit ? (
-        <span className="rounded border border-amber-500/30 bg-amber-500/10 px-1 py-px text-[10px] text-amber-700 dark:text-amber-300">
-          18+
-        </span>
-      ) : null}
-      {isAiMusic ? (
-        <span className="rounded border border-violet-500/25 bg-violet-500/10 px-1 py-px text-[10px] text-violet-700 dark:text-violet-300">
-          ІІ·м
-        </span>
-      ) : null}
-      {showAiLyrics ? (
-        <span className="rounded border border-violet-500/25 bg-violet-500/10 px-1 py-px text-[10px] text-violet-700 dark:text-violet-300">
-          ІІ·с
-        </span>
-      ) : null}
-      {genres.slice(0, 3).map((g) => (
-        <span
-          key={g}
-          className="rounded border border-border/60 bg-primary/[0.06] px-1 py-px text-[10px] text-muted-foreground max-w-[7rem] truncate"
-        >
-          {getGenreLabelBe(g)}
-        </span>
-      ))}
-      {genres.length > 3 ? (
-        <span className="text-[10px] text-muted-foreground/80">+{genres.length - 3}</span>
-      ) : null}
-    </div>
-  );
-}
 
 function ChartMovementBadge({
   movement,
@@ -328,17 +285,26 @@ export function SpeuTrackRow({
           )}
 
           <div className="min-w-0 flex-1">
-            <Link
-              href={`/speu/tracks/${track.slug}`}
-              className={cn(
-                "relative z-[1] inline-block max-w-full min-w-0 truncate text-sm hover:underline pointer-events-auto align-top",
-                active ? "font-medium" : "text-foreground/80"
-              )}
-              style={active ? { color: accentColor } : undefined}
-            >
-              {track.title}
-            </Link>
-            <SpeuTrackPublicMeta track={track} />
+            <div className="flex min-w-0 items-center gap-1.5">
+              {track.isExplicit ? (
+                <span
+                  className="shrink-0 rounded border border-amber-500/30 bg-amber-500/10 px-1 py-px text-[10px] font-medium text-amber-700 dark:text-amber-300"
+                  aria-label="18+"
+                >
+                  18+
+                </span>
+              ) : null}
+              <Link
+                href={`/speu/tracks/${track.slug}`}
+                className={cn(
+                  "relative z-[1] inline-block min-w-0 flex-1 truncate text-sm hover:underline pointer-events-auto",
+                  active ? "font-medium" : "text-foreground/80",
+                )}
+                style={active ? { color: accentColor } : undefined}
+              >
+                {track.title}
+              </Link>
+            </div>
             <div className="mt-0.5 flex flex-wrap items-center text-xs text-muted-foreground">
               {track.artists.map((a, i) => (
                 <span key={a.id} className="inline-flex min-w-0 items-center">

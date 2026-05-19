@@ -112,6 +112,12 @@
   /* Вышыня ніжняга chrome (стэк) + асобна радка таб-бара, абнаўляюцца па ResizeObserver */
   --speu-mobile-bottom-stack: 5.5rem;
   --speu-mobile-bottom-nav: 4.25rem;
+  /* Вышыня fixed Navbar (+ safe-area); абнаўляецца ResizeObserver у Navbar */
+  --speu-site-header: 5.5rem;
+}
+
+.speu-page-pad {
+  padding-top: calc(var(--speu-site-header) + 0.5rem);
 }
 
 /* ══════════════════════════════════════════════════════════════════════ */

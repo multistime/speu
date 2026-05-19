@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -44,6 +44,7 @@ export function Navbar({
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const pathname = usePathname();
   const { showBottomNav } = useSpeuMobileChrome();
+  const headerRef = useRef<HTMLElement>(null);
 
   const showMobileOverflow =
     effectiveNav.length > 0 ||
@@ -51,7 +52,10 @@ export function Navbar({
     (showCabinet && !showBottomNav);
 
   useEffect(() => {
-    if (!showMobileOverflow) setMobileOpen(false);
+    if (!showMobileOverflow) {
+      const id = window.requestAnimationFrame(() => setMobileOpen(false));
+      return () => cancelAnimationFrame(id);
+    }
   }, [showMobileOverflow]);
 
   useEffect(() => {
@@ -59,6 +63,23 @@ export function Navbar({
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useLayoutEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const apply = () => {
+      const h = Math.ceil(el.getBoundingClientRect().height);
+      document.documentElement.style.setProperty("--speu-site-header", `${h}px`);
+    };
+    apply();
+    const ro = new ResizeObserver(apply);
+    ro.observe(el);
+    window.addEventListener("orientationchange", apply);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("orientationchange", apply);
+    };
+  }, [barActive, mobileOpen]);
 
   useEffect(() => {
     const supabase = createClient();
@@ -116,6 +137,7 @@ export function Navbar({
 
   return (
     <motion.header
+      ref={headerRef}
       initial={{ y: -80, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}

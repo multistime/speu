@@ -5,6 +5,7 @@ import { SerwistProvider } from "@serwist/next/react";
 import { PlayerProvider } from "@/contexts/PlayerContext";
 import { TrackLikesProvider } from "@/contexts/TrackLikesContext";
 import { UiAccentProvider } from "@/contexts/UiAccentContext";
+import { SpeuHubDataProvider } from "@/contexts/SpeuHubDataContext";
 import { SpeuMobileChromeProvider } from "@/contexts/SpeuMobileChromeContext";
 
 const GlobalPlayer = dynamic(
@@ -18,14 +19,16 @@ export function ClientProviders({ children }: { children: React.ReactNode }) {
   return (
     <SpeuMobileChromeProvider>
       <SerwistProvider swUrl="/sw.js" disable={!registerSw}>
-        <TrackLikesProvider>
-          <UiAccentProvider>
-            <PlayerProvider>
-              {children}
-              <GlobalPlayer />
-            </PlayerProvider>
-          </UiAccentProvider>
-        </TrackLikesProvider>
+        <SpeuHubDataProvider>
+          <TrackLikesProvider>
+            <UiAccentProvider>
+              <PlayerProvider>
+                {children}
+                <GlobalPlayer />
+              </PlayerProvider>
+            </UiAccentProvider>
+          </TrackLikesProvider>
+        </SpeuHubDataProvider>
       </SerwistProvider>
     </SpeuMobileChromeProvider>
   );

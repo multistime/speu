@@ -741,13 +741,14 @@ function movementForRank(rank: number, prev: number | undefined): {
   return { movement: "down", delta: rank - prev };
 }
 
-/** Калі snapshot чарта не чытаецца цалком — той жа парадак, што ў радыё/каталозе. */
-async function speuChartRowsFromPlayableCatalog(limit: number): Promise<{
+function chartRowsFromPlayableList(
+  playable: SpeuPublicTrack[],
+  limit: number,
+): {
   rows: SpeuChartRow[];
   snapshotDate: null;
   usedSnapshot: false;
-}> {
-  const playable = await fetchSpeuPlayableTracks();
+} {
   const rows: SpeuChartRow[] = playable.slice(0, limit).map((track, i) => ({
     track,
     rank: i + 1,
@@ -757,17 +758,33 @@ async function speuChartRowsFromPlayableCatalog(limit: number): Promise<{
   return { rows, snapshotDate: null, usedSnapshot: false };
 }
 
+/** Калі snapshot чарта не чытаецца цалком — той жа парадак, што ў радыё/каталозе. */
+async function speuChartRowsFromPlayableCatalog(
+  limit: number,
+  playablePrefetched?: SpeuPublicTrack[],
+): Promise<{
+  rows: SpeuChartRow[];
+  snapshotDate: null;
+  usedSnapshot: false;
+}> {
+  const playable = playablePrefetched ?? (await fetchSpeuPlayableTracks());
+  return chartRowsFromPlayableList(playable, limit);
+}
+
 /**
  * Апошні апублікаваны snapshot чарта (да `limit` пазіцый) + міткі руху адносна папярэдняга snapshot.
  * Калі здымкаў няма — fallback: каталог у парадку compareSpeuChartTiebreak.
  */
-export async function fetchSpeuChartRows(limit: number): Promise<{
+export async function fetchSpeuChartRows(
+  limit: number,
+  playablePrefetched?: SpeuPublicTrack[],
+): Promise<{
   rows: SpeuChartRow[];
   snapshotDate: string | null;
   usedSnapshot: boolean;
 }> {
   const supabase = publicAnonClient();
-  if (!supabase) return speuChartRowsFromPlayableCatalog(limit);
+  if (!supabase) return speuChartRowsFromPlayableCatalog(limit, playablePrefetched);
 
   const { data: dates, error: dErr } = await supabase
     .schema("speu")
@@ -778,11 +795,11 @@ export async function fetchSpeuChartRows(limit: number): Promise<{
 
   if (dErr) {
     console.warn("[fetchSpeuChartRows] chart_snapshots:", dErr.message);
-    return speuChartRowsFromPlayableCatalog(limit);
+    return speuChartRowsFromPlayableCatalog(limit, playablePrefetched);
   }
 
   if (!dates?.length) {
-    return speuChartRowsFromPlayableCatalog(limit);
+    return speuChartRowsFromPlayableCatalog(limit, playablePrefetched);
   }
 
   const latest = dates[0]?.snapshot_date as string;
@@ -797,7 +814,7 @@ export async function fetchSpeuChartRows(limit: number): Promise<{
     .limit(limit);
 
   if (sErr || !snapRows?.length) {
-    return speuChartRowsFromPlayableCatalog(limit);
+    return speuChartRowsFromPlayableCatalog(limit, playablePrefetched);
   }
 
   const prevRankByTrack = new Map<string, number>();
@@ -825,7 +842,7 @@ export async function fetchSpeuChartRows(limit: number): Promise<{
     if (tErr) {
       console.warn("[fetchSpeuChartRows] artist_tracks by snapshot ids:", tErr.message);
     }
-    return speuChartRowsFromPlayableCatalog(limit);
+    return speuChartRowsFromPlayableCatalog(limit, playablePrefetched);
   }
 
   const byId = new Map<string, SpeuPublicTrack>();
@@ -855,7 +872,7 @@ export async function fetchSpeuChartRows(limit: number): Promise<{
     console.warn(
       "[fetchSpeuChartRows] snapshot had no playable rows after mapping; falling back to catalog",
     );
-    return speuChartRowsFromPlayableCatalog(limit);
+    return speuChartRowsFromPlayableCatalog(limit, playablePrefetched);
   }
 
   return { rows, snapshotDate: latest, usedSnapshot: true };

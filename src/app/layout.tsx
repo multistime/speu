@@ -5,10 +5,13 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { ClientProviders } from "@/components/ClientProviders";
 import { MobileMainFrame } from "@/components/MobileMainFrame";
-import { getPublicSiteNav, getExpandedSiteNav, type SiteNavItem } from "@/lib/site-nav";
+import { getExpandedSiteNav, type SiteNavItem } from "@/lib/site-nav";
 import { createClient } from "@/lib/supabase/server";
-import { getFooterConfig } from "@/lib/speu/footer-config.server";
-import { getVisiblePublicHrefs } from "@/lib/site-visibility";
+import {
+  getCachedFooterConfig,
+  getCachedPublicSiteNav,
+  getCachedVisiblePublicHrefs,
+} from "@/lib/layout-data.server";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -62,8 +65,8 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const visibleHrefsArray = Array.from(await getVisiblePublicHrefs());
-  const publicNav = await getPublicSiteNav();
+  const visibleHrefsArray = await getCachedVisiblePublicHrefs();
+  const publicNav = await getCachedPublicSiteNav();
   let logoHref = publicNav.logoHref;
   const navItems = publicNav.items;
 
@@ -85,7 +88,7 @@ export default async function RootLayout({
     }
   }
 
-  const footerConfig = await getFooterConfig();
+  const footerConfig = await getCachedFooterConfig();
 
   return (
     <html

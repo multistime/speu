@@ -67,14 +67,15 @@ export function SpeuAlbumPageView({ data }: { data: SpeuAlbumPageData }) {
   const { startNonStopShuffle, playPlaylistAt } = usePlayer();
   const { accentColor: accent, accentRgb } = useUiAccent();
   const primary = data.artists[0];
-  if (!primary) return null;
-  const { gradientFrom, gradientTo } = primary.theme;
   const playable = data.tracks;
 
   const albumPlaylist = useMemo(
     () => playable.map(speuPublicTrackToPlayerTrack),
     [playable]
   );
+
+  if (!primary) return null;
+  const { gradientFrom, gradientTo } = primary.theme;
 
   const playAlbumShuffle = () => {
     if (playable.length === 0) return;
@@ -87,7 +88,7 @@ export function SpeuAlbumPageView({ data }: { data: SpeuAlbumPageData }) {
   };
 
   return (
-    <div className="min-h-screen pt-20 pb-24 px-3 sm:px-6 lg:px-8">
+    <div className="min-h-screen pb-24 px-3 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 16 }}

@@ -11,6 +11,10 @@ export function getSpeuPlayerAudio(): HTMLAudioElement {
   }
   if (!shared) {
     shared = new Audio();
+    shared.preload = "auto";
+    shared.setAttribute("playsinline", "");
+    shared.setAttribute("webkit-playsinline", "");
+    shared.volume = 1;
   }
   return shared;
 }

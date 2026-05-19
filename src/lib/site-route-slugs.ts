@@ -14,6 +14,10 @@ export const SITE_ROUTE_SLUGS = [
 /** Шлях публічнага струменя — заўсёды ў навігацыі, незалежна ад content_pages */
 export const SPEU_HUB_HREF = "/speu" as const;
 
+export const SPEU_SEARCH_HREF = "/speu/search" as const;
+
+export const SPEU_LIKED_HREF = "/speu/liked" as const;
+
 /** Slug у content_pages, які адпавядае дынамічнаму хабу Next `/speu` (не блытаць з `/`) */
 export const SPEU_HUB_SLUG = "speu" as const;
 

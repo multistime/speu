@@ -330,7 +330,7 @@ export function SpeuArtistPageView({ data }: { data: SpeuArtistPageData }) {
   return (
     <>
       {/* Мабільны: адна калонка ў стылі старонкі альбома */}
-      <div className="min-h-screen pt-20 pb-24 px-3 sm:px-6 lg:hidden">
+      <div className="min-h-screen pb-24 px-3 sm:px-6 lg:hidden">
         <div className="mx-auto max-w-4xl">
           <SpeuArtistProfileCard data={data} className="mb-10" />
 
@@ -359,7 +359,7 @@ export function SpeuArtistPageView({ data }: { data: SpeuArtistPageData }) {
       </div>
 
       {/* Дэсктоп: сетка — злева картачка + альбомы, справа трэкі той ж вышыні */}
-      <div className="box-border hidden min-h-svh pt-20 pb-24 lg:block">
+      <div className="box-border hidden min-h-svh pb-24 lg:block">
         <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-12 gap-6 items-start">
             <div ref={profileColRef} className="col-span-4 w-full self-start space-y-6">

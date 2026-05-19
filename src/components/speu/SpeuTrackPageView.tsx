@@ -148,7 +148,7 @@ export function SpeuTrackPageView({ data }: { data: SpeuTrackPageData }) {
   const hasLyrics = Boolean(lyrics && lyrics.length > 0);
 
   return (
-    <div className="min-h-screen pt-20 pb-24 px-3 sm:px-6 lg:px-8">
+    <div className="min-h-screen pb-24 px-3 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 16 }}

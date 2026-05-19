@@ -62,7 +62,7 @@ export function SpeuHubClient({
   const heroPull = useMemo(() => hubHeroOverlapStyle(heroDiscScale), [heroDiscScale]);
 
   return (
-    <div className="min-h-screen pt-20 pb-28 px-3 sm:px-6 lg:px-8">
+    <div className="min-h-screen pb-28 px-3 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         <section className="relative mb-0">
           {/* Мяккае «поле» за пластынай — на ўсю шырыню экрана (без overflow-x-clip, інакш размыцце рэжацца па баках) */}
@@ -72,9 +72,8 @@ export function SpeuHubClient({
           />
 
           <motion.div
-            initial={{ opacity: 0, y: 24 }}
+            initial={false}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
             className="relative z-30 text-center px-1 pointer-events-none"
           >
             <p className="text-xs uppercase tracking-[0.18em] text-primary/70 mb-2 sm:mb-3 font-medium">
