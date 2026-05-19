@@ -15,6 +15,8 @@ export function getSpeuPlayerAudio(): HTMLAudioElement {
     shared.setAttribute("playsinline", "");
     shared.setAttribute("webkit-playsinline", "");
     shared.volume = 1;
+    // Bluetooth / AirPods: трымаць буфер гатовым пасля паўзы
+    shared.autoplay = false;
   }
   return shared;
 }

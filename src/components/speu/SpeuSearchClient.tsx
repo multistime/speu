@@ -78,15 +78,15 @@ export function SpeuSearchClient() {
 
   const chipClass = (on: boolean) =>
     cn(
-      "rounded-full border px-2.5 py-1 text-xs transition-colors",
+      "max-w-full shrink-0 rounded-full border px-2.5 py-1 text-xs transition-colors",
       on
         ? "border-primary/40 bg-primary/10 text-primary"
         : "border-border bg-muted/40 text-muted-foreground hover:text-foreground",
     );
 
   return (
-    <div className="pb-24 px-3 sm:px-6 lg:px-8">
-      <div className="max-w-3xl mx-auto">
+    <div className="speu-search-page w-full min-w-0 max-w-full overflow-x-hidden pb-24 px-3 sm:px-6 lg:px-8 touch-manipulation">
+      <div className="mx-auto w-full min-w-0 max-w-3xl">
         <p className="text-xs uppercase tracking-[0.18em] text-primary/70 mb-3 font-medium text-center">
           Спеў
         </p>
@@ -104,13 +104,13 @@ export function SpeuSearchClient() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Назва трэка або артыст…"
-            className="w-full rounded-xl border border-border bg-card/60 py-2.5 pl-10 pr-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            className="speu-no-input-zoom w-full min-w-0 max-w-full rounded-xl border border-border bg-card/60 py-2.5 pl-10 pr-3 text-base outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
             autoComplete="off"
             enterKeyHint="search"
           />
         </div>
 
-        <div className="mb-4 flex flex-wrap gap-1.5">
+        <div className="mb-4 flex max-w-full flex-wrap gap-1.5 overflow-x-hidden">
           <button type="button" className={chipClass(filters.has("explicit"))} onClick={() => toggleFilter("explicit")}>
             18+
           </button>
@@ -132,7 +132,7 @@ export function SpeuSearchClient() {
           ))}
         </div>
 
-        <div className="mb-6 flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
+        <div className="mb-6 flex max-w-full flex-wrap gap-1.5 max-h-32 overflow-x-hidden overflow-y-auto overscroll-x-none">
           {GENRE_ENTRIES.map((g) => (
             <button
               key={g.code}

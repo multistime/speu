@@ -416,3 +416,27 @@ body.speu-pwa-mobile {
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
+
+/* iOS Safari: не зуміць пры фокусе на input з font-size < 16px */
+.speu-no-input-zoom,
+.speu-search-page input,
+.speu-search-page select,
+.speu-search-page textarea {
+  font-size: 16px;
+}
+
+@media (min-width: 640px) {
+  .speu-search-page input {
+    font-size: 0.875rem;
+  }
+}
+
+.speu-search-page button {
+  touch-action: manipulation;
+}
+
+html.speu-pwa-mobile main,
+body.speu-pwa-mobile main {
+  max-width: 100%;
+  overflow-x: hidden;
+}

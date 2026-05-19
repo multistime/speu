@@ -20,7 +20,11 @@ import {
 import { listenTerminalClientSkipReason } from "@/lib/listen-analytics/terminal-guard";
 import { submitListenTerminal } from "@/lib/listen-analytics/submit";
 import { createClient } from "@/lib/supabase/client";
-import { resumeSpeuAudioFromOs } from "@/lib/speu-ios-audio-resume";
+import {
+  repairSpeuSilentPlayback,
+  resumeSpeuAudioFromOs,
+  type SpeuAudioResumeReason,
+} from "@/lib/speu-ios-audio-resume";
 import { getSpeuPlayerAudio } from "@/lib/speu-player-audio";
 import {
   clearSpeuPlayerSession,
@@ -132,8 +136,12 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const queueIndexRef = useRef(0);
 
   const playTrackInternalRef = useRef<(next: PlayerTrack) => void>(() => {});
-  const resumePlaybackRef = useRef<() => void>(() => {});
+  const resumePlaybackRef = useRef<(reason?: SpeuAudioResumeReason) => void>(() => {});
+  const resumePlaybackFnRef = useRef<
+    (reason: SpeuAudioResumeReason, forceReload?: boolean) => Promise<void>
+  >(async () => {});
   const stopRef = useRef<() => void>(() => {});
+  const resumeInFlightRef = useRef(false);
   const seekRatioRef = useRef<(ratio: number) => void>(() => {});
   const skipNextRef = useRef<() => void>(() => {});
   const skipPreviousRef = useRef<() => void>(() => {});
@@ -257,18 +265,29 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     finalizeListenSessionRef.current = finalizeListenSession;
   }, [finalizeListenSession]);
 
-  const resumePlayback = useCallback(async () => {
-    const audio = audioRef.current;
-    if (!audio?.src?.trim()) return;
-    const tr = trackRef.current;
-    if (tr) setTrackMediaMetadata(tr);
-    try {
-      await resumeSpeuAudioFromOs(audio);
-    } catch {
-      setIsPlaying(false);
-      setMediaSessionPlaybackState(audio.src?.trim() ? "paused" : "none");
-    }
-  }, []);
+  const resumePlayback = useCallback(
+    async (reason: SpeuAudioResumeReason = "ui", forceReload = false) => {
+      const audio = audioRef.current;
+      if (!audio?.src?.trim() || resumeInFlightRef.current) return;
+      resumeInFlightRef.current = true;
+      const tr = trackRef.current;
+      if (tr) setTrackMediaMetadata(tr);
+      const baseline = audio.currentTime;
+      setMediaSessionPlaybackState("playing");
+      try {
+        await resumeSpeuAudioFromOs(audio, { reason, forceReload });
+        if (reason === "os" && !audio.paused) {
+          void repairSpeuSilentPlayback(audio, baseline);
+        }
+      } catch {
+        setIsPlaying(false);
+        setMediaSessionPlaybackState(audio.src?.trim() ? "paused" : "none");
+      } finally {
+        resumeInFlightRef.current = false;
+      }
+    },
+    [],
+  );
 
   const playTrackInternal = useCallback((next: PlayerTrack) => {
     const audio = audioRef.current;
@@ -307,8 +326,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   }, [playTrackInternal]);
 
   useLayoutEffect(() => {
-    resumePlaybackRef.current = () => {
-      void resumePlayback();
+    resumePlaybackFnRef.current = resumePlayback;
+    resumePlaybackRef.current = (reason?: SpeuAudioResumeReason) => {
+      void resumePlayback(reason ?? "ui");
     };
   }, [resumePlayback]);
 
@@ -442,11 +462,18 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    /** iOS: ранняя рэгістрацыя пры mount часта дае ±15 с; пасля «playing» — стрэлкі трэкаў (гл. SO 73993512). */
-    const applyMediaSessionActionHandlers = () => {
+  /** iOS: play/pause рэгіструем адразу (AirPods / lock screen); seek — толькі пасля playing (SO 73993512). */
+    const applyMediaSessionActionHandlers = (includeSeekHandlers: boolean) => {
       if (typeof navigator === "undefined" || !("mediaSession" in navigator)) return;
-      const play = () => resumePlaybackRef.current();
-      const pause = () => audio.pause();
+      const play = () => {
+        if (resumeInFlightRef.current) return;
+        resumePlaybackRef.current("os");
+      };
+      const pause = () => {
+        listenHadUserPauseRef.current = true;
+        audio.pause();
+        setMediaSessionPlaybackState(audio.src?.trim() ? "paused" : "none");
+      };
       const stopFromOs = () => stopRef.current();
       const next = () => skipNextRef.current();
       const prev = () => skipPreviousRef.current();
@@ -465,14 +492,16 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       }
       setMediaSessionLikeActionHandler(like);
       if (mediaSessionPrefersTrackButtonsOnLockScreen()) {
-        for (const action of ["seekbackward", "seekforward", "seekto"] as const) {
-          try {
-            navigator.mediaSession.setActionHandler(action, null);
-          } catch {
-            /* action не падтрымліваецца */
+        if (includeSeekHandlers) {
+          for (const action of ["seekbackward", "seekforward", "seekto"] as const) {
+            try {
+              navigator.mediaSession.setActionHandler(action, null);
+            } catch {
+              /* action не падтрымліваецца */
+            }
           }
+          clearMediaSessionPositionState();
         }
-        clearMediaSessionPositionState();
       }
     };
 
@@ -504,6 +533,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       setIsPlaying(true);
       setMediaSessionPlaybackState("playing");
       updateMediaSessionPositionState(audio);
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+        const baseline = audio.currentTime;
+        void repairSpeuSilentPlayback(audio, baseline);
+      }
     };
     const onPause = () => {
       if (ignoreNextPauseRef.current) return;
@@ -592,8 +625,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     };
 
     const onPlaying = () => {
-      applyMediaSessionActionHandlers();
+      applyMediaSessionActionHandlers(true);
     };
+
+    applyMediaSessionActionHandlers(false);
 
     audio.addEventListener("play", onPlay);
     audio.addEventListener("playing", onPlaying);
@@ -607,10 +642,15 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
     const onVisibility = () => {
       if (document.visibilityState !== "visible") return;
-      if (!audio.src?.trim() || audio.paused) return;
+      if (!audio.src?.trim()) return;
       const tr = trackRef.current;
       if (tr) setTrackMediaMetadata(tr);
-      void resumeSpeuAudioFromOs(audio).catch(() => {});
+      if (audio.paused) {
+        void resumePlaybackFnRef.current("visibility");
+        return;
+      }
+      const baseline = audio.currentTime;
+      void repairSpeuSilentPlayback(audio, baseline);
     };
 
     const onPageShow = (e: PageTransitionEvent) => {
@@ -700,7 +740,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         listenHadUserPauseRef.current = true;
         audio.pause();
       } else {
-        void resumePlayback();
+        void resumePlayback("ui");
       }
       return;
     }
@@ -898,7 +938,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     next: PlayerTrack | null;
   }>({ prev: null, next: null });
 
-  /* eslint-disable react-hooks/set-state-in-effect -- суседзі з queueRef у refs; публікуем у state для бяспечнага кантэксту */
   useLayoutEffect(() => {
     if (!nonStopActive || queueSize < 1) {
       setQueueNeighborTracks({ prev: null, next: null });
@@ -935,7 +974,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       next: idx < len - 1 ? (q[idx + 1] ?? null) : null,
     });
   }, [nonStopActive, queueSize, track?.id, shuffleEnabled, repeatMode]);
-  /* eslint-enable react-hooks/set-state-in-effect */
 
   return (
     <PlayerContext.Provider
